@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.github.com/" rel="alternate"></link><link href="http://marselester.github.com/feeds/Misc.atom.xml" rel="self"></link><id>http://marselester.github.com/</id><updated>2009-12-03T00:00:00+05:00</updated><entry><title>Определение нажатия комбинации клавиш средствами BIOS на ассемблере</title><link href="http://marselester.github.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html" rel="alternate"></link><updated>2009-12-03T00:00:00+05:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2009-12-03:definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html</id><summary type="html">&lt;p&gt;По учебе понадобилось написать программу на ассемблере, которая должна
+распознать нажатие «горячей» комбинации клавиш &lt;tt class="docutils literal"&gt;LeftCtrl+RightShift+F3&lt;/tt&gt; и
+реагировать на него звуковым сигналом. Информации/примеров по этой теме
+маловато, по этому решил опубликовать свою программку.&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+masm
+.model small
+.stack 256
+.data
+    Msg_about db 'Распознать нажатие «горячей» комбинации клавиш', 0Ah, 0Dh
+              db 'LeftCtrl+RightShift+F3', 0Ah, 0Dh
+              db 'и реагировать на него звуковым сигналом', 0Ah, 0Dh, '$'
+
+.code
+
+start:
+    ; Инициализация сегментного регистра ds
+    mov ax, &amp;#64;data
+    mov ds, ax
+
+    ; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)
+    mov ax, 0003h
+    int 10h
+
+    ; Вывод сообщения на экран
+    mov ah, 9
+    mov dx, offset Msg_about
+    int 21h
+
+    ; Чтение символа с ожиданием
+    mov ah, 0
+    int 16h
+
+    ; Проверка нажатия Ctrl+F3
+    cmp ah, 60h
+    jne exit
+
+    ; Получение состояния клавиатуры
+    mov ah, 12h
+    int 16h
+
+    ; Проверка нажатия LeftCtrl
+    test ah, 1b
+    jz exit
+
+    ; Проверка нажатия RightShift
+    test al, 1b
+    jz exit
+
+    mov ah, 2 ; Вывод символа
+    mov dl, 7 ; Сигнал
+    int 21h
+
+    ; Завершение программы, возврат управления ОС
+    exit:
+    mov ax, 4c00h
+    int 21h
+end start
+&lt;/pre&gt;
+&lt;p&gt;Для чтения символа используется функция &lt;tt class="docutils literal"&gt;16h BIOS&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;AH = 0&lt;/p&gt;
+&lt;p&gt;На выходе в AL = ASCII-код символа, 0 или префикс скан-кода, АН = скан-код
+нажатой клавиши или расширенный ASCII-код.&lt;/p&gt;
+&lt;p&gt;Далее производится сравнение регистра AH со скан-кодом 60h (нажатие Ctrl+F3).&lt;/p&gt;
+&lt;p&gt;Потом получаем состояния клавиатуры. Используется функция &lt;tt class="docutils literal"&gt;16h BIOS&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;AH = 12h&lt;/p&gt;
+&lt;p&gt;На выходе в AX заносится состояние клавиатуры. Нас интересует только первый
+бит AH (LeftCtrl) и первый бит AL (RightShift).&lt;/p&gt;
+&lt;div class="section" id="id1"&gt;
+&lt;h2&gt;Состояние клавиатуры&lt;/h2&gt;
+&lt;div class="section" id="al"&gt;
+&lt;h3&gt;AL&lt;/h3&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;Бит 7: Ins&lt;/li&gt;
+&lt;li&gt;Бит 6: CapsLock&lt;/li&gt;
+&lt;li&gt;Бит 5: NumLock&lt;/li&gt;
+&lt;li&gt;Бит 4: ScrollLock&lt;/li&gt;
+&lt;li&gt;Бит 3: Alt (любой Alt для функции 02h, часто только левый Alt для 12h/22h)&lt;/li&gt;
+&lt;li&gt;Бит 2: Ctrl (любой)&lt;/li&gt;
+&lt;li&gt;Бит 1: LeftShift&lt;/li&gt;
+&lt;li&gt;Бит 0: RightShift&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="section" id="ah"&gt;
+&lt;h3&gt;AH&lt;/h3&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;Бит 7: SysRq&lt;/li&gt;
+&lt;li&gt;Бит 6: CapsLock&lt;/li&gt;
+&lt;li&gt;Бит 5: NumLock&lt;/li&gt;
+&lt;li&gt;Бит 4: ScrollLock&lt;/li&gt;
+&lt;li&gt;Бит 3: RightAlt&lt;/li&gt;
+&lt;li&gt;Бит 2: RightCtrl&lt;/li&gt;
+&lt;li&gt;Бит 1: LeftAlt&lt;/li&gt;
+&lt;li&gt;Бит 0: LeftCtrl&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</summary><category term="assembler"></category></entry></feed>

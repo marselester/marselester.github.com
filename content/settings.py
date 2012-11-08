@@ -8,8 +8,6 @@ GITHUB_URL = 'https://github.com/marselester/'
 DISQUS_SITENAME = 'marselester'
 TWITTER_USERNAME = 'marselester'
 
-DEFAULT_CATEGORY = 'Misc'
-
 SOCIAL = (
     ('GitHub', 'https://github.com/marselester'),
     ('Twitter', 'http://twitter.com/marselester'),

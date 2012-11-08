@@ -4,6 +4,7 @@
 
 :date: 2009-12-03
 :tags: assembler
+:category: Misc
 :slug: definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler
 
 По учебе понадобилось написать программу на ассемблере, которая должна
