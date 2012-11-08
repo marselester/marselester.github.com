@@ -1444,7 +1444,7 @@ deps=
 </summary><category term="python"></category><category term="django"></category><category term="infrastructure"></category></entry><entry><title>Вычислительные методы одномерной оптимизации</title><link href="http://marselester.github.com/computing-methods-of-one-dimensional-optimization.html" rel="alternate"></link><updated>2010-10-06T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2010-10-06:computing-methods-of-one-dimensional-optimization.html</id><summary type="html">&lt;p&gt;На третьем курсе по предмету методы оптимизации делали лабораторную работу на
 тему «Вычислительные методы одномерной оптимизации».
 Задача заключалась в поиске безусловного минимума функции
-&lt;tt class="docutils literal"&gt;f(x) = pow(x, 3) – x + pow(e, &lt;span class="pre"&gt;-x)&lt;/span&gt; на начальном интервале &lt;span class="pre"&gt;``[0,&lt;/span&gt; 1]&lt;/tt&gt;
+&lt;tt class="docutils literal"&gt;f(x) = pow(x, 3) – x + pow(e, &lt;span class="pre"&gt;-x)&lt;/span&gt;&lt;/tt&gt; на начальном интервале &lt;tt class="docutils literal"&gt;[0, 1]&lt;/tt&gt;
 с точностью &lt;tt class="docutils literal"&gt;0.00001&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;Вычисления производились через:&lt;/p&gt;
 &lt;ul class="simple"&gt;
