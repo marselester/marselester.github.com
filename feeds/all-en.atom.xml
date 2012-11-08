@@ -1,0 +1,1326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.github.com/" rel="alternate"></link><link href="http://marselester.github.com/feeds/all-en.atom.xml" rel="self"></link><id>http://marselester.github.com/</id><updated>2012-11-02T00:00:00+06:00</updated><entry><title>Preparation to Python Interview</title><link href="http://marselester.github.com/preparation-to-python-interview.html" rel="alternate"></link><updated>2012-11-02T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-11-02:preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
+preparation to Python developer interview. These are some information and
+links which seemed important to me. Maybe it will be helpful.&lt;/p&gt;
+&lt;div class="section" id="how-does-it-usually-go"&gt;
+&lt;h2&gt;How does it usually go?&lt;/h2&gt;
+&lt;div class="section" id="what-kind-of-projects-did-you-participate-in"&gt;
+&lt;h3&gt;What kind of projects did you participate in?&lt;/h3&gt;
+&lt;p&gt;What did you do at your previous job? It is expected that you will told
+the essence in simple words.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="tricky-question"&gt;
+&lt;h3&gt;Tricky question&lt;/h3&gt;
+&lt;p&gt;It is expected that you will search for solution of task independently.
+Reasonings aloud are welcomed.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="writing-code"&gt;
+&lt;h3&gt;Writing code&lt;/h3&gt;
+&lt;p&gt;Interviewer is interested in critical analysis of code. For example,
+efficiency of used data structures, algorithm's complexity evaluation.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="design"&gt;
+&lt;h3&gt;Design&lt;/h3&gt;
+&lt;p&gt;In this step it is important to ask as much as possible about a task before
+starting to look for solution.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="provocative-question"&gt;
+&lt;h3&gt;Provocative question&lt;/h3&gt;
+&lt;p&gt;You have to stay in your lane.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="questions"&gt;
+&lt;h2&gt;Questions&lt;/h2&gt;
+&lt;div class="section" id="basic"&gt;
+&lt;h3&gt;Basic&lt;/h3&gt;
+&lt;p&gt;Probably interviewer starts with basic questions. Let us see example:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+funcs = []
+for i in range(5):
+    def f():
+        print i
+    funcs.append(f)
+
+for f in funcs:
+    f()
+&lt;/pre&gt;
+&lt;p&gt;I guess he examines knowledge about namespace. It will print &lt;tt class="docutils literal"&gt;4&lt;/tt&gt; five times.
+To explain that you supposed to know about &lt;a class="reference external" href="http://stackoverflow.com/questions/291978/short-description-of-python-scoping-rules"&gt;LEGB&lt;/a&gt; rule. Also you should know
+that variable search in enclosed scope will be done later, &lt;strong&gt;after call&lt;/strong&gt; of
+enclosed functions. They all get same value -- value of &lt;tt class="docutils literal"&gt;i&lt;/tt&gt; in last
+iteration.&lt;/p&gt;
+&lt;p&gt;Next example prints numbers from 0 to 4:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+funcs = []
+for i in range(5):
+    def f(i=i):
+        print i
+    funcs.append(f)
+
+for f in funcs:
+    f()
+&lt;/pre&gt;
+&lt;p&gt;It happens because default value is stored &lt;strong&gt;when enclosed function was
+created&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;There is another popular question related with default value of function.
+N.B. &lt;tt class="docutils literal"&gt;names&lt;/tt&gt; is mutable:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+def f(names=[]):
+    names.append('some name')
+&lt;/pre&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://pythontutor.com"&gt;Visualizing code execution&lt;/a&gt; and &lt;a class="reference external" href="https://alexbers.com/python_quiz/"&gt;quiz of non-trivial features of Python&lt;/a&gt;
+will be helpful to prepare for questions which are mentioned above.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="what-do-you-think-about-this-code"&gt;
+&lt;h3&gt;What do you think about this code?&lt;/h3&gt;
+&lt;pre class="literal-block"&gt;
+d = {1: 'a', 2: 'b', 3: 'c'}
+
+
+def safe_get(d, key, value):
+    if key in d.keys():
+        return d[key]
+    return value
+
+print safe_get(d, 0, 'blah')
+&lt;/pre&gt;
+&lt;p&gt;Apparently interviewer expects these answers:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;it repeats functionality of &lt;tt class="docutils literal"&gt;d.get(0, 'blah')&lt;/tt&gt;.&lt;/li&gt;
+&lt;li&gt;it uses &lt;tt class="docutils literal"&gt;if key in d.keys()&lt;/tt&gt; instead of &lt;tt class="docutils literal"&gt;if key in d&lt;/tt&gt;.&lt;/li&gt;
+&lt;li&gt;actually it is looking for &lt;tt class="docutils literal"&gt;key&lt;/tt&gt; in &lt;tt class="docutils literal"&gt;[1, 2, 3]&lt;/tt&gt; (for Python 2).
+Therefore O(n) is worse than O(1) for dictionary lookup.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;It would be appropriate to read about &lt;a class="reference external" href="http://habrahabr.ru/post/128457/"&gt;data structures&lt;/a&gt; and their
+&lt;a class="reference external" href="http://wiki.python.org/moin/TimeComplexity"&gt;time complexity&lt;/a&gt;, about &lt;a class="reference external" href="http://docs.python.org/3/library/collections.html"&gt;collections&lt;/a&gt;, &lt;a class="reference external" href="http://docs.python.org/3/library/itertools"&gt;itertools&lt;/a&gt; and &lt;a class="reference external" href="http://wiki.python.org/moin/HowTo/Sorting/"&gt;sorting&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="advanced-knowledge"&gt;
+&lt;h3&gt;Advanced knowledge&lt;/h3&gt;
+&lt;p&gt;These articles are for complete picture of Python:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://www.cafepy.com/article/python_types_and_objects/"&gt;Python Types and Objects&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://stackoverflow.com/questions/100003/what-is-a-metaclass-in-python/6581949#6581949"&gt;What is a metaclass in Python?&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://www.cafepy.com/article/python_attributes_and_methods/"&gt;Python Attributes and Methods&lt;/a&gt;, &lt;a class="reference external" href="http://habrahabr.ru/post/137415/"&gt;Пользовательские атрибуты в Python&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="section" id="misc"&gt;
+&lt;h3&gt;Misc&lt;/h3&gt;
+&lt;p&gt;Questions:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://pragmaticstartup.wordpress.com/2012/08/25/what-every-new-pythondjango-web-developer-should-know-in-3-months/"&gt;What Every New Python/Django Web Developer Should Know in 3 Months&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://groups.google.com/d/topic/comp.lang.python/rhW_rIYY5HM/discussion"&gt;Python Interview Questions&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://www.techinterviews.com/python-interview-questions-and-answers"&gt;Python interview questions and answers&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://habrahabr.ru/qa/5783/"&gt;Что спрашивают на собеседовании в Яндекс?&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://pyobject.ru/blog/2010/02/04/python-quiz/"&gt;Вопросы и задания по Python&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Useful articles:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://programmers.stackexchange.com/questions/43409/dealing-with-engineers-that-frequently-leave-their-jobs"&gt;Dealing with engineers that frequently leave their jobs&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://steve-yegge.blogspot.ch/2008/03/get-that-job-at-google.html"&gt;Get that job at Google&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="http://stackoverflow.com/questions/101268/hidden-features-of-python"&gt;Hidden features of Python&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</summary><category term="python"></category><category term="interview"></category></entry><entry><title>Стартап fangid.com</title><link href="http://marselester.github.com/startap-fangidcom.html" rel="alternate"></link><updated>2012-10-13T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-10-13:startap-fangidcom.html</id><summary type="html">&lt;p&gt;В середине июля 2012 г. команда &lt;a class="reference external" href="http://fangid.com/"&gt;стартапа fangid.com&lt;/a&gt;
+приступила к воплощению идеи социальной концертной платформы на севере
+Таиланда. Я занимался подготовительными работами (соглашениями по разработке,
+первоначальной подготовкой репозитория, например, продумыванием структуры,
+организацией тестов, разделением настроек), принимал участие в выработке
+требований к системе и проектировании архитектуры. При конструировании системы
+моими основными задачами были:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;социальная регистрация/авторизация;&lt;/li&gt;
+&lt;li&gt;голосование;&lt;/li&gt;
+&lt;li&gt;страницы концерта, профиля артиста;&lt;/li&gt;
+&lt;li&gt;задачи, требующий Celery (например, загрузка похожих артистов, отправка
+почты);&lt;/li&gt;
+&lt;li&gt;подсистема продажи билетов с оплатой через Робокассу;&lt;/li&gt;
+&lt;li&gt;подсистема скидок.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Также к своим заслугам отношу организацию работы через GitHub, организацию
+модульного и функционального тестирования (unittest, WebTest, factory_boy).&lt;/p&gt;
+&lt;p&gt;Вопреки сжатым срокам мы, как разработчики, старались улучшить процесс
+разработки, используя для мониторинга Sentry и Zabbix, для деплоя -- Fabric.&lt;/p&gt;
+</summary><category term="python"></category><category term="django"></category><category term="startup"></category><category term="thailand"></category></entry><entry><title>Django TODO: тестирование во время конструирования</title><link href="http://marselester.github.com/django-todo-testing-during-construction.html" rel="alternate"></link><updated>2012-06-29T13:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-06-29:django-todo-testing-during-construction.html</id><summary type="html">&lt;p&gt;Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
+стратегии тестирования.&lt;/p&gt;
+&lt;p&gt;Тестирование может указать только на отдельные дефектные области программы --
+оно не сделает программу удобнее в использовании, более быстрой, компактной,
+удобочитаемой или расширяемой.&lt;/p&gt;
+&lt;p&gt;Цель тестирования противоположна целям других этапов разработки. Его целью
+является нахождение ошибок. Успешным считается тест, нарушающий работу ПО. Все
+остальные этапы разработки направлены на предотвращение ошибок и недопущение
+нарушения работы программы &lt;a class="footnote-reference" href="#mcconnell" id="id1"&gt;[1]&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="section" id="id2"&gt;
+&lt;h2&gt;Виды тестирования&lt;/h2&gt;
+&lt;p&gt;Виды тестирования, выполняемые разработчиком: блочное тестирование,
+интеграционное тестирование.&lt;/p&gt;
+&lt;p&gt;Блочным тестированием называют тестирование полного класса, метода или
+небольшого приложения, выполняемое отдельно от прочих частей системы. Данный
+тип тестирования позволяет структурировать код.&lt;/p&gt;
+&lt;p&gt;Интеграционное тестирование -- это совместное выполнение двух или более
+классов, пакетов, компонентов или подсистем. Этот вид тестирования начинают
+вводить, как только созданы два класса, которые можно протестировать. Такое
+тестирование позволяет определить регрессию, но является медленным и менее
+информативным, чем блочное тестирование.&lt;/p&gt;
+&lt;p&gt;Тестирование разделяют на две обширные категории: &amp;quot;тестирование методом
+черного ящика&amp;quot; и &amp;quot;тестирование методом белого (прозрачного) ящика&amp;quot;. В первом
+случае тестирощик не владеет сведениями о внутренней работе тестируемого
+элемента. При тестировании методом белого ящика внутренняя реализация
+тестируемого элемента тестировщику известна. Тестируя собственный код,
+программист использует именно этот вид тестирования.&lt;/p&gt;
+&lt;p&gt;Тестирование требует, чтобы программист рассчитывал найти ошибки в своем коде
+&lt;a class="footnote-reference" href="#mcconnell" id="id3"&gt;[1]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="django"&gt;
+&lt;h2&gt;Рекомендации по тестированию Django приложений&lt;/h2&gt;
+&lt;p&gt;Карл Майер дал следующие рекомендации по тестированию Django приложений
+&lt;a class="footnote-reference" href="#meyer" id="id4"&gt;[2]&lt;/a&gt;:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;для представлений следует писать интеграционные тесты;&lt;/li&gt;
+&lt;li&gt;для тестирования Ajax и других JavaScript взаимодействий нужно использовать
+&lt;em&gt;Selenium&lt;/em&gt;, который позволяет автоматизировать тестирование веб-приложений в
+браузере;&lt;/li&gt;
+&lt;li&gt;для всех остальных случаев необходимо использовать блочное тестирование.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Он также выступил против использования &lt;em&gt;fixtures&lt;/em&gt; (набор данных, которые
+Django использует для импорта в БД), аргументируя тем, что они медленно
+загружаются, их трудно поддерживать и обновлять. Также применение &lt;em&gt;fixtures&lt;/em&gt;
+приводит к росту взаимозависимости тестов. Для замены &lt;em&gt;fixtures&lt;/em&gt; был
+разработан инструмент &lt;em&gt;factory_boy&lt;/em&gt;, который имеет следующие преимущества:
+близость тестовых данных к тестовому коду, не требует от тестирования введение
+избыточных данных, прост в обслуживании.&lt;/p&gt;
+&lt;div class="section" id="id5"&gt;
+&lt;h3&gt;Что именно тестировать?&lt;/h3&gt;
+&lt;p&gt;Ответ на вопрос &lt;em&gt;&amp;quot;Что именно тестировать в Django приложении?&amp;quot;&lt;/em&gt; дал Дэниэл
+Линдсли &lt;a class="footnote-reference" href="#lindsley" id="id6"&gt;[3]&lt;/a&gt;:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;не следует тестировать стандартные функции Python и Django;&lt;/li&gt;
+&lt;li&gt;если модель данных содержит пользовательские методы, их необходимо
+тестировать;&lt;/li&gt;
+&lt;li&gt;нужно тестировать пользовательские формы, шаблонные теги, контекстные
+процессоры, команды управления;&lt;/li&gt;
+&lt;li&gt;следует тестировать бизнес логику в представлениях.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id7"&gt;
+&lt;h2&gt;Тестирование моделей данных&lt;/h2&gt;
+&lt;p&gt;Для тестирования Django моделей используют блочное тестирование. В качестве
+инструмента блочного тестирования автор выбрал библиотеку &lt;em&gt;unittest&lt;/em&gt;, так как
+она входит в стандартную библиотеку Python. Тесты, написанные на &lt;em&gt;unittest&lt;/em&gt;
+работают быстрее при тестировании Django приложений &lt;a class="footnote-reference" href="#lindsley" id="id8"&gt;[3]&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;В качестве примера проектирования тестов приводятся методы
+&lt;em&gt;days_quantity_after_deadline&lt;/em&gt; (определяет количество просроченных дней
+задачи) и &lt;em&gt;start_date&lt;/em&gt; (определяет дату начала работы над задачей).&lt;/p&gt;
+&lt;div class="section" id="id9"&gt;
+&lt;h3&gt;Количество просроченных дней задачи&lt;/h3&gt;
+&lt;p&gt;Определение количества просроченных дней задачи. Для этого рассмотрим все
+возможные случаи наступления дедлайна:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;просрочен дедлайн у ожидающей задачи из-за предыдущей задачи. Предыдущая
+задача превысила свой дедлайн и дедлайн текущей задачи;&lt;/li&gt;
+&lt;li&gt;работающая задача превысила дедлайн;&lt;/li&gt;
+&lt;li&gt;задача выполнена с превышением дедлайна;&lt;/li&gt;
+&lt;li&gt;просрочен дедлайн у остановленной задачи. Владелец цепочки не решил проблему
+остановки задачи.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Из вышеперечисленных случаев следует два правила расчета количества
+просроченных дней:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;если статус &lt;strong&gt;DONE&lt;/strong&gt; и дата окончания задачи больше или равна дедлайну, то
+количество дней равно разности даты окончания и дедлайна, плюс один день
+(день дедлайна);&lt;/li&gt;
+&lt;li&gt;если статус &lt;strong&gt;WAIT/WORK/STOP&lt;/strong&gt; и текущая дата больше или равна дедлайну, то
+количество дней равно разности текущей даты и дедлайна, плюс один день (день
+дедлайна).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Определив все возможные случаи наступления дедлайна можно спроектировать
+&amp;quot;чистые тесты&amp;quot; для метода &lt;em&gt;days_quantity_after_deadline&lt;/em&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+class DeadlineDaysTest(TaskTest):
+    &amp;quot;&amp;quot;&amp;quot;Тестирует определение количества просроченных дней.&amp;quot;&amp;quot;&amp;quot;
+    def task_wait_overdue(self):
+        &amp;quot;&amp;quot;&amp;quot;Просрочен дедлайн у ожидающей задачи из-за предыдущей задачи.
+
+        Предыдущая задача превысила свой дедлайн и дедлайн текущей задачи.
+        &amp;quot;&amp;quot;&amp;quot;
+
+    def task_work_overdue(self):
+        &amp;quot;&amp;quot;&amp;quot;Работающая задача превысила дедлайн.&amp;quot;&amp;quot;&amp;quot;
+
+    def task_done_overdue(self):
+        &amp;quot;&amp;quot;&amp;quot;Задача выполнена с превышением дедлайна.&amp;quot;&amp;quot;&amp;quot;
+
+    def task_stop_overdue(self):
+        &amp;quot;&amp;quot;&amp;quot;Просрочен дедлайн у остановленной задачи.
+
+        Владелец цепочки не решил проблему остановки задачи.
+        &amp;quot;&amp;quot;&amp;quot;
+&lt;/pre&gt;
+&lt;p&gt;Под &amp;quot;чистыми тестами&amp;quot; подразумеваются тесты, которые проверяют работает ли
+код, а не пытаются нарушить его работу всевозможными способами (&amp;quot;грязные
+тесты&amp;quot;). В организациях со зрелым процессом тестирования на каждый &amp;quot;чистый
+тест&amp;quot; обычно приходятся пять &amp;quot;грязных&amp;quot; &lt;a class="footnote-reference" href="#mcconnell" id="id10"&gt;[1]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id11"&gt;
+&lt;h3&gt;Дата начала работы над задачей&lt;/h3&gt;
+&lt;p&gt;Рассмотрим проектирование тестов для более сложного метода -- метода, который
+определяет дату начала работы над задачей.&lt;/p&gt;
+&lt;p&gt;Чтобы определить дату начала работы над задачей необходимо рассмотреть все
+возможные комбинации предшествующих задач по статусам.&lt;/p&gt;
+&lt;div class="section" id="wait"&gt;
+&lt;h4&gt;Статус текущей задачи WAIT&lt;/h4&gt;
+&lt;p&gt;Задача стоит первой в цепочке, дата начала работы над цепочкой не наступила.
+В этом случае дата начала работы над задачей равна дате начала цепочки.&lt;/p&gt;
+&lt;p&gt;Предыдущая задача имеет статус &lt;em&gt;WAIT&lt;/em&gt;, к тому же:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;em&gt;дата начала предыдущей задачи&lt;/em&gt; не наступила. В данном случае дата начала
+текущей задачи равна дедлайну предыдущей задачи;&lt;/li&gt;
+&lt;li&gt;наступила &lt;em&gt;дата начала предыдущей задачи&lt;/em&gt;, но еще не наступил &lt;em&gt;дедлайн
+предыдущей задачи&lt;/em&gt;. В данном случае дата начала текущей задачи равна
+дедлайну предыдущей задачи;&lt;/li&gt;
+&lt;li&gt;наступил &lt;em&gt;дедлайн предыдущей задачи&lt;/em&gt;. В данном случае дата начала текущей
+задачи не прогнозируема.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Предыдущая задача имеет статус &lt;em&gt;WORK&lt;/em&gt; или &lt;em&gt;STOP&lt;/em&gt;, к тому же:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;не наступил &lt;em&gt;дедлайн предыдущей задачи&lt;/em&gt;. В данном случае дата начала текущей
+задачи равна дедлайну предыдущей задачи;&lt;/li&gt;
+&lt;li&gt;наступил &lt;em&gt;дедлайн предыдущей задачи&lt;/em&gt;. В данном случае дата начала текущей
+задачи не прогнозируема.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="section" id="work-done-stop"&gt;
+&lt;h4&gt;Статус текущей задачи WORK или DONE или STOP&lt;/h4&gt;
+&lt;p&gt;Задача стоит первой в цепочке, наступила дата начала работы над цепочкой.
+В данном случае дата начала работы над задачей равна дате начала цепочки.&lt;/p&gt;
+&lt;p&gt;Предыдущая задача имеет статус &lt;em&gt;DONE&lt;/em&gt;. В данном случае дата начала задачи
+равна дедлайну предыдущей задачи.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id12"&gt;
+&lt;h4&gt;Правило определения даты&lt;/h4&gt;
+&lt;p&gt;Проанализировав вышеперечисленные случаи автор сформулировал правила
+определения даты начала работы над задачей:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;для первой задачи равна дате начала работы над цепочкой;&lt;/li&gt;
+&lt;li&gt;для статуса &lt;em&gt;WAIT&lt;/em&gt; равна дедлайну предыдущей задачи. Если дедлайн просрочен,
+дата начала задачи не прогнозируема;&lt;/li&gt;
+&lt;li&gt;для статусов &lt;em&gt;WORK&lt;/em&gt;, &lt;em&gt;DONE&lt;/em&gt;, &lt;em&gt;STOP&lt;/em&gt; равна дате окончания предыдущей задачи.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Демонстрация фрагмента блочного тестирования для метода &lt;em&gt;start_date&lt;/em&gt; приведена
+ниже:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+# -*- coding: utf-8 -*-
+import datetime
+
+from django.test import TestCase
+from django.contrib.auth.models import User
+
+from todo.models import Chain, Task
+from . import factories
+
+
+class TaskTest(TestCase):
+    def setUp(self):
+        factories.make_fixtures()
+        # Сотрудники.
+        self.manager = User.objects.get(username='alexander')
+        self.designer = User.objects.get(username='kazimir')
+        self.programmer = User.objects.get(username='ada')
+
+
+class StartDateTest(TaskTest):
+    &amp;quot;&amp;quot;&amp;quot;Тестирует определение даты начала работы над задачей.&amp;quot;&amp;quot;&amp;quot;
+    def test_first_task(self):
+        &amp;quot;&amp;quot;&amp;quot;Тестирует дату начала работы первой задачи.
+
+        Дата начала первой задачи совпадает с датой начала цепочки. Это условие
+        верно для задач с любым статусом.
+        &amp;quot;&amp;quot;&amp;quot;
+        today = datetime.date.today()
+        chain_start_date = today + datetime.timedelta(days=1)
+        chain = Chain.objects.create(name='Chain', start_date=chain_start_date,
+                                     owner=self.manager)
+        deadline = chain_start_date + datetime.timedelta(days=3)
+        first_task = Task.objects.create(worker=self.designer, task='Design',
+                                         deadline=deadline, chain=chain)
+        self.assertEqual(first_task.start_date(), chain.start_date)
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id13"&gt;
+&lt;h3&gt;Заключение&lt;/h3&gt;
+&lt;p&gt;Организация библиотеки &lt;em&gt;unittest&lt;/em&gt; по классам и методам подходит в случае, когда
+есть потребность в написании тестов, которые используют одинаковый код. Такой
+подход упрощает абстракцию общих задач в общие методы. Библиотека также
+поддерживает явные процедуры настройки и очистки, которые предоставляют
+высокий уровень контроля над средой, в которой происходит выполнение тестов.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id14"&gt;
+&lt;h2&gt;Тестирование представлений&lt;/h2&gt;
+&lt;p&gt;Для тестирования Django представлений рекомендуется &lt;a class="footnote-reference" href="#korobov" id="id15"&gt;[4]&lt;/a&gt; использовать
+библиотеку &lt;em&gt;WebTest&lt;/em&gt;. Ближайшим аналогом &lt;em&gt;WebTest&lt;/em&gt; является &lt;em&gt;twill&lt;/em&gt;, но он не
+поддерживает юникод и давно не развивается (последний релиз был в 2007 году).&lt;/p&gt;
+&lt;p&gt;В качестве примера приводится тестирование посещения пользователем страницы
+актуальных задач:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+# -*- coding: utf-8 -*-
+from django_webtest import WebTest
+
+from django.core.urlresolvers import reverse
+
+from . import factories
+
+
+class ActualTasksTest(WebTest):
+    def setUp(self):
+        factories.make_fixtures()
+
+    def test_user_not_logined(self):
+        response = self.app.get(reverse('todo_actual_tasks'))
+        self.assertEqual(response.status_int, 302)
+
+    def test_designer_logined(self):
+        response = self.app.get(reverse('todo_actual_tasks'), user='kazimir')
+        assert 'Казимир Малевич' in response
+&lt;/pre&gt;
+&lt;p&gt;В первом случае пользователь не авторизован (метод &lt;em&gt;test_user_not_logined&lt;/em&gt;) и
+браузер должен вернуть статус &lt;em&gt;302&lt;/em&gt; (перенаправление на страницу авторизации),
+во втором случае (метод &lt;em&gt;test_designer_logined&lt;/em&gt;) пользователь авторизован под
+именем &lt;em&gt;Казимир Малевич&lt;/em&gt;. Данные тесты не такие полезные, как блочные тесты.
+Но даже если они просто проверят основные страницы системы на отсутствие
+сообщений об исключении, то они уже принесут большую пользу разработчику.&lt;/p&gt;
+&lt;p&gt;Представления имеют много связей и зависимостей (шаблоны, база данных,
+конфигурация URL), поэтому их трудно тестировать. Карл Майер рекомендует
+писать как можно меньше кода на уровне представлений &lt;a class="footnote-reference" href="#meyer" id="id16"&gt;[2]&lt;/a&gt;.&lt;/p&gt;
+&lt;table class="docutils footnote" frame="void" id="mcconnell" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;[1]&lt;/td&gt;&lt;td&gt;&lt;em&gt;(&lt;a class="fn-backref" href="#id1"&gt;1&lt;/a&gt;, &lt;a class="fn-backref" href="#id3"&gt;2&lt;/a&gt;, &lt;a class="fn-backref" href="#id10"&gt;3&lt;/a&gt;)&lt;/em&gt; Макконелл С. Совершенный код. Мастер-класс /
+Пер. с англ. – М. : Издательство &amp;quot;Русская редакция&amp;quot;, 2012. – 896 стр. : ил.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="meyer" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;[2]&lt;/td&gt;&lt;td&gt;&lt;em&gt;(&lt;a class="fn-backref" href="#id4"&gt;1&lt;/a&gt;, &lt;a class="fn-backref" href="#id16"&gt;2&lt;/a&gt;)&lt;/em&gt; Meyer C. &lt;a class="reference external" href="http://carljm.github.com/django-testing-slides/"&gt;Testing and Django&lt;/a&gt; at PyCon US 2012.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="lindsley" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;[3]&lt;/td&gt;&lt;td&gt;&lt;em&gt;(&lt;a class="fn-backref" href="#id6"&gt;1&lt;/a&gt;, &lt;a class="fn-backref" href="#id8"&gt;2&lt;/a&gt;)&lt;/em&gt; Линдсли Д. &lt;a class="reference external" href="http://toastdriven.com/blog/2011/apr/10/guide-to-testing-in-django/"&gt;Guide to Testing in Django&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="korobov" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id15"&gt;[4]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Коробов М. &lt;a class="reference external" href="http://habrahabr.ru/post/91471/"&gt;Пишем функциональные/интеграционные тесты для
+проекта на Django&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+</summary><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="testing"></category></entry><entry><title>Django TODO: конструирование системы</title><link href="http://marselester.github.com/django-todo-system-construction.html" rel="alternate"></link><updated>2012-06-29T12:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-06-29:django-todo-system-construction.html</id><summary type="html">&lt;p&gt;При работе над проектом конструирование включает другие процессы, в том числе
+проектирование. Формальная архитектура дает ответы только на вопросы
+системного уровня, при этом значительная часть проектирования может быть
+намеренно оставлена на этап конструирования. Проектирование -- это
+&amp;quot;постепенный&amp;quot; процесс. Проекты приложений не возникают в умах разработчиков
+сразу в готовом виде. Они развиваются и улучшаются в ходе обзоров,
+неформальных обсуждений, написания кода и выполнения его ревизий.&lt;/p&gt;
+&lt;p&gt;Практически во всех случаях проект несколько меняется во время первоначальной
+разработки системы и еще больше -- при ее модернизации.&lt;/p&gt;
+&lt;p&gt;Управление сложностью -- самый важный технический аспект разработки ПО.
+Управлять сложностью гораздо легче, если при проектировании стремиться к
+простоте. Есть два общих способа достижения простоты: минимизация объема
+существенной сложности, с которой приходится иметь дело в любой конкретный
+момент времени, и подавление необязательного роста несущественной сложности.&lt;/p&gt;
+&lt;p&gt;Одной из самых полезных концепций проектирования является сокрытие информации.
+Оно полезно на всех уровнях проектирования: от применения именованных констант
+вместо литералов до создания типов данных и проектирования классов, методов и
+подсистем &lt;a class="footnote-reference" href="#mcconnell" id="id1"&gt;[1]&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Для снижения сложности Стив Макконелл определил ряд рекомендаций
+&lt;a class="footnote-reference" href="#mcconnell" id="id2"&gt;[1]&lt;/a&gt;:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;тщательно определяйте интерфейсы классов, чтобы можно было игнорировать
+внутреннее устройство классов;&lt;/li&gt;
+&lt;li&gt;поддерживайте абстракцию, формируемую интерфейсом класса, чтобы не
+запоминать ненужных деталей;&lt;/li&gt;
+&lt;li&gt;избегайте глобальных данных, потому что их использование значительно
+увеличивает процент кода, который нужно удерживать в уме в любой момент
+времени;&lt;/li&gt;
+&lt;li&gt;избегайте глубоких иерархий наследования, потому что они предъявляют высокие
+требования к интеллекту;&lt;/li&gt;
+&lt;li&gt;избегайте глубокой вложенности циклов и условных операторов, поскольку их
+можно заменить на более простые управляющие структуры, позволяющие бережнее
+расходовать умственные ресурсы;&lt;/li&gt;
+&lt;li&gt;тщательно определите подход к обработке ошибок, вместо того, чтобы
+использовать произвольную комбинацию произвольных методик;&lt;/li&gt;
+&lt;li&gt;не позволяйте классам достигать размеров целых программ;&lt;/li&gt;
+&lt;li&gt;поддерживайте методы короткими;&lt;/li&gt;
+&lt;li&gt;используйте ясные, очевидные имена переменных;&lt;/li&gt;
+&lt;li&gt;минимизируйте число параметров, передаваемых в метод, или, что еще важнее,
+передавайте только те параметры, которые нужны для поддержания абстракции,
+формируемой интерфейсом метода;&lt;/li&gt;
+&lt;li&gt;используйте соглашения, чтобы не запоминать произвольные, несущественные
+различия между разными фрагментами кода;&lt;/li&gt;
+&lt;li&gt;создавая для сложного теста булеву функцию и абстрагирую суть теста
+упрощается код.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;При конструировании системы &lt;a class="reference external" href="https://github.com/marselester/django-todo"&gt;Django TODO&lt;/a&gt; я старался придерживаться вышеперечисленных рекомендаций.&lt;/p&gt;
+&lt;div class="section" id="id4"&gt;
+&lt;h2&gt;Модель данных&lt;/h2&gt;
+&lt;p&gt;Уровень доступа к данным вынесен в отдельную часть приложения, называемый
+моделью. Модели размещаются в файле &lt;tt class="docutils literal"&gt;models.py&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Модель в Django представляет собой описание данных в базе, представленное на
+языке Python. В Django модель используется, чтобы выполнить SQL-запрос и
+вернуть удобные структуры данных Python. Кроме того, модели позволяют
+представить высокоуровневые концепции, для которых в SQL может не быть
+аналогов.&lt;/p&gt;
+&lt;p&gt;Описание моделей на Python лучше по ряду причин:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;сокращается количество мысленных &amp;quot;переключений контекста&amp;quot;. Когда приходится
+писать код на SQL, потом на Python, а потом снова на SQL, продуктивность
+падает;&lt;/li&gt;
+&lt;li&gt;размещение моделей данных в коде упрощает их хранение в системе управления
+версиями;&lt;/li&gt;
+&lt;li&gt;удобные средства миграции моделей (например, South).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Каждая модель соответствует одной таблице БД, а каждый атрибут модели
+соответствует одному столбцу таблицы. Из этого правила есть исключение,
+касающееся отношения многие-ко-многим &lt;a class="footnote-reference" href="#holovaty" id="id5"&gt;[2]&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="section" id="id6"&gt;
+&lt;h3&gt;Соглашения по оформлению кода&lt;/h3&gt;
+&lt;p&gt;При конструировании моделей приняты следующие соглашения по оформлению кода.
+Последовательность размещения атрибутов класса-модели &lt;a class="footnote-reference" href="#django" id="id7"&gt;[3]&lt;/a&gt;:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;названия полей;&lt;/li&gt;
+&lt;li&gt;атрибуты менеджера модели;&lt;/li&gt;
+&lt;li&gt;класс &lt;tt class="docutils literal"&gt;Meta&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;метод &lt;tt class="docutils literal"&gt;__unicode__&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;метод &lt;tt class="docutils literal"&gt;__str__&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;метод &lt;tt class="docutils literal"&gt;save&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;метод &lt;tt class="docutils literal"&gt;get_absolute_url&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;остальные методы.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Вышеперечисленные группы атрибутов должны быть отделены друг от друга пустой
+строкой.&lt;/p&gt;
+&lt;p&gt;Если в модели есть поле выбора (&lt;em&gt;choices&lt;/em&gt;), оно должно быть оформлено в виде
+кортежа из кортежей, заглавными буквами. Должны быть расположены в начале
+модели &lt;a class="footnote-reference" href="#django" id="id8"&gt;[3]&lt;/a&gt; и названы без использования &amp;quot;магических чисел&amp;quot;
+&lt;a class="footnote-reference" href="#mcconnell" id="id9"&gt;[1]&lt;/a&gt;. Например:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+class Task(models.Model):
+    UNCERTAIN_STATUS = 0
+    DONE_STATUS = 1
+    STOP_STATUS = 2
+    WAIT_STATUS = 3
+    WORK_STATUS = 4
+    STATUS_CHOICES = (
+        (DONE_STATUS, 'done'),
+        (STOP_STATUS, 'stop')
+    )
+
+    status = models.IntegerField(choices=STATUS_CHOICES,
+                                 default=UNCERTAIN_STATUS)
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id10"&gt;
+&lt;h3&gt;Методы модели&lt;/h3&gt;
+&lt;p&gt;Разработчик может определить в модели свои собственные методы и тем самым
+наделять свои объекты дополнительной функциональностью на уровне строк. Методы
+модели подходят для инкапсуляции всей бизнес-логики в одном месте. Например,
+фрагмент модели &lt;em&gt;Цепочка&lt;/em&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+class Chain(models.Model):
+    &amp;quot;&amp;quot;&amp;quot;Цепочка задач.&amp;quot;&amp;quot;&amp;quot;
+    # Пропущены атрибуты модели для экономии места.
+
+    # Default manager.
+    objects = PassThroughManager.for_queryset_class(ChainQuerySet)()
+
+    def actual_status(self):
+        &amp;quot;&amp;quot;&amp;quot;Определяет фактический статус цепочки.&amp;quot;&amp;quot;&amp;quot;
+        if self.start_date &amp;gt; datetime.date.today():
+            return self.WAIT_STATUS
+        if self.task_set.filter(status=Task.STOP_STATUS).exists():
+            return self.STOP_STATUS
+        last_task = self.last_task()
+        if last_task.actual_status() == Task.DONE_STATUS:
+            return self.DONE_STATUS
+        else:
+            return self.WORK_STATUS
+&lt;/pre&gt;
+&lt;p&gt;Согласно спроектированной архитектуре системы были разработаны следующие
+методы модели данных &lt;em&gt;Задача&lt;/em&gt;:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;em&gt;be_in_time&lt;/em&gt; определяет, успевает ли задача к дедлайну;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;actual_status&lt;/em&gt; определяет фактический статус задачи, основываясь на таких
+данных, как «статический» статус задачи (DONE, STOP), статус предыдущей
+задачи, порядковый номер задачи и текущая дата;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;start_date&lt;/em&gt; определяет дату начала работы над задачей, если это возможно;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;days_to_start&lt;/em&gt; определяет количество дней, оставшихся до начала работы над
+задачей;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;remaining_days&lt;/em&gt; определяет количество полных дней, оставшихся до дедлайна.
+Например, задача ограничена сроком &lt;tt class="docutils literal"&gt;[26; 29)&lt;/tt&gt; и сейчас &lt;em&gt;27 число&lt;/em&gt;. До
+дедлайна остался один полный день &lt;em&gt;(28 число)&lt;/em&gt;, так как текущий день не
+учитывается;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;days_quantity_after_deadline&lt;/em&gt; определяет количество дней, на которые
+просрочена задача;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;expended_days&lt;/em&gt; определяет количество дней, затраченных на задачу;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;duration&lt;/em&gt; определяет количество дней, выделенных на выполнение задачи.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Для модели &lt;em&gt;Цепочка&lt;/em&gt; были реализованы методы:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;em&gt;actual_status&lt;/em&gt; определяет фактический статус цепочки, основываясь на таких
+данных, как дата начала работы над цепочкой, статус текущей задачи цепочки;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;deadline&lt;/em&gt; определяет дедлайн цепочки. Дедлайн цепочки равен дедлайну
+последней задачи в цепочке;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;finish_date&lt;/em&gt; определяет дату завершения цепочки. Дата завершения цепочки
+равна дате завершения последней задачи в цепочке;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;be_in_time&lt;/em&gt; определяет, успевает ли цепочка задач к дедлайну;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;days_to_start&lt;/em&gt; определяет количество дней, оставшихся до начала работы
+цепочки;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;remaining_days&lt;/em&gt; определяет количество дней, оставшихся до дедлайна цепочки.
+Совпадает с количеством дней, оставшихся до дедлайна последней задачи в
+цепочке;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;days_quantity_after_deadline&lt;/em&gt; определяет количество дней, на которые
+просрочена цепочка;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;expended_days&lt;/em&gt; определяет количество дней, затраченных на цепочку;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;last_task&lt;/em&gt; возвращает последнюю задачу из цепочки.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id11"&gt;
+&lt;h3&gt;Менеджер модели&lt;/h3&gt;
+&lt;p&gt;Менеджер модели -- это объект, с помощью которого Django выполняет запросы к
+БД. Каждая модель Django имеет по меньшей мере один менеджер, и разработчик
+может создавать свои менеджеры для организации специализированных видов
+доступа.&lt;/p&gt;
+&lt;p&gt;Потребность создания собственного менеджера может быть вызвана двумя
+причинами: необходимостью добавить менеджеру дополнительные методы или
+необходимостью модифицировать исходный объект QuerySet, возвращаемый
+менеджером &lt;a class="footnote-reference" href="#holovaty" id="id12"&gt;[2]&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Встроенный в Django менеджер моделей не позволяет строить цепочки методов,
+таких как &lt;tt class="docutils literal"&gt;actual_tasks = &lt;span class="pre"&gt;Task.objects.by_worker(user).actual()&lt;/span&gt;&lt;/tt&gt;. Для обхода
+этого ограничения используется сторонняя библиотека &lt;em&gt;django-model-utils&lt;/em&gt;,
+которая позволяет писать QuerySet вместо менеджера &lt;a class="footnote-reference" href="#korobov" id="id13"&gt;[4]&lt;/a&gt;. Например:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+# -*- coding: utf-8 -*-
+from django.db.models.query import QuerySet
+
+
+class ChainQuerySet(QuerySet):
+    def by_owner(self, owner):
+        &amp;quot;&amp;quot;&amp;quot;Возвращает цепочки владельца.&amp;quot;&amp;quot;&amp;quot;
+        return self.filter(owner=owner)
+
+    def actual(self):
+        &amp;quot;&amp;quot;&amp;quot;Возвращает актуальтуные цепочки задач.&amp;quot;&amp;quot;&amp;quot;
+        return self.filter(archive=False).order_by('start_date')
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id14"&gt;
+&lt;h3&gt;Миграция схемы модели&lt;/h3&gt;
+&lt;p&gt;Во время разработки Django приложений наступает момент, когда необходимо
+изменить схему модели данных, например, добавить новое поле. Если разработка
+ведется в группе, то проблема усугубляется тем, что необходимо
+синхронизировать модель. Эту проблему призвана решить библиотека South. Ее
+основными задачами является обеспечение простого, стабильного и независимого
+от БД слоя миграции, чтобы избавить разработчика от проблем изменения схемы.&lt;/p&gt;
+&lt;p&gt;Рассмотрим типовые примеры начала работы с South &lt;a class="footnote-reference" href="#south" id="id15"&gt;[5]&lt;/a&gt;. Случай, когда в
+базе данных нет таблиц и нет файлов миграций -- состояние проекта сразу после
+выполнения команда &lt;tt class="docutils literal"&gt;manage.py startapp myapp&lt;/tt&gt;. Далее, вместо команды
+&lt;tt class="docutils literal"&gt;manage.py syncdb&lt;/tt&gt; нужно создать начальную миграцию командой &lt;tt class="docutils literal"&gt;manage.py
+schemamigration myapp &lt;span class="pre"&gt;--initial&lt;/span&gt;&lt;/tt&gt; и применить миграцию командой
+&lt;tt class="docutils literal"&gt;manage.py migrate myapp&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Следующий вариант, когда таблицы уже созданы, но нет файлов миграций. В данной
+ситуации необходимо выполнить команду &lt;tt class="docutils literal"&gt;manage.py convert_to_south myapp&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Возможна ситуация, когда таблицы уже созданы, но миграции еще не применены.
+Тогда необходимо выполнить &lt;tt class="docutils literal"&gt;manage.py migrate myapp 0001 &lt;span class="pre"&gt;--fake&lt;/span&gt;&lt;/tt&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id16"&gt;
+&lt;h2&gt;Шаблон&lt;/h2&gt;
+&lt;p&gt;Шаблон -- это текстовый документ или строка Python, который размечен с
+применением языка шаблонов Django. Шаблон может содержать шаблонные теги и
+шаблонные переменные.&lt;/p&gt;
+&lt;p&gt;При выборе места хранения шаблонов в многоразовых Django приложениях
+рекомендуется &lt;a class="footnote-reference" href="#lincolnloop" id="id17"&gt;[6]&lt;/a&gt; использовать следующий путь:
+&lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;корень-репозитория/название_приложения/templates/название_приложения/&lt;/span&gt;
+название_шаблона&lt;/tt&gt;. Например, &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;django-todo/todo/templates/todo/base.html&lt;/span&gt;&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Название шаблонов следует выбирать придерживаясь следующей конвенции
+&lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;[model]_[function].html&lt;/span&gt;&lt;/tt&gt;, например, &lt;tt class="docutils literal"&gt;task_list.html&lt;/tt&gt;. Отнюдь не каждое
+название шаблона, полученное в соответствии с конвенцией, получается
+подходящим. В таких случаях следует выбирать название по своему усмотрению.&lt;/p&gt;
+&lt;p&gt;Шаблонный тег -- это некоторое обозначение в шаблоне, с которым ассоциирована
+программная логика. Например, шаблонный тег может порождать содержимое,
+выступать в роли управляющей конструкции, получать содержимое из базы данных
+или разрешать доступ к другим шаблонным тегам.&lt;/p&gt;
+&lt;p&gt;Шаблоны пользовательских тегов и частичные шаблоны рекомендуется хранить в
+директории &lt;tt class="docutils literal"&gt;includes&lt;/tt&gt;. Например, отображение информации о цепочке задач
+вынесено в шаблон &lt;tt class="docutils literal"&gt;includes/chain.html&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Пользовательские теги шаблона рекомендуется хранить в каталоге:
+&lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;корень-репозитория/название_приложения/templatetags/&lt;/span&gt;
+[название_приложения]_tags.py&lt;/tt&gt;. Например, &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;django-todo/todo/templatetags/&lt;/span&gt;
+todo_tags.py&lt;/tt&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="url"&gt;
+&lt;h2&gt;Представления и конфигурирование URL&lt;/h2&gt;
+&lt;p&gt;Представление -- функция на языке Python, которая принимает экземпляр класса
+&lt;em&gt;HttpRequest&lt;/em&gt; в качестве первого параметра и возвращает экземпляр класса
+&lt;em&gt;HttpResponse&lt;/em&gt;. Ниже приведен код функции вместе с командами импорта из файла
+&lt;tt class="docutils literal"&gt;views.py&lt;/tt&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+# -*- coding: utf-8 -*-
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+
+from todo.models import Chain, Task
+
+
+&amp;#64;login_required
+def actual_tasks(request):
+    &amp;quot;&amp;quot;&amp;quot;Отображает список актуальных задач для исполнителя.&amp;quot;&amp;quot;&amp;quot;
+    user = request.user
+    actual_tasks = Task.objects.by_worker(user).actual()
+    return render(request, 'todo/task_list.html', {
+        'place': 'tasks',
+        'actual_tasks': actual_tasks,
+    })
+&lt;/pre&gt;
+&lt;p&gt;Чтобы связать функцию представления с URL, в Django используется механизм
+конфигурации URL. Django ожидает найти переменную &lt;em&gt;urlpatterns&lt;/em&gt; в конфигурации
+URL. Она определяет соответствие между URL-адресами и обрабатывающим их кодом.&lt;/p&gt;
+&lt;p&gt;Вот как подключается представление &lt;em&gt;actual_tasks&lt;/em&gt; и &lt;em&gt;task_archive&lt;/em&gt; в файле
+&lt;tt class="docutils literal"&gt;urls.py&lt;/tt&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+from django.conf.urls.defaults import patterns, url
+
+urlpatterns = patterns('todo.views',
+    url(r'^$', 'actual_tasks', name='todo_actual_tasks'),
+    url(r'^task/archive/$', 'task_archive', name='todo_task_archive'),
+)
+&lt;/pre&gt;
+&lt;p&gt;Любой запрос к URL &lt;tt class="docutils literal"&gt;/task/archive/&lt;/tt&gt; должен обрабатываться функцией
+&lt;em&gt;task_archive&lt;/em&gt;, а запрос &lt;tt class="docutils literal"&gt;/&lt;/tt&gt; будет обрабатываться &lt;em&gt;actual_tasks&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;Названия шаблонам URL рекомендуется давать в форме &lt;tt class="docutils literal"&gt;APP_MODEL_VIEW&lt;/tt&gt;,
+например, &lt;tt class="docutils literal"&gt;blog_post_detail&lt;/tt&gt; или &lt;tt class="docutils literal"&gt;blog_post_list&lt;/tt&gt;.&lt;/p&gt;
+&lt;table class="docutils footnote" frame="void" id="mcconnell" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;[1]&lt;/td&gt;&lt;td&gt;&lt;em&gt;(&lt;a class="fn-backref" href="#id1"&gt;1&lt;/a&gt;, &lt;a class="fn-backref" href="#id2"&gt;2&lt;/a&gt;, &lt;a class="fn-backref" href="#id9"&gt;3&lt;/a&gt;)&lt;/em&gt; Макконелл С. Совершенный код. Мастер-класс /
+Пер. с англ. – М. : Издательство &amp;quot;Русская редакция&amp;quot;, 2012. – 896 стр. : ил.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="holovaty" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;[2]&lt;/td&gt;&lt;td&gt;&lt;em&gt;(&lt;a class="fn-backref" href="#id5"&gt;1&lt;/a&gt;, &lt;a class="fn-backref" href="#id12"&gt;2&lt;/a&gt;)&lt;/em&gt; Головатый А., Каплан-Мосс Дж. Django. Подробное руководство,
+2-е издание. – Пер. с англ. – СПб.: Символ-Плюс, 2010. – 560 с., ил.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="django" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;[3]&lt;/td&gt;&lt;td&gt;&lt;em&gt;(&lt;a class="fn-backref" href="#id7"&gt;1&lt;/a&gt;, &lt;a class="fn-backref" href="#id8"&gt;2&lt;/a&gt;)&lt;/em&gt; Django community. &lt;a class="reference external" href="https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/"&gt;Django Coding Style&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="korobov" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id13"&gt;[4]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Коробов М. &lt;a class="reference external" href="http://habrahabr.ru/post/142703/"&gt;Рецепты от ПанГурмана&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="south" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id15"&gt;[5]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Godwin A. &lt;a class="reference external" href="http://south.readthedocs.org/en/latest/tutorial/index.html"&gt;South documentation&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="lincolnloop" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id17"&gt;[6]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Lincoln Loop company. &lt;a class="reference external" href="http://lincolnloop.com/django-best-practices/"&gt;Django Best Practices&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+</summary><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="construction"></category></entry><entry><title>Django TODO: проектирование архитектуры системы</title><link href="http://marselester.github.com/django-todo-design-architecture.html" rel="alternate"></link><updated>2012-06-29T11:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-06-29:django-todo-design-architecture.html</id><summary type="html">&lt;p&gt;Следующим этапом разработки системы является проектирование архитектуры.&lt;/p&gt;
+&lt;p&gt;Архитектура должна быть продуманным концептуальным целым. Главный тезис самой
+популярной книги по разработке ПО &amp;quot;Мифический человеко-месяц&amp;quot; гласит, что
+основной проблемой, характерной для крупных систем, является поддержание их
+концептуальной целостности. Хорошая архитектура должна соответствовать
+проблеме &lt;a class="footnote-reference" href="#mcconnell" id="id1"&gt;[1]&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Разделение системы на подсистемы на уровне архитектуры, позволяет
+концентрироваться в каждый конкретный момент времени на меньшей части системы.&lt;/p&gt;
+&lt;p&gt;Обобщенная схема работы системы приведена на рисунке.&lt;/p&gt;
+&lt;img alt="http://marselester.ru/media/django_todo_block_schema.png" src="http://marselester.ru/media/django_todo_block_schema.png" /&gt;
+&lt;p&gt;Работа пользователя с системой начинается с авторизации. После успешной
+аутентификации пользователь попадает на страницу с задачами, поставленными ему
+другими пользователями. Далее он может перейти в раздел проектов, либо в
+раздел &amp;quot;сотрудники&amp;quot;.&lt;/p&gt;
+&lt;div class="section" id="id2"&gt;
+&lt;h2&gt;Модель данных&lt;/h2&gt;
+&lt;p&gt;Уровень доступа к данным. На этому уровне сосредоточена вся информация о
+данных: как получить к ним доступ, как осуществлять контроль, каково их
+поведение, каковы отношения между данными.&lt;/p&gt;
+&lt;div class="section" id="id3"&gt;
+&lt;h3&gt;Модель &amp;quot;Задача&amp;quot;&lt;/h3&gt;
+&lt;p&gt;Модель данных &lt;em&gt;Задача&lt;/em&gt; содержит следующие атрибуты:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p class="first"&gt;&lt;em&gt;задача&lt;/em&gt; -- описание сути задачи. Текстовое поле, обязательное для
+заполнения;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;&lt;em&gt;исполнитель&lt;/em&gt; -- идентификатор сотрудника. Целочисленное поле, обязательное
+для заполнения;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;&lt;em&gt;статус&lt;/em&gt; -- целочисленное поле, обязательное для заполнения. Может принимать
+значения: UNCERTAIN (не определен), DONE (завершен), STOP (прерван), WAIT
+(в ожидании), WORK (в работе). Статусы WAIT и WORK вычисляются при выборке
+из базы данных на основе даты начала и статуса предыдущей задачи. Задача
+может быть завершена (DONE) или прервана (STOP) только из статуса WORK.
+Статус STOP нужен в случае, когда дальнейшее выполнение работы над задачей
+невозможно. Сигнализирует, что необходимо вмешательство руководителя
+проекта. Только руководитель может отредактировать прерванную задачу
+(например, изменить дедлайн задачи) и вновь запустить ее на выполнение
+(сменить статус на WORK). Статус задачи WAIT может быть в случае:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;если она первая в цепочке и дата начала работы над цепочкой не наступила;&lt;/li&gt;
+&lt;li&gt;если статус предыдущей задачи не DONE.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Статус задачи WORK может быть в случае:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;если она первая в цепочке и наступила дата начала работы над цепочкой;&lt;/li&gt;
+&lt;li&gt;если статус предыдущей задачи DONE.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;&lt;em&gt;дедлайн&lt;/em&gt; -- крайняя дата завершения работы над задачей. Дедлайн задачи
+должен быть больше, чем дедлайн предыдущей задачи;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;&lt;em&gt;дата завершения&lt;/em&gt; -- дата завершения работы над задачей. Поле заполняется по
+завершению работы над задачей. Может не совпадать с дедлайном;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;&lt;em&gt;цепочка&lt;/em&gt; -- идентификатор цепи, к которой относится задача. Поле
+обязательно для заполнения;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;&lt;em&gt;порядковый номер&lt;/em&gt; -- целочисленное поле, больше или равно единице,
+обязательное для заполнения. Поле введено для сортировки задач в цепочке и
+простого способа получения предыдущей задачи;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;&lt;em&gt;архив&lt;/em&gt; -- флаг, по которому определяется актуальность задачи для ее
+исполнителя.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Модель данных &lt;em&gt;Задача&lt;/em&gt; содержит вычисляемые атрибуты:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;em&gt;дата начала&lt;/em&gt; -- определяет дату начала работы над задачей. Для первой
+задачи равна дате начала работы над цепочкой. Для задачи со статусом WAIT
+равна дедлайну предыдущей задачи. Если дедлайн нарушен, дата начала задачи
+не прогнозируема. Для остальных статусов равна дате окончания предыдущей
+задачи;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;срок до начала работы&lt;/em&gt; -- определяет количество дней, оставшихся до начала
+работы над задачей (статус WAIT);&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;срок до дедлайна&lt;/em&gt; -- определяет количество дней, оставшихся до дедлайна
+задачи;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;просроченные дни&lt;/em&gt; -- определяет количество дней, на которые просрочена
+задача;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;фактический срок&lt;/em&gt; -- определяет количество дней, затраченных на задачу.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id4"&gt;
+&lt;h3&gt;Модель &amp;quot;Цепочка&amp;quot;&lt;/h3&gt;
+&lt;p&gt;Модель данных &lt;em&gt;Цепочка&lt;/em&gt; содержит следующие атрибуты:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;em&gt;название&lt;/em&gt; -- текстовое поле, обязательное для заполнения;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;владелец&lt;/em&gt; -- идентификатор сотрудника. Целочисленное поле, обязательное для
+заполнения;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;дата начала&lt;/em&gt; -- дата начала работы над цепочкой задач. Поле обязательно для
+заполнения;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;приоритет&lt;/em&gt; -- приоритет цепочки (срочно, не срочно);&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;архив&lt;/em&gt; -- флаг, по которому определяется актуальность цепочки для ее
+владельца;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Модель данных &lt;em&gt;Цепочка&lt;/em&gt; содержит вычисляемые атрибуты:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;em&gt;статус&lt;/em&gt; -- статус цепочки совпадает со статусом текущей задачи цепочки;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;дедлайн&lt;/em&gt; -- дедлайн цепочки совпадает с дедлайном последней задачи;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;срок до дедлайна&lt;/em&gt; -- определяет количество полных дней, оставшихся до
+дедлайна последней задачи;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;просроченные дни&lt;/em&gt; -- определяет количество дней, на которые просрочена
+последняя задача;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;фактический срок&lt;/em&gt; -- определяет количество дней, затраченных на цепочку.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Модель данных &lt;em&gt;Сотрудник&lt;/em&gt; содержит текстовые атрибуты &lt;em&gt;ФИО&lt;/em&gt; и &lt;em&gt;должность&lt;/em&gt;,
+обязательные для заполнения.&lt;/p&gt;
+&lt;table class="docutils footnote" frame="void" id="mcconnell" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id1"&gt;[1]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Макконелл С. Совершенный код. Мастер-класс /
+Пер. с англ. – М. : Издательство &amp;quot;Русская редакция&amp;quot;, 2012. – 896 стр. : ил.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</summary><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="architecture"></category></entry><entry><title>Django TODO: выработка требований к системе</title><link href="http://marselester.github.com/django-todo-development-of-system-requirements.html" rel="alternate"></link><updated>2012-06-29T11:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-06-29:django-todo-development-of-system-requirements.html</id><summary type="html">&lt;p&gt;После прочтения Макконелла захотелось спроецировать его советы на Django.
+Для этого я взял за основу разработку системы &lt;a class="reference external" href="https://github.com/marselester/django-todo"&gt;Django TODO&lt;/a&gt;. Итак, первый этап -- выработка требований к
+системе.&lt;/p&gt;
+&lt;p&gt;Требования подробно описывают, что должна делать система. Внимание к
+требованиям помогает свести к минимуму изменения системы после начала
+разработки. Явные требования помогают гарантировать, что функциональность
+системы определяется пользователем, а не программистом. Если явных требований
+нет, программисту обычно самому приходится вырабатывать их во время
+программирования &lt;a class="footnote-reference" href="#mcconnell" id="id2"&gt;[1]&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;В данном случае приложение должно предоставлять простой механизм создания
+цепочек задач, мониторинг статуса их выполнения, а также должно отображать
+актуальные задачи для исполнителя.&lt;/p&gt;
+&lt;p&gt;Для каждой задачи цепочки устанавливается дедлайн, который должен быть больше,
+чем дедлайн предыдущей задачи. Под дедлайном подразумевается дата в формате
+&lt;em&gt;дд.мм.гггг&lt;/em&gt;, до которой задача должна быть завершена.&lt;/p&gt;
+&lt;p&gt;В списке задач отображаются актуальные задачи, в которых пользователь
+фигурирует как исполнитель. Пользователь сам отправляет задачи в архив, тем
+самым он решает, какие задачи для него актуальны.&lt;/p&gt;
+&lt;p&gt;Отображение дополнительной информации о сроке задачи зависит от ее статуса.
+Пример возможных вариантов для статуса &lt;em&gt;WAIT&lt;/em&gt;:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;задача начнет работать через десять дней;&lt;/li&gt;
+&lt;li&gt;дата начала работы не прогнозируема, так как предыдущая задача превысила
+свой дедлайн и использует рабочие дни текущей задачи;&lt;/li&gt;
+&lt;li&gt;дедлайн просрочен на один день, так как предыдущая задача превысила свой
+дедлайн и дедлайн текущей задачи.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Пример возможных вариантов для статусов &lt;em&gt;WORK&lt;/em&gt; и &lt;em&gt;STOP&lt;/em&gt;: до дедлайна осталось
+два дня, дедлайн просрочен на один день. Пример возможных вариантов для
+статуса &lt;em&gt;DONE&lt;/em&gt;: выполнено в срок за пять дней, дедлайн просрочен на один день.&lt;/p&gt;
+&lt;p&gt;В списке цепочек задач необходимо отображать актуальные цепочки пользователя,
+отсортированные по дедлайну (сверху старые, внизу новые). Актуальность цепочки
+определяет ее владелец. Каждая цепочка задач должна содержать:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;название;&lt;/li&gt;
+&lt;li&gt;дедлайн;&lt;/li&gt;
+&lt;li&gt;информацию об исполнителе задачи, ее статусе, выделенный и фактический срок
+исполнения;&lt;/li&gt;
+&lt;li&gt;информацию о сроке цепочки, которая зависит от статуса цепочки.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;table class="docutils footnote" frame="void" id="mcconnell" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id2"&gt;[1]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Макконелл С. Совершенный код. Мастер-класс /
+Пер. с англ. – М. : Издательство &amp;quot;Русская редакция&amp;quot;, 2012. – 896 стр. : ил.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+</summary><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="requirements"></category></entry><entry><title>Соглашения по разработке на Python/Django</title><link href="http://marselester.github.com/links-to-best-practices-of-python-django.html" rel="alternate"></link><updated>2012-06-29T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-06-29:links-to-best-practices-of-python-django.html</id><summary type="html">&lt;p&gt;Во время разработки я часто сверяюсь с известными мне соглашениями,
+стараюсь следовать рекомендациям. Цитировать их не имеет смысла -- лучше
+приведу ссылки.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.python.org/dev/peps/pep-0008/"&gt;PEP 8 -- Style Guide for Python Code&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://python.net/~goodger/projects/pycon/2007/idiomatic/handout.html#long-lines-continuations"&gt;Code Like a Pythonista: Idiomatic Python&lt;/a&gt;.
+В нем я нашел ответы на вопросы форматирования длинных строк:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+expended_time = (self.finish_date() - self.start_date
+                 + datetime.timedelta(days=1))
+&lt;/pre&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://google-styleguide.googlecode.com/svn/trunk/pyguide.html"&gt;Google Python Style Guide&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/"&gt;Coding style&lt;/a&gt; из документации Django.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://lincolnloop.com/django-best-practices/"&gt;Django Best Practices&lt;/a&gt; от
+компании Lincoln Loop.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://docs.python-guide.org/en/latest/index.html"&gt;The Hitchhiker’s Guide to Python!&lt;/a&gt; от Kenneth Reitz.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://guide.python-distribute.org/"&gt;The Hitchhiker’s Guide to Packaging&lt;/a&gt;
+от Tarek Ziadé.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.s7labs.com/learn/ewa/"&gt;Elements of Web Architecture&lt;/a&gt; от s7labs.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://twitter.com/getpy"&gt;Твиты&lt;/a&gt; с ссылками на интересные статьи по Python
+от &lt;a class="reference external" href="https://twitter.com/czheng"&gt;&amp;#64;czheng&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="section" id="id2"&gt;
+&lt;h2&gt;Рекомендации по именованию от Макконелла&lt;/h2&gt;
+&lt;p&gt;Читать как мантру.&lt;/p&gt;
+&lt;div class="section" id="id3"&gt;
+&lt;h3&gt;Именование переменных&lt;/h3&gt;
+&lt;p&gt;Имя должно полно и точно описывать сущность. Формулирование сути переменной в
+словах.&lt;/p&gt;
+&lt;p&gt;Имя чаще всего описывает проблему реального мира, а не ее решение на языке
+программирования.&lt;/p&gt;
+&lt;p&gt;Значимая часть имени переменной располагаться в начале и читается первой.
+Спецификаторы вычисляемых значений находятся в конце:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+revenue_total
+expense_average
+&lt;/pre&gt;
+&lt;p&gt;Не используйте &amp;quot;Number&amp;quot; из-за двойного смысла (количество и номер). Лучше:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+customer_count
+customer_index
+&lt;/pre&gt;
+&lt;p&gt;Именование булевых переменных в утвердительной форме:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+done
+success или ok
+found
+error
+&lt;/pre&gt;
+&lt;p&gt;Имена должны легко читаться.&lt;/p&gt;
+&lt;p&gt;Избегайте имен, имеющих:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;похожие значения: &lt;tt class="docutils literal"&gt;file_number, file_index&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;похожие звучания: &lt;tt class="docutils literal"&gt;wrap, rap&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;похожие имена: плохо -- &lt;tt class="docutils literal"&gt;client_recs, client_reps&lt;/tt&gt;, хорошо --
+&lt;tt class="docutils literal"&gt;client_records, clients_reports&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;цифры: &lt;tt class="docutils literal"&gt;file1, file2&lt;/tt&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Не используйте &amp;quot;магические числа&amp;quot;, заменяйте их абстрактными сущностями:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+CYCLES_NEEDED = 5
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id4"&gt;
+&lt;h3&gt;Именование функций&lt;/h3&gt;
+&lt;p&gt;Если функция возвращает значение, в имени должно быть указано описание
+возвращаемого значения.&lt;/p&gt;
+&lt;p&gt;Глагол &lt;em&gt;get&lt;/em&gt; здесь излишен:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+cos()
+
+pen.current_color()
+user.last_id()
+&lt;/pre&gt;
+&lt;p&gt;Для именования процедуры используйте &lt;strong&gt;глагол + объект&lt;/strong&gt;, над которым
+выполняется действие:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+print_document()
+repaginate_document()
+
+document.print()
+order_info.check()
+monthly_revenue.calc()
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</summary><category term="python"></category><category term="django"></category><category term="best practices"></category></entry><entry><title>Разделение настроек в Django</title><link href="http://marselester.github.com/splitting-settings-in-django.html" rel="alternate"></link><updated>2012-06-29T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-06-29:splitting-settings-in-django.html</id><summary type="html">&lt;p&gt;В &lt;a class="reference external" href="https://code.djangoproject.com/wiki/SplitSettings"&gt;Django wiki&lt;/a&gt; собраны
+различные способы разделения настроек. Мне нравится &lt;a class="reference external" href="http://senko.net/en/django-quickstart-skeleton-project/"&gt;вариант&lt;/a&gt;, описанный в блоге
+Senko Rašić:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+settings/
+├── __init__.py
+├── base.py
+├── development.py
+├── local.py
+└── production.py
+&lt;/pre&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;base.py&lt;/tt&gt; содержит общие настройки для &lt;tt class="docutils literal"&gt;development.py&lt;/tt&gt; и
+&lt;tt class="docutils literal"&gt;production.py&lt;/tt&gt;, например:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+ADMINS = ()
+MANAGERS = ADMINS
+
+TIME_ZONE = 'Asia/Yekaterinburg'
+# ...
+&lt;/pre&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;production.py&lt;/tt&gt; содержит настройки для эксплуатации. Как минимум, необходимо
+выключить режим отладки:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+from .base import *
+
+DEBUG = False
+TEMPLATE_DEBUG = DEBUG
+# ...
+&lt;/pre&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;development.py&lt;/tt&gt; содержит настройки, необходимые для разработки. Настройки
+должны быть &lt;strong&gt;одинаковы&lt;/strong&gt; и &lt;strong&gt;полезны для всех участников&lt;/strong&gt; процесса
+разработки, например:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+from .base import *
+
+DEBUG = True
+TEMPLATE_DEBUG = DEBUG
+# ...
+&lt;/pre&gt;
+&lt;p&gt;Все индивидуальные настройки разработчика необходимо вынести в &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt;.
+Например, это могут быть настройки подключения к БД, любимые инструменты
+разработки и так далее:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+from .development import *
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': &amp;quot;developer's db name&amp;quot;,
+        'USER': &amp;quot;developer's db user&amp;quot;,
+        'PASSWORD': &amp;quot;developer's db password&amp;quot;,
+        'HOST': ''
+        'PORT': '',
+    }
+}
+&lt;/pre&gt;
+&lt;p&gt;На production сервере &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt; обычно содержит настройки подключения к
+БД:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+from .production import *
+&lt;/pre&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt; не должен отслеживаться VCS.&lt;/p&gt;
+&lt;p&gt;Для Django 1.4 в файлах &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;repo-name/project_name/wsgi.py&lt;/span&gt;&lt;/tt&gt; и
+&lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;repo-name/manage.py&lt;/span&gt;&lt;/tt&gt; нужно указать путь до &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+os.environ.setdefault(&amp;quot;DJANGO_SETTINGS_MODULE&amp;quot;, &amp;quot;project_name.settings.local&amp;quot;)
+&lt;/pre&gt;
+&lt;p&gt;У меня не получилось разместить &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt; на &lt;a class="reference external" href="http://www.heroku.com/"&gt;heroku&lt;/a&gt;, чтобы файл не находился под контролем git (плохо
+искал?). Самое простое решение -- избавиться от &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt;, в &lt;tt class="docutils literal"&gt;manage.py&lt;/tt&gt;
+указать &lt;tt class="docutils literal"&gt;project_name.settings.development&lt;/tt&gt;, а в &lt;tt class="docutils literal"&gt;wsgi.py&lt;/tt&gt; --
+&lt;tt class="docutils literal"&gt;project_name.settings.production&lt;/tt&gt;. Еще можно использовать
+&lt;tt class="docutils literal"&gt;heroku config&lt;/tt&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+$ heroku config:add SECRET_KEY=my_unique_secret_key
+&lt;/pre&gt;
+</summary><category term="python"></category><category term="django"></category><category term="settings"></category></entry><entry><title>Краткий обзор инфраструктуры для разработки reusable Django приложений</title><link href="http://marselester.github.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html" rel="alternate"></link><updated>2012-06-13T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-06-13:short-overview-of-infrastructure-for-developing-reusable-django-apps.html</id><summary type="html">&lt;p&gt;Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
+зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
+веб-приложений на Django к этим проблемам необходимо отнести организацию
+файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
+организации автоматизированного тестирования. В данной статье приведены пути
+решения этих проблем.&lt;/p&gt;
+&lt;p&gt;Важно знать различия между двумя способами разработки Django приложений.
+Первый способ заключается в создании приложения внутри каталога проекта с
+помощью команды &lt;tt class="docutils literal"&gt;manage.py startapp&lt;/tt&gt;. Второй способ – разработка
+независимого приложения. Автономное приложение проще использовать и
+распространять &lt;a class="footnote-reference" href="#bennett" id="id1"&gt;[1]&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="section" id="id2"&gt;
+&lt;h2&gt;Системы пакетирования&lt;/h2&gt;
+&lt;p&gt;Для того чтобы Django смог найти изолированное приложение, нужно чтобы оно
+находилось в Python пути. Python путь – это список каталогов, в которых Python
+ищет модули, всякий раз исполняя оператор &lt;tt class="docutils literal"&gt;import&lt;/tt&gt;. При установке
+интерпретатора Python создается директория &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;site-packages&lt;/span&gt;&lt;/tt&gt; и добавляется в
+Python путь. Все сторонние приложения устанавливаются в &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;site-packages&lt;/span&gt;&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Python имеет систему пакетов, которая позволяет распространять программы и
+библиотеки в стандартном формате, что помогает легко устанавливать и
+использовать их. Помимо распространения пакетов Python также обеспечивает
+централизованный сервис для контрибуции пакетов. Этот сервис называется Индекс
+Python Пакетов (PyPI). Он позволяет разработчикам распространять пакет
+большому сообществу с небольшими затратами усилий. Использование пакетов дает
+такие преимущества, как:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;управление зависимостями пакетов;&lt;/li&gt;
+&lt;li&gt;получение информации об установленных пакетах (например, версия пакета);&lt;/li&gt;
+&lt;li&gt;удаление пакетов;&lt;/li&gt;
+&lt;li&gt;поиск пакетов по PyPI &lt;a class="footnote-reference" href="#ziade" id="id3"&gt;[2]&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Текущее состояние систем пакетирования показано на рисунке. Если
+разрабатываемому пакету необходим модуль &lt;em&gt;Setuptools&lt;/em&gt;, рекомендуется
+установить &lt;em&gt;Distribute&lt;/em&gt;, который является обновленной версией оригинального
+&lt;em&gt;Setuptools&lt;/em&gt;. &lt;em&gt;Distribute&lt;/em&gt; был создан так как &lt;em&gt;Setuptools&lt;/em&gt; больше не
+поддерживается разработчиками. Модуль &lt;em&gt;distutils&lt;/em&gt; является частью стандартной
+библиотеки Python и обеспечивает основу для пакетирования. В будущем
+&lt;em&gt;distutils2&lt;/em&gt; заменит &lt;em&gt;Setuptools&lt;/em&gt; и &lt;em&gt;distutils&lt;/em&gt;, а также устранит
+необходимость в &lt;em&gt;Distribute&lt;/em&gt;. До завершения работ над &lt;em&gt;distutils2&lt;/em&gt;
+разработчикам рекомендуют использовать &lt;em&gt;distutils&lt;/em&gt; &lt;a class="footnote-reference" href="#ziade" id="id4"&gt;[2]&lt;/a&gt;.&lt;/p&gt;
+&lt;img alt="http://guide.python-distribute.org/_images/state_of_packaging.jpg" src="http://guide.python-distribute.org/_images/state_of_packaging.jpg" /&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id5"&gt;
+&lt;h2&gt;Управление экосистемой пакетирования&lt;/h2&gt;
+&lt;p&gt;Для манипулирования экосистемой пакетирования были разработаны такие
+инструменты, как Pip и Virtualenv. Pip – это инструмент для установки и
+управления Python пакетами. С его помощью можно:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;устанавливать пакеты, например, &lt;tt class="docutils literal"&gt;pip install Django&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;показывать список установленных пакетов и их версии, например,
+&lt;tt class="docutils literal"&gt;pip freeze&lt;/tt&gt; отобразит &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;Django==1.3.1,&lt;/span&gt; &lt;span class="pre"&gt;pep8==0.6.1,&lt;/span&gt;
+&lt;span class="pre"&gt;virtualenv==1.7.1.2&lt;/span&gt;&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;устанавливать пакеты определенных версий, например,
+&lt;tt class="docutils literal"&gt;pip install &lt;span class="pre"&gt;'Mark-down&amp;gt;2.0,&amp;lt;2.0.3'&lt;/span&gt;&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;обновлять пакеты, например, &lt;tt class="docutils literal"&gt;pip install &lt;span class="pre"&gt;--upgrade&lt;/span&gt; Django&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;удалять пакеты, например, &lt;tt class="docutils literal"&gt;pip uninstall Markdown&lt;/tt&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Для того чтобы не смешивать экспериментальные пакеты со стабильными пакетами,
+разработчики используют Virtualenv. Данный инструмент позволяет создавать
+изолированные Python окружения и устанавливать в них пакеты, не модифицируя
+системное окружение Python. Например, &lt;tt class="docutils literal"&gt;virtualenv &lt;span class="pre"&gt;--no-site-packages&lt;/span&gt; my_env&lt;/tt&gt;
+создаст окружение &lt;tt class="docutils literal"&gt;my_env&lt;/tt&gt; без пакетов, &lt;tt class="docutils literal"&gt;source my_env/bin/activate&lt;/tt&gt;
+активирует окружение &lt;tt class="docutils literal"&gt;my_env&lt;/tt&gt;, а &lt;tt class="docutils literal"&gt;deactivate&lt;/tt&gt; отключит его.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id6"&gt;
+&lt;h2&gt;Метаданные проекта&lt;/h2&gt;
+&lt;p&gt;Наименьший проект на Python состоит из двух файлов. Файл &lt;tt class="docutils literal"&gt;setup.py&lt;/tt&gt;, который
+содержит метаданные о проекте и файл, который содержит Python код для
+реализации функциональности проекта. В &lt;tt class="docutils literal"&gt;setup.py&lt;/tt&gt; есть только три поля,
+необходимые для заполнения: &lt;em&gt;name&lt;/em&gt;, &lt;em&gt;version&lt;/em&gt; и &lt;em&gt;packages&lt;/em&gt;. Поле &lt;em&gt;name&lt;/em&gt; должно
+быть уникальным для публикации в PyPI. Поле &lt;em&gt;version&lt;/em&gt; следит за различными
+версиями проекта. Поле &lt;em&gt;packages&lt;/em&gt; описывает, где размещен Python код проекта
+&lt;a class="footnote-reference" href="#ziade" id="id7"&gt;[2]&lt;/a&gt;. Ниже приведен пример файла &lt;tt class="docutils literal"&gt;setup.py&lt;/tt&gt;, который также включает
+информацию о лицензии и описание проекта:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+#!/usr/bin/env python
+from distutils.core import setup
+
+setup(
+    name='django-todo',
+    version='0.1dev',
+    long_description=open('README.rst').read(),
+    licence='MIT license',
+    packages=[
+        'todo',
+        'todo.templatetags',
+    ]
+)
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id8"&gt;
+&lt;h2&gt;Структура репозитория&lt;/h2&gt;
+&lt;p&gt;Для удобства разработки в Django существует стандарт организации проекта и
+стиль кодирования &lt;a class="footnote-reference" href="#django" id="id9"&gt;[3]&lt;/a&gt;. При разработке приложений автор в большей
+степени опирается на них, а также на практический опыт компании Lincoln Loop
+&lt;a class="footnote-reference" href="#lincolnloop" id="id10"&gt;[4]&lt;/a&gt;. Руководство по стилю кодирования и автоматизация имеет важное
+значение для цикла разработки. Структура репозитория в той же степени является
+важной частью архитектуры проекта. Рассмотрим некоторые особенности:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;README.rst&lt;/tt&gt; должен содержать описание проекта в формате reST;&lt;/li&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;LICENSE&lt;/tt&gt; должен содержать полный текст лицензии;&lt;/li&gt;
+&lt;li&gt;аргумент &lt;em&gt;install_requires&lt;/em&gt; в &lt;tt class="docutils literal"&gt;setup.py&lt;/tt&gt; нужен для перечисления
+зависимостей проекта;&lt;/li&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;MANIFEST.in&lt;/tt&gt; – это шаблон, который определяет, какие файлы должны быть
+включены в пакет, например, &lt;tt class="docutils literal"&gt;include README.rst&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;в &lt;tt class="docutils literal"&gt;requirements.txt&lt;/tt&gt; следует указывать зависимости, необходимые для
+участия в разработке проекта (тестирование, генерация документации)
+&lt;a class="footnote-reference" href="#reitz" id="id11"&gt;[5]&lt;/a&gt;;&lt;/li&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;todo/__init__.py&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;todo/models.py&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;docs/conf.py&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;docs/index.rst&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;tests/__init__.py&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;&lt;tt class="docutils literal"&gt;tests/models.py&lt;/tt&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id12"&gt;
+&lt;h2&gt;Обнаружение и запуск тестов&lt;/h2&gt;
+&lt;p&gt;Тесты не следует распространять вместе с модулем, так как это приводит к
+увеличению сложности для конечных пользователей – наборы тестов требуют
+дополнительных зависимостей. На конференции &lt;em&gt;PyCon US 2012&lt;/em&gt; Карл Майер
+предложил решение &lt;a class="footnote-reference" href="#meyer" id="id13"&gt;[6]&lt;/a&gt;, которое позволило отделить тесты от приложений в
+проекте и реализовать обнаружение и запуск всех тестов из каталога &lt;tt class="docutils literal"&gt;tests&lt;/tt&gt;.
+Автор применил данное решение для организации тестов в многоразовых Django
+приложениях &lt;a class="footnote-reference" href="#app-skeleton" id="id14"&gt;[7]&lt;/a&gt;. В корне репозитория располагается скрипт
+&lt;tt class="docutils literal"&gt;runtests.py&lt;/tt&gt;, который запускает тесты:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+#!/usr/bin/env python
+import os
+import sys
+
+os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.settings'
+
+from django.test.utils import get_runner
+from django.conf import settings
+
+
+def runtests():
+    TestRunner = get_runner(settings)
+
+    test_runner = TestRunner(verbosity=1, interactive=True, failfast=False)
+    failures = test_runner.run_tests([])
+    sys.exit(failures)
+
+if __name__ == '__main__':
+    runtests()
+&lt;/pre&gt;
+&lt;p&gt;Настройки для их запуска указаны в файле &lt;tt class="docutils literal"&gt;tests/settings.py&lt;/tt&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+import os
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+    }
+}
+INSTALLED_APPS = (
+    'app_name',
+)
+
+BASE_PATH = os.path.dirname(os.path.dirname(__file__))
+TEST_DISCOVERY_ROOT = os.path.join(BASE_PATH, 'tests')
+
+TEST_RUNNER = 'tests.runner.DiscoveryDjangoTestSuiteRunner'
+
+FIXTURE_DIRS = (
+    os.path.join(TEST_DISCOVERY_ROOT, 'fixtures'),
+)
+&lt;/pre&gt;
+&lt;p&gt;Обнаружение тестов осуществляется во всех файлах, которые находятся в каталоге
+&lt;tt class="docutils literal"&gt;tests&lt;/tt&gt; и название которых совпадает с &lt;em&gt;models.py&lt;/em&gt;, &lt;em&gt;tests.py&lt;/em&gt; или
+&lt;em&gt;test*.py&lt;/em&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="id15"&gt;
+&lt;h2&gt;Автоматизация тестирования&lt;/h2&gt;
+&lt;p&gt;Для автоматизации тестирования Python проектов автор использует инструмент
+tox. Он может быть использован:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;для проверки, что пакеты устанавливаются правильно в разных версиях Python;&lt;/li&gt;
+&lt;li&gt;для запуска тестов в каждой из сред;&lt;/li&gt;
+&lt;li&gt;в качестве интерфейса для сервера непрерывной интеграции, например, Jenkins.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Ниже приведен пример конфигурации &lt;tt class="docutils literal"&gt;tox.ini&lt;/tt&gt; со средами &lt;em&gt;Python 2.6&lt;/em&gt;,
+&lt;em&gt;Python 2.7&lt;/em&gt; и &lt;em&gt;Django 1.3&lt;/em&gt; &lt;a class="footnote-reference" href="#django-todo" id="id16"&gt;[8]&lt;/a&gt;:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+[tox]
+envlist=py26,py27,dj13
+
+[testenv]
+deps=
+    django==1.4.0
+    git+https://github.com/rbarrois/factory_boy.git
+    webtest
+    django-webtest
+
+commands=python runtests.py
+
+[testenv:dj13]
+deps=
+    django==1.3.1
+    git+https://github.com/rbarrois/factory_boy.git
+    webtest
+    django-webtest
+&lt;/pre&gt;
+&lt;p&gt;Окружение &lt;em&gt;testenv&lt;/em&gt; является средой по умолчанию. В ней описаны пакеты с
+указаниями версий, которые необходимы для тестирования проекта (в данном
+случае это фреймворк Django версии 1.4.1, последние версии инструментов для
+тестирования – factory_boy, webtest, django-webtest).&lt;/p&gt;
+&lt;table class="docutils footnote" frame="void" id="bennett" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id1"&gt;[1]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Bennett B. Practical Django Projects.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="ziade" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;[2]&lt;/td&gt;&lt;td&gt;&lt;em&gt;(&lt;a class="fn-backref" href="#id3"&gt;1&lt;/a&gt;, &lt;a class="fn-backref" href="#id4"&gt;2&lt;/a&gt;, &lt;a class="fn-backref" href="#id7"&gt;3&lt;/a&gt;)&lt;/em&gt; Ziadé T. &lt;a class="reference external" href="http://guide.python-distribute.org/"&gt;The Hitchhiker's Guide to Packaging&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="django" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id9"&gt;[3]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Django community. &lt;a class="reference external" href="https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/"&gt;Django Coding Style&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="lincolnloop" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id10"&gt;[4]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Lincoln Loop company. &lt;a class="reference external" href="http://lincolnloop.com/django-best-practices/"&gt;Django Best Practices&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="reitz" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id11"&gt;[5]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Reitz K. &lt;a class="reference external" href="http://kennethreitz.com/repository-structure-and-python.html"&gt;Repository Structure and Python&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="meyer" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id13"&gt;[6]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Meyer C. &lt;a class="reference external" href="http://carljm.github.com/django-testing-slides/"&gt;Testing and Django&lt;/a&gt; at PyCon US 2012.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="app-skeleton" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id14"&gt;[7]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Мавлеткулов М. &lt;a class="reference external" href="https://github.com/marselester/reusable-django-app-skeleton"&gt;Reusable Django app skeleton&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="django-todo" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id16"&gt;[8]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Мавлеткулов М. &lt;a class="reference external" href="https://github.com/marselester/django-todo"&gt;Система управления цепочками задач&lt;/a&gt;.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+</summary><category term="python"></category><category term="django"></category><category term="infrastructure"></category></entry></feed>

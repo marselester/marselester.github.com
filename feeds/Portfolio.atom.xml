@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.github.com/" rel="alternate"></link><link href="http://marselester.github.com/feeds/Portfolio.atom.xml" rel="self"></link><id>http://marselester.github.com/</id><updated>2012-10-13T00:00:00+06:00</updated><entry><title>Стартап fangid.com</title><link href="http://marselester.github.com/startap-fangidcom.html" rel="alternate"></link><updated>2012-10-13T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-10-13:startap-fangidcom.html</id><summary type="html">&lt;p&gt;В середине июля 2012 г. команда &lt;a class="reference external" href="http://fangid.com/"&gt;стартапа fangid.com&lt;/a&gt;
+приступила к воплощению идеи социальной концертной платформы на севере
+Таиланда. Я занимался подготовительными работами (соглашениями по разработке,
+первоначальной подготовкой репозитория, например, продумыванием структуры,
+организацией тестов, разделением настроек), принимал участие в выработке
+требований к системе и проектировании архитектуры. При конструировании системы
+моими основными задачами были:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;социальная регистрация/авторизация;&lt;/li&gt;
+&lt;li&gt;голосование;&lt;/li&gt;
+&lt;li&gt;страницы концерта, профиля артиста;&lt;/li&gt;
+&lt;li&gt;задачи, требующий Celery (например, загрузка похожих артистов, отправка
+почты);&lt;/li&gt;
+&lt;li&gt;подсистема продажи билетов с оплатой через Робокассу;&lt;/li&gt;
+&lt;li&gt;подсистема скидок.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Также к своим заслугам отношу организацию работы через GitHub, организацию
+модульного и функционального тестирования (unittest, WebTest, factory_boy).&lt;/p&gt;
+&lt;p&gt;Вопреки сжатым срокам мы, как разработчики, старались улучшить процесс
+разработки, используя для мониторинга Sentry и Zabbix, для деплоя -- Fabric.&lt;/p&gt;
+</summary><category term="python"></category><category term="django"></category><category term="startup"></category><category term="thailand"></category></entry></feed>

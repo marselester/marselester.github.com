@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>marselester's blog - best practices</title>
+        <meta charset="utf-8" />
+        <link rel="stylesheet" href=".././theme/css/main.css" type="text/css" />
+        
+        <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
+        
+        
+
+        <!--[if IE]>
+                <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+
+        <!--[if lte IE 7]>
+                <link rel="stylesheet" type="text/css" media="all" href=".././css/ie.css"/>
+                <script src=".././js/IE8.js" type="text/javascript"></script><![endif]-->
+
+        <!--[if lt IE 7]>
+                <link rel="stylesheet" type="text/css" media="all" href=".././css/ie6.css"/><![endif]-->
+
+</head>
+
+<body id="index" class="home">
+
+<a href="https://github.com/marselester/">
+
+<img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub" />
+
+</a>
+
+        <header id="banner" class="body">
+                <h1><a href="../.">marselester's blog </a></h1>
+                <nav><ul>
+                
+                
+                
+                    <li><a href=".././pages/about.html">About</a></li>
+                
+                
+                
+                    <li ><a href=".././category/portfolio.html">Portfolio</a></li>
+                
+                    <li ><a href=".././category/python.html">Python</a></li>
+                
+                </ul></nav>
+        </header><!-- /#banner -->
+                
+
+            
+
+        
+        
+            <aside id="featured" class="body">
+                <article>
+                    <h1 class="entry-title"><a href=".././links-to-best-practices-of-python-django.html">Соглашения по разработке на Python/Django</a></h1> 
+                    <footer class="post-info">
+        <abbr class="published" title="2012-06-29T00:00:00">
+                пт 29 июня 2012
+        </abbr>
+
+        
+        <address class="vcard author">
+                By <a class="url fn" href=".././author/marsel-mavletkulov.html">Marsel Mavletkulov</a>
+        </address>
+        
+<p>In <a href=".././category/python.html">Python</a>. </p>
+<p>tags: <a href=".././tag/python.html">python</a><a href=".././tag/django.html">django</a><a href=".././tag/best-practices.html">best practices</a></p>
+
+
+</footer><!-- /.post-info --><p>Во время разработки я часто сверяюсь с известными мне соглашениями,
+стараюсь следовать рекомендациям. Цитировать их не имеет смысла -- лучше
+приведу ссылки.</p>
+<p><a class="reference external" href="http://www.python.org/dev/peps/pep-0008/">PEP 8 -- Style Guide for Python Code</a>.</p>
+<p><a class="reference external" href="http://python.net/~goodger/projects/pycon/2007/idiomatic/handout.html#long-lines-continuations">Code Like a Pythonista: Idiomatic Python</a>.
+В нем я нашел ответы на вопросы форматирования длинных строк:</p>
+<pre class="literal-block">
+expended_time = (self.finish_date() - self.start_date
+                 + datetime.timedelta(days=1))
+</pre>
+<p><a class="reference external" href="http://google-styleguide.googlecode.com/svn/trunk/pyguide.html">Google Python Style Guide</a>.</p>
+<p><a class="reference external" href="https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/">Coding style</a> из документации Django.</p>
+<p><a class="reference external" href="http://lincolnloop.com/django-best-practices/">Django Best Practices</a> от
+компании Lincoln Loop.</p>
+<p><a class="reference external" href="http://docs.python-guide.org/en/latest/index.html">The Hitchhiker’s Guide to Python!</a> от Kenneth Reitz.</p>
+<p><a class="reference external" href="http://guide.python-distribute.org/">The Hitchhiker’s Guide to Packaging</a>
+от Tarek Ziadé.</p>
+<p><a class="reference external" href="http://www.s7labs.com/learn/ewa/">Elements of Web Architecture</a> от s7labs.</p>
+<p><a class="reference external" href="http://twitter.com/getpy">Твиты</a> с ссылками на интересные статьи по Python
+от <a class="reference external" href="https://twitter.com/czheng">&#64;czheng</a>.</p>
+<div class="section" id="id2">
+<h2>Рекомендации по именованию от Макконелла</h2>
+<p>Читать как мантру.</p>
+<div class="section" id="id3">
+<h3>Именование переменных</h3>
+<p>Имя должно полно и точно описывать сущность. Формулирование сути переменной в
+словах.</p>
+<p>Имя чаще всего описывает проблему реального мира, а не ее решение на языке
+программирования.</p>
+<p>Значимая часть имени переменной располагаться в начале и читается первой.
+Спецификаторы вычисляемых значений находятся в конце:</p>
+<pre class="literal-block">
+revenue_total
+expense_average
+</pre>
+<p>Не используйте &quot;Number&quot; из-за двойного смысла (количество и номер). Лучше:</p>
+<pre class="literal-block">
+customer_count
+customer_index
+</pre>
+<p>Именование булевых переменных в утвердительной форме:</p>
+<pre class="literal-block">
+done
+success или ok
+found
+error
+</pre>
+<p>Имена должны легко читаться.</p>
+<p>Избегайте имен, имеющих:</p>
+<ul class="simple">
+<li>похожие значения: <tt class="docutils literal">file_number, file_index</tt>;</li>
+<li>похожие звучания: <tt class="docutils literal">wrap, rap</tt>;</li>
+<li>похожие имена: плохо -- <tt class="docutils literal">client_recs, client_reps</tt>, хорошо --
+<tt class="docutils literal">client_records, clients_reports</tt>;</li>
+<li>цифры: <tt class="docutils literal">file1, file2</tt>.</li>
+</ul>
+<p>Не используйте &quot;магические числа&quot;, заменяйте их абстрактными сущностями:</p>
+<pre class="literal-block">
+CYCLES_NEEDED = 5
+</pre>
+</div>
+<div class="section" id="id4">
+<h3>Именование функций</h3>
+<p>Если функция возвращает значение, в имени должно быть указано описание
+возвращаемого значения.</p>
+<p>Глагол <em>get</em> здесь излишен:</p>
+<pre class="literal-block">
+cos()
+
+pen.current_color()
+user.last_id()
+</pre>
+<p>Для именования процедуры используйте <strong>глагол + объект</strong>, над которым
+выполняется действие:</p>
+<pre class="literal-block">
+print_document()
+repaginate_document()
+
+document.print()
+order_info.check()
+monthly_revenue.calc()
+</pre>
+</div>
+</div>
+<p>There are <a href=".././links-to-best-practices-of-python-django.html#disqus_thread">comments</a>.</p>
+                </article>
+                
+                    
+                
+            </aside><!-- /#featured -->
+            
+        
+        
+        
+            </ol><!-- /#posts-list -->
+            
+            </section><!-- /#content -->
+        
+    
+
+
+        <section id="extras" class="body">
+        
+        
+                <div class="social">
+                        <h2>social</h2>
+                        <ul>
+                            <li><a href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
+                            
+
+                        
+                            <li><a href="https://github.com/marselester">GitHub</a></li>
+                        
+                            <li><a href="http://twitter.com/marselester">Twitter</a></li>
+                        
+                            <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
+                        
+                            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
+                        
+                            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+                        
+                        </ul>
+                </div><!-- /.social -->
+        
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>, which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+
+                <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
+        </footer><!-- /#contentinfo -->
+
+
+
+
+<script type="text/javascript">
+    var disqus_shortname = 'marselester';
+    (function () {
+        var s = document.createElement('script'); s.async = true;
+        s.type = 'text/javascript';
+        s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
+        (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+    }());
+</script>
+
+</body>
+</html>
