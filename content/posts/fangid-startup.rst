@@ -5,6 +5,7 @@
 :date: 2012-10-13
 :tags: python, django, startup, thailand
 :category: Portfolio
+:slug: fangid-startup
 
 В середине июля 2012 г. команда `стартапа fangid.com <http://fangid.com/>`_
 приступила к воплощению идеи социальной концертной платформы на севере
