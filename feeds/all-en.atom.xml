@@ -1538,4 +1538,82 @@ end start
 &lt;/ul&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="assembler"></category></entry></feed>
+</summary><category term="assembler"></category></entry><entry><title>Моделирование одноканальной СМО с отказами</title><link href="http://marselester.github.com/modeling-single-channel-queue-with-refusals.html" rel="alternate"></link><updated>2009-05-30T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2009-05-30:modeling-single-channel-queue-with-refusals.html</id><summary type="html">&lt;p&gt;Дана одноканальная система массового обслуживания с отказами. В нее поступают
+заявки через промежуток времени &lt;tt class="docutils literal"&gt;n&lt;/tt&gt;, где &lt;tt class="docutils literal"&gt;n&lt;/tt&gt; – случайная величина,
+подчиненная равномерному закону распределения. Время обслуживания заявки
+системой &lt;tt class="docutils literal"&gt;m&lt;/tt&gt; также является случайной величиной с показательным законом
+распределения. Если к моменту прихода заявки канал занят, заявка покидает
+систему необслуженной.&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+&amp;lt;?php
+// Интенсивность потока обслуживания
+$m = 0.5;
+// Время работы системы
+$time_work = 70;
+// Текущее время системы
+$time_system = 0;
+// Время, когда освободится канал
+$chanel = 0;
+// Количество заявок, которым отказано в обработке
+$cnt_denied = 0;
+// Количество обработанных заявок
+$cnt_processed = 0;
+
+/**
+ * Равномерный закон распределения
+ */
+function uniform() {
+    return rand(1, 1000) / 1000;
+}
+
+/**
+ * Показательный закон распределения
+ */
+function exponential() {
+    global $m;
+    return (-1 / $m) * log(rand(1, 1000) / 1000);
+}
+
+while ($time_system &amp;lt;= $time_work) {
+    // Время, через сколько поступила новая заявка
+    $time_claim_in = uniform();
+
+    $time_system += $time_claim_in;
+
+    echo &amp;quot;Время, через сколько поступила новая заявка: $time_claim_in&amp;lt;br/&amp;gt;&amp;quot;;
+    echo &amp;quot;Текущее время системы: $time_system&amp;lt;br/&amp;gt;&amp;quot;;
+
+    // Проверка, свободен ли канал
+    if ($chanel &amp;lt;= $time_system) {
+        $cnt_processed++;
+
+        // Время, на которое заявка заняла канал
+        $time_claim_busy = exponential();
+        $chanel = $time_system + $time_claim_busy;
+
+        echo &amp;quot;Заявка заняла канал на: $time_claim_busy&amp;lt;br/&amp;gt;&amp;quot;;
+        echo &amp;quot;Время, когда освободится канал: $chanel&amp;lt;br/&amp;gt;&amp;quot;;
+    }
+    // Отказываем заявке в обслуживании
+    else {
+        echo 'Заявке отказано&amp;lt;br/&amp;gt;';
+        $cnt_denied++;
+    }
+
+    echo '&amp;lt;hr/&amp;gt;';
+}
+
+$cnt_total = $cnt_processed + $cnt_denied;
+$P_deny = $cnt_denied / $cnt_total;
+$Q = $cnt_processed / $cnt_total;
+$A = $cnt_processed / $time_work;
+
+echo &amp;quot;&amp;lt;b&amp;gt;Общее число заявок:&amp;lt;/b&amp;gt; $cnt_total&amp;lt;br/&amp;gt;&amp;quot;;
+echo &amp;quot;&amp;lt;b&amp;gt;Количество обработанных заявок:&amp;lt;/b&amp;gt; $cnt_processed&amp;lt;br/&amp;gt;&amp;quot;;
+echo &amp;quot;&amp;lt;b&amp;gt;Количество заявок, которым отказано в обработке:&amp;lt;/b&amp;gt; $cnt_denied&amp;lt;br/&amp;gt;&amp;quot;;
+echo &amp;quot;&amp;lt;b&amp;gt;Вероятность отказа:&amp;lt;/b&amp;gt; $P_deny&amp;lt;br/&amp;gt;&amp;quot;;
+echo &amp;quot;&amp;lt;b&amp;gt;Доля обслуженных заявок:&amp;lt;/b&amp;gt; $Q&amp;lt;br/&amp;gt;&amp;quot;;
+echo &amp;quot;&amp;lt;b&amp;gt;Абсолютная пропускная способность:&amp;lt;/b&amp;gt; $A&amp;lt;br/&amp;gt;&amp;quot;;
+?&amp;gt;
+&lt;/pre&gt;
+</summary><category term="php"></category><category term="modeling"></category><category term="single-channel queue"></category></entry></feed>
