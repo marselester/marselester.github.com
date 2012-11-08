@@ -5,6 +5,7 @@
 :date: 2012-06-13
 :tags: python, django, infrastructure
 :category: Python
+:slug: short-overview-of-infrastructure-for-developing-reusable-django-apps
 
 Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
 зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
