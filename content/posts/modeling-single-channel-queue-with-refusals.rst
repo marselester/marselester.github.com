@@ -3,7 +3,7 @@
 ==========================================
 
 :date: 2009-05-30
-:tags: php, modeling, single-channel queue
+:tags: python, modeling, single-channel queue
 :category: Misc
 :slug: modeling-single-channel-queue-with-refusals
 
@@ -14,75 +14,76 @@
 распределения. Если к моменту прихода заявки канал занят, заявка покидает
 систему необслуженной.
 
-::
+Изначально код был написан на php, вот `пример на python 3
+<https://github.com/marselester/single-channel-queuing>`_::
 
-    <?php
-    // Интенсивность потока обслуживания
-    $m = 0.5;
-    // Время работы системы
-    $time_work = 70;
-    // Текущее время системы
-    $time_system = 0;
-    // Время, когда освободится канал
-    $chanel = 0;
-    // Количество заявок, которым отказано в обработке
-    $cnt_denied = 0;
-    // Количество обработанных заявок
-    $cnt_processed = 0;
+    import random
 
-    /**
-     * Равномерный закон распределения
-     */
-    function uniform() {
-        return rand(1, 1000) / 1000;
-    }
-     
-    /**
-     * Показательный закон распределения
-     */
-    function exponential() {
-        global $m;
-        return (-1 / $m) * log(rand(1, 1000) / 1000);
-    }
-     
-    while ($time_system <= $time_work) {
-        // Время, через сколько поступила новая заявка
-        $time_claim_in = uniform();
 
-        $time_system += $time_claim_in;
+    class RequestPoll:
+        """Iterator that yields random requests and keeps statistic."""
 
-        echo "Время, через сколько поступила новая заявка: $time_claim_in<br/>";
-        echo "Текущее время системы: $time_system<br/>";
+        def __init__(self, time_to_finish, intensity_of_service_flow):
+            self.time_to_finish = time_to_finish
+            self.intensity_of_service_flow = intensity_of_service_flow
 
-        // Проверка, свободен ли канал
-        if ($chanel <= $time_system) {
-            $cnt_processed++;
+        def __str__(self):
+            return (
+                'Total: {}\n'.format(self.total()) +
+                'Processed: {}\n'.format(self.qty_of_processed_requests) +
+                'Refused: {}\n'.format(self.qty_of_refused_requests) +
+                'Proportion of processed requests: {}\n'.format(self.proportion_of_processed_requests()) +
+                'Probability of refuse: {}\n'.format(self.probability_of_refuse()) +
+                'Absolute bandwidth: {}'.format(self.abs_bandwidth())
+            )
 
-            // Время, на которое заявка заняла канал
-            $time_claim_busy = exponential();
-            $chanel = $time_system + $time_claim_busy;
-     
-            echo "Заявка заняла канал на: $time_claim_busy<br/>";
-            echo "Время, когда освободится канал: $chanel<br/>";
-        }
-        // Отказываем заявке в обслуживании
-        else {
-            echo 'Заявке отказано<br/>';
-            $cnt_denied++;
-        }
-     
-        echo '<hr/>';
-    }
-     
-    $cnt_total = $cnt_processed + $cnt_denied;
-    $P_deny = $cnt_denied / $cnt_total;
-    $Q = $cnt_processed / $cnt_total;
-    $A = $cnt_processed / $time_work;
-     
-    echo "<b>Общее число заявок:</b> $cnt_total<br/>";
-    echo "<b>Количество обработанных заявок:</b> $cnt_processed<br/>";
-    echo "<b>Количество заявок, которым отказано в обработке:</b> $cnt_denied<br/>";
-    echo "<b>Вероятность отказа:</b> $P_deny<br/>";
-    echo "<b>Доля обслуженных заявок:</b> $Q<br/>";
-    echo "<b>Абсолютная пропускная способность:</b> $A<br/>";
-    ?>
+        def __iter__(self):
+            self.system_uptime = 0
+            self.time_when_channel_will_be_free = 0
+            self.qty_of_processed_requests = 0
+            self.qty_of_refused_requests = 0
+            return self
+
+        def __next__(self):
+            if self.system_uptime > self.time_to_finish:
+                raise StopIteration
+            time_when_request_came_in = random.random()
+            self.system_uptime += time_when_request_came_in
+
+            if self._can_system_process_request():
+                self.qty_of_processed_requests += 1
+
+                time_for_which_request_has_taken_channel = random \
+                    .expovariate(self.intensity_of_service_flow)
+                self.time_when_channel_will_be_free = self.system_uptime \
+                    + time_for_which_request_has_taken_channel
+
+                return 'request added to queue at {}'.format(self.system_uptime)
+            else:
+                self.qty_of_refused_requests += 1
+
+                return 'requests refused at {}'.format(self.system_uptime)
+
+        def _can_system_process_request(self):
+            return self.system_uptime >= self.time_when_channel_will_be_free
+
+        def total(self):
+            return self.qty_of_processed_requests + self.qty_of_refused_requests
+
+        def abs_bandwidth(self):
+            return self.qty_of_processed_requests / self.time_to_finish
+
+        def proportion_of_processed_requests(self):
+            return self.qty_of_processed_requests / self.total()
+
+        def probability_of_refuse(self):
+            return self.qty_of_refused_requests / self.total()
+
+    intensity_of_service_flow = 0.5
+    time_to_finish = 70
+    request_poll = RequestPoll(time_to_finish, intensity_of_service_flow)
+
+    for request in request_poll:
+        print(request)
+
+    print(request_poll)
