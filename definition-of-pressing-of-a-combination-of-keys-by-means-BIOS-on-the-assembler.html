@@ -4,11 +4,8 @@
         <title>Определение нажатия комбинации клавиш средствами BIOS на ассемблере</title>
         <meta charset="utf-8" />
         <link rel="stylesheet" href="./theme/css/main.css" type="text/css" />
-        
-        <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
-        
-        
-
+                <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
+                
         <!--[if IE]>
                 <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
 
@@ -22,41 +19,25 @@
 </head>
 
 <body id="index" class="home">
-
 <a href="https://github.com/marselester/">
-
 <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub" />
-
 </a>
-
         <header id="banner" class="body">
-                <h1><a href=".">marselester's blog </a></h1>
+                <h1><a href="./">marselester's blog </a></h1>
                 <nav><ul>
-                
-                
-                
-                    <li><a href="./pages/about.html">About</a></li>
-                
-                
-                
-                    <li class="active"><a href="./category/misc.html">Misc</a></li>
-                
-                    <li ><a href="./category/portfolio.html">Portfolio</a></li>
-                
-                    <li ><a href="./category/python.html">Python</a></li>
-                
-                </ul></nav>
+                                                                    <li><a href="./pages/about.html">About</a></li>
+                                                                    <li class="active"><a href="./category/misc.html">Misc</a></li>
+                                    <li ><a href="./category/portfolio.html">Portfolio</a></li>
+                                    <li ><a href="./category/python.html">Python</a></li>
+                                </ul></nav>
         </header><!-- /#banner -->
-        
-<section id="content" class="body">
+        <section id="content" class="body">
   <article>
     <header>
       <h1 class="entry-title">
-        <a href="definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html" rel="bookmark"
+        <a href="./definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html" rel="bookmark"
            title="Permalink to Определение нажатия комбинации клавиш средствами BIOS на ассемблере">Определение нажатия комбинации клавиш средствами BIOS на ассемблере</a></h1>
-      
-<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
-
+      <a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
     </header>
 
     <div class="entry-content">
@@ -65,75 +46,69 @@
                 чт 03 декабря 2009
         </abbr>
 
-        
-        <address class="vcard author">
+                <address class="vcard author">
                 By <a class="url fn" href="./author/marsel-mavletkulov.html">Marsel Mavletkulov</a>
         </address>
-        
-<p>In <a href="./category/misc.html">Misc</a>. </p>
+        <p>In <a href="./category/misc.html">Misc</a>. </p>
 <p>tags: <a href="./tag/assembler.html">assembler</a></p>
-
-
-</footer><!-- /.post-info -->
-      <p>По учебе понадобилось написать программу на ассемблере, которая должна
+</footer><!-- /.post-info -->      <p>По учебе понадобилось написать программу на ассемблере, которая должна
 распознать нажатие «горячей» комбинации клавиш <tt class="docutils literal">LeftCtrl+RightShift+F3</tt> и
 реагировать на него звуковым сигналом. Информации/примеров по этой теме
 маловато, по этому решил опубликовать свою программку.</p>
-<pre class="literal-block">
-masm
-.model small
-.stack 256
-.data
-    Msg_about db 'Распознать нажатие «горячей» комбинации клавиш', 0Ah, 0Dh
-              db 'LeftCtrl+RightShift+F3', 0Ah, 0Dh
-              db 'и реагировать на него звуковым сигналом', 0Ah, 0Dh, '$'
+<div class="highlight"><pre><span class="nf">masm</span>
+<span class="nf">.model</span> <span class="nv">small</span>
+<span class="nf">.stack</span> <span class="mi">256</span>
+<span class="nf">.data</span>
+    <span class="nf">Msg_about</span> <span class="nv">db</span> <span class="s">&#39;Распознать нажатие «горячей» комбинации клавиш&#39;</span><span class="p">,</span> <span class="mh">0Ah</span><span class="p">,</span> <span class="mh">0Dh</span>
+              <span class="kd">db</span> <span class="s">&#39;LeftCtrl+RightShift+F3&#39;</span><span class="p">,</span> <span class="mh">0Ah</span><span class="p">,</span> <span class="mh">0Dh</span>
+              <span class="kd">db</span> <span class="s">&#39;и реагировать на него звуковым сигналом&#39;</span><span class="p">,</span> <span class="mh">0Ah</span><span class="p">,</span> <span class="mh">0Dh</span><span class="p">,</span> <span class="s">&#39;$&#39;</span>
 
-.code
+<span class="nf">.code</span>
 
-start:
-    ; Инициализация сегментного регистра ds
-    mov ax, &#64;data
-    mov ds, ax
+<span class="nl">start:</span>
+    <span class="c1">; Инициализация сегментного регистра ds</span>
+    <span class="nf">mov</span> <span class="nb">ax</span><span class="p">,</span> <span class="err">@</span><span class="nv">data</span>
+    <span class="nf">mov</span> <span class="nb">ds</span><span class="p">,</span> <span class="nb">ax</span>
 
-    ; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)
-    mov ax, 0003h
-    int 10h
+    <span class="c1">; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)</span>
+    <span class="nf">mov</span> <span class="nb">ax</span><span class="p">,</span> <span class="mh">0003h</span>
+    <span class="nf">int</span> <span class="mh">10h</span>
 
-    ; Вывод сообщения на экран
-    mov ah, 9
-    mov dx, offset Msg_about
-    int 21h
+    <span class="c1">; Вывод сообщения на экран</span>
+    <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mi">9</span>
+    <span class="nf">mov</span> <span class="nb">dx</span><span class="p">,</span> <span class="nv">offset</span> <span class="nv">Msg_about</span>
+    <span class="nf">int</span> <span class="mh">21h</span>
 
-    ; Чтение символа с ожиданием
-    mov ah, 0
-    int 16h
+    <span class="c1">; Чтение символа с ожиданием</span>
+    <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="nf">int</span> <span class="mh">16h</span>
 
-    ; Проверка нажатия Ctrl+F3
-    cmp ah, 60h
-    jne exit
+    <span class="c1">; Проверка нажатия Ctrl+F3</span>
+    <span class="nf">cmp</span> <span class="nb">ah</span><span class="p">,</span> <span class="mh">60h</span>
+    <span class="nf">jne</span> <span class="nv">exit</span>
 
-    ; Получение состояния клавиатуры
-    mov ah, 12h
-    int 16h
+    <span class="c1">; Получение состояния клавиатуры</span>
+    <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mh">12h</span>
+    <span class="nf">int</span> <span class="mh">16h</span>
 
-    ; Проверка нажатия LeftCtrl
-    test ah, 1b
-    jz exit
+    <span class="c1">; Проверка нажатия LeftCtrl</span>
+    <span class="nf">test</span> <span class="nb">ah</span><span class="p">,</span> <span class="m">1b</span>
+    <span class="nf">jz</span> <span class="nv">exit</span>
 
-    ; Проверка нажатия RightShift
-    test al, 1b
-    jz exit
+    <span class="c1">; Проверка нажатия RightShift</span>
+    <span class="nf">test</span> <span class="nb">al</span><span class="p">,</span> <span class="m">1b</span>
+    <span class="nf">jz</span> <span class="nv">exit</span>
 
-    mov ah, 2 ; Вывод символа
-    mov dl, 7 ; Сигнал
-    int 21h
+    <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mi">2</span> <span class="c1">; Вывод символа</span>
+    <span class="nf">mov</span> <span class="nb">dl</span><span class="p">,</span> <span class="mi">7</span> <span class="c1">; Сигнал</span>
+    <span class="nf">int</span> <span class="mh">21h</span>
 
-    ; Завершение программы, возврат управления ОС
-    exit:
-    mov ax, 4c00h
-    int 21h
-end start
-</pre>
+    <span class="c1">; Завершение программы, возврат управления ОС</span>
+    <span class="nl">exit:</span>
+    <span class="nf">mov</span> <span class="nb">ax</span><span class="p">,</span> <span class="mh">4c00h</span>
+    <span class="nf">int</span> <span class="mh">21h</span>
+<span class="nf">end</span> <span class="nv">start</span>
+</pre></div>
 <p>Для чтения символа используется функция <tt class="docutils literal">16h BIOS</tt>.</p>
 <p>AH = 0</p>
 <p>На выходе в AL = ASCII-код символа, 0 или префикс скан-кода, АН = скан-код
@@ -174,8 +149,7 @@ end start
 </div>
 
     </div><!-- /.entry-content -->
-    
-    <div class="comments">
+        <div class="comments">
       <h2>Comments !</h2>
       <div id="disqus_thread"></div>
       <script type="text/javascript">
@@ -188,34 +162,22 @@ end start
       </script>
     </div>
     
-
   </article>
 </section>
-
         <section id="extras" class="body">
-        
-        
-                <div class="social">
+                                <div class="social">
                         <h2>social</h2>
                         <ul>
                             <li><a href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
                             
-
-                        
-                            <li><a href="https://github.com/marselester">GitHub</a></li>
-                        
-                            <li><a href="http://twitter.com/marselester">Twitter</a></li>
-                        
-                            <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
-                        
-                            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
-                        
-                            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
-                        
-                        </ul>
+                                                    <li><a href="https://github.com/marselester">GitHub</a></li>
+                                                    <li><a href="http://twitter.com/marselester">Twitter</a></li>
+                                                    <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
+                                                    <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
+                                                    <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+                                                </ul>
                 </div><!-- /.social -->
-        
-        </section><!-- /#extras -->
+                </section><!-- /#extras -->
 
         <footer id="contentinfo" class="body">
                 <address id="about" class="vcard body">
@@ -224,9 +186,6 @@ end start
 
                 <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
         </footer><!-- /#contentinfo -->
-
-
-
 
 <script type="text/javascript">
     var disqus_shortname = 'marselester';
@@ -237,6 +196,5 @@ end start
         (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
     }());
 </script>
-
 </body>
 </html>

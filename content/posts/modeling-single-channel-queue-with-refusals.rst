@@ -15,7 +15,9 @@
 систему необслуженной.
 
 Изначально код был написан на php, вот `пример на python 3
-<https://github.com/marselester/single-channel-queuing>`_::
+<https://github.com/marselester/single-channel-queuing>`_:
+
+.. code-block:: python3
 
     import random
 

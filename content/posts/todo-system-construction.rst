@@ -106,9 +106,12 @@ django-todo>`_ я старался придерживаться вышепере
 Если в модели есть поле выбора (*choices*), оно должно быть оформлено в виде
 кортежа из кортежей, заглавными буквами. Должны быть расположены в начале
 модели [#Django]_ и названы без использования "магических чисел"
-[#McConnell]_. Например::
+[#McConnell]_. Например:
+
+.. code-block:: python
 
     class Task(models.Model):
+
         UNCERTAIN_STATUS = 0
         DONE_STATUS = 1
         STOP_STATUS = 2
@@ -128,10 +131,13 @@ django-todo>`_ я старался придерживаться вышепере
 Разработчик может определить в модели свои собственные методы и тем самым
 наделять свои объекты дополнительной функциональностью на уровне строк. Методы
 модели подходят для инкапсуляции всей бизнес-логики в одном месте. Например,
-фрагмент модели *Цепочка*::
+фрагмент модели *Цепочка*:
+
+.. code-block:: python
 
     class Chain(models.Model):
         """Цепочка задач."""
+
         # Пропущены атрибуты модели для экономии места.
 
         # Default manager.
@@ -203,13 +209,16 @@ django-todo>`_ я старался придерживаться вышепере
 Встроенный в Django менеджер моделей не позволяет строить цепочки методов,
 таких как ``actual_tasks = Task.objects.by_worker(user).actual()``. Для обхода
 этого ограничения используется сторонняя библиотека *django-model-utils*,
-которая позволяет писать QuerySet вместо менеджера [#Korobov]_. Например::
+которая позволяет писать QuerySet вместо менеджера [#Korobov]_. Например:
+
+.. code-block:: python
 
     # -*- coding: utf-8 -*-
     from django.db.models.query import QuerySet
 
 
     class ChainQuerySet(QuerySet):
+
         def by_owner(self, owner):
             """Возвращает цепочки владельца."""
             return self.filter(owner=owner)
@@ -278,7 +287,9 @@ todo_tags.py``.
 Представление -- функция на языке Python, которая принимает экземпляр класса
 *HttpRequest* в качестве первого параметра и возвращает экземпляр класса
 *HttpResponse*. Ниже приведен код функции вместе с командами импорта из файла
-``views.py``::
+``views.py``:
+
+.. code-block:: python
 
     # -*- coding: utf-8 -*-
     from django.shortcuts import render, get_object_or_404
@@ -302,7 +313,9 @@ todo_tags.py``.
 URL. Она определяет соответствие между URL-адресами и обрабатывающим их кодом.
 
 Вот как подключается представление *actual_tasks* и *task_archive* в файле
-``urls.py``::
+``urls.py``:
+
+.. code-block:: python
 
     from django.conf.urls.defaults import patterns, url
 

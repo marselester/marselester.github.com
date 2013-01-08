@@ -34,56 +34,52 @@ starting to look for solution.&lt;/p&gt;
 &lt;div class="section" id="basic"&gt;
 &lt;h3&gt;Basic&lt;/h3&gt;
 &lt;p&gt;Probably interviewer starts with basic questions. Let us see example:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-funcs = []
-for i in range(5):
-    def f():
-        print i
-    funcs.append(f)
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;funcs&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;range&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;f&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+        &lt;span class="k"&gt;print&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;
+    &lt;span class="n"&gt;funcs&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-for f in funcs:
-    f()
-&lt;/pre&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;funcs&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;I guess he examines knowledge about namespace. It will print &lt;tt class="docutils literal"&gt;4&lt;/tt&gt; five times.
 To explain that you supposed to know about &lt;a class="reference external" href="http://stackoverflow.com/questions/291978/short-description-of-python-scoping-rules"&gt;LEGB&lt;/a&gt; rule. Also you should know
 that variable search in enclosed scope will be done later, &lt;strong&gt;after call&lt;/strong&gt; of
 enclosed functions. They all get same value -- value of &lt;tt class="docutils literal"&gt;i&lt;/tt&gt; in last
 iteration.&lt;/p&gt;
 &lt;p&gt;Next example prints numbers from 0 to 4:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-funcs = []
-for i in range(5):
-    def f(i=i):
-        print i
-    funcs.append(f)
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;funcs&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;range&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;f&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;print&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;
+    &lt;span class="n"&gt;funcs&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-for f in funcs:
-    f()
-&lt;/pre&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;f&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;funcs&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;It happens because default value is stored &lt;strong&gt;when enclosed function was
 created&lt;/strong&gt;.&lt;/p&gt;
 &lt;p&gt;There is another popular question related with default value of function.
 N.B. &lt;tt class="docutils literal"&gt;names&lt;/tt&gt; is mutable:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-def f(names=[]):
-    names.append('some name')
-&lt;/pre&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;f&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;names&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;[]):&lt;/span&gt;
+    &lt;span class="n"&gt;names&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;some name&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;&lt;a class="reference external" href="http://pythontutor.com"&gt;Visualizing code execution&lt;/a&gt; and &lt;a class="reference external" href="https://alexbers.com/python_quiz/"&gt;quiz of non-trivial features of Python&lt;/a&gt;
 will be helpful to prepare for questions which are mentioned above.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class="section" id="what-do-you-think-about-this-code"&gt;
 &lt;h3&gt;What do you think about this code?&lt;/h3&gt;
-&lt;pre class="literal-block"&gt;
-d = {1: 'a', 2: 'b', 3: 'c'}
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;d&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;a&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;b&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;c&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
 
 
-def safe_get(d, key, value):
-    if key in d.keys():
-        return d[key]
-    return value
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;safe_get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;keys&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;value&lt;/span&gt;
 
-print safe_get(d, 0, 'blah')
-&lt;/pre&gt;
+&lt;span class="k"&gt;print&lt;/span&gt; &lt;span class="n"&gt;safe_get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;blah&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Apparently interviewer expects these answers:&lt;/p&gt;
 &lt;ul class="simple"&gt;
 &lt;li&gt;it repeats functionality of &lt;tt class="docutils literal"&gt;d.get(0, 'blah')&lt;/tt&gt;.&lt;/li&gt;
@@ -354,27 +350,27 @@ Django использует для импорта в БД), аргументир
 &lt;/ul&gt;
 &lt;p&gt;Определив все возможные случаи наступления дедлайна можно спроектировать
 &amp;quot;чистые тесты&amp;quot; для метода &lt;em&gt;days_quantity_after_deadline&lt;/em&gt;:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-class DeadlineDaysTest(TaskTest):
-    &amp;quot;&amp;quot;&amp;quot;Тестирует определение количества просроченных дней.&amp;quot;&amp;quot;&amp;quot;
-    def task_wait_overdue(self):
-        &amp;quot;&amp;quot;&amp;quot;Просрочен дедлайн у ожидающей задачи из-за предыдущей задачи.
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;DeadlineDaysTest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TaskTest&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Тестирует определение количества просроченных дней.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 
-        Предыдущая задача превысила свой дедлайн и дедлайн текущей задачи.
-        &amp;quot;&amp;quot;&amp;quot;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;task_wait_overdue&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Просрочен дедлайн у ожидающей задачи из-за предыдущей задачи.&lt;/span&gt;
 
-    def task_work_overdue(self):
-        &amp;quot;&amp;quot;&amp;quot;Работающая задача превысила дедлайн.&amp;quot;&amp;quot;&amp;quot;
+&lt;span class="sd"&gt;        Предыдущая задача превысила свой дедлайн и дедлайн текущей задачи.&lt;/span&gt;
+&lt;span class="sd"&gt;        &amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 
-    def task_done_overdue(self):
-        &amp;quot;&amp;quot;&amp;quot;Задача выполнена с превышением дедлайна.&amp;quot;&amp;quot;&amp;quot;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;task_work_overdue&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Работающая задача превысила дедлайн.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 
-    def task_stop_overdue(self):
-        &amp;quot;&amp;quot;&amp;quot;Просрочен дедлайн у остановленной задачи.
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;task_done_overdue&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Задача выполнена с превышением дедлайна.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 
-        Владелец цепочки не решил проблему остановки задачи.
-        &amp;quot;&amp;quot;&amp;quot;
-&lt;/pre&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;task_stop_overdue&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Просрочен дедлайн у остановленной задачи.&lt;/span&gt;
+
+&lt;span class="sd"&gt;        Владелец цепочки не решил проблему остановки задачи.&lt;/span&gt;
+&lt;span class="sd"&gt;        &amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Под &amp;quot;чистыми тестами&amp;quot; подразумеваются тесты, которые проверяют работает ли
 код, а не пытаются нарушить его работу всевозможными способами (&amp;quot;грязные
 тесты&amp;quot;). В организациях со зрелым процессом тестирования на каждый &amp;quot;чистый
@@ -427,43 +423,44 @@ class DeadlineDaysTest(TaskTest):
 &lt;/ul&gt;
 &lt;p&gt;Демонстрация фрагмента блочного тестирования для метода &lt;em&gt;start_date&lt;/em&gt; приведена
 ниже:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-# -*- coding: utf-8 -*-
-import datetime
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;# -*- coding: utf-8 -*-&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;datetime&lt;/span&gt;
 
-from django.test import TestCase
-from django.contrib.auth.models import User
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.test&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;TestCase&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.contrib.auth.models&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;User&lt;/span&gt;
 
-from todo.models import Chain, Task
-from . import factories
-
-
-class TaskTest(TestCase):
-    def setUp(self):
-        factories.make_fixtures()
-        # Сотрудники.
-        self.manager = User.objects.get(username='alexander')
-        self.designer = User.objects.get(username='kazimir')
-        self.programmer = User.objects.get(username='ada')
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;todo.models&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;Chain&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Task&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;.&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;factories&lt;/span&gt;
 
 
-class StartDateTest(TaskTest):
-    &amp;quot;&amp;quot;&amp;quot;Тестирует определение даты начала работы над задачей.&amp;quot;&amp;quot;&amp;quot;
-    def test_first_task(self):
-        &amp;quot;&amp;quot;&amp;quot;Тестирует дату начала работы первой задачи.
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;TaskTest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TestCase&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
 
-        Дата начала первой задачи совпадает с датой начала цепочки. Это условие
-        верно для задач с любым статусом.
-        &amp;quot;&amp;quot;&amp;quot;
-        today = datetime.date.today()
-        chain_start_date = today + datetime.timedelta(days=1)
-        chain = Chain.objects.create(name='Chain', start_date=chain_start_date,
-                                     owner=self.manager)
-        deadline = chain_start_date + datetime.timedelta(days=3)
-        first_task = Task.objects.create(worker=self.designer, task='Design',
-                                         deadline=deadline, chain=chain)
-        self.assertEqual(first_task.start_date(), chain.start_date)
-&lt;/pre&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;setUp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;factories&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;make_fixtures&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="c"&gt;# Сотрудники.&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;manager&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;User&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;objects&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;username&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;alexander&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;designer&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;User&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;objects&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;username&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;kazimir&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;programmer&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;User&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;objects&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;username&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;ada&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;StartDateTest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TaskTest&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Тестирует определение даты начала работы над задачей.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;test_first_task&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Тестирует дату начала работы первой задачи.&lt;/span&gt;
+
+&lt;span class="sd"&gt;        Дата начала первой задачи совпадает с датой начала цепочки. Это условие&lt;/span&gt;
+&lt;span class="sd"&gt;        верно для задач с любым статусом.&lt;/span&gt;
+&lt;span class="sd"&gt;        &amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+        &lt;span class="n"&gt;today&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;datetime&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;date&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;today&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="n"&gt;chain_start_date&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;today&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;datetime&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;timedelta&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;days&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;chain&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Chain&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;objects&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;create&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;Chain&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;start_date&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;chain_start_date&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                                     &lt;span class="n"&gt;owner&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;manager&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;deadline&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;chain_start_date&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;datetime&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;timedelta&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;days&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;first_task&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Task&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;objects&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;create&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;worker&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;designer&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;task&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;Design&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                                         &lt;span class="n"&gt;deadline&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;deadline&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;chain&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;chain&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;assertEqual&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;first_task&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;start_date&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; &lt;span class="n"&gt;chain&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;start_date&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class="section" id="id13"&gt;
@@ -482,27 +479,27 @@ class StartDateTest(TaskTest):
 поддерживает юникод и давно не развивается (последний релиз был в 2007 году).&lt;/p&gt;
 &lt;p&gt;В качестве примера приводится тестирование посещения пользователем страницы
 актуальных задач:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-# -*- coding: utf-8 -*-
-from django_webtest import WebTest
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;# -*- coding: utf-8 -*-&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django_webtest&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;WebTest&lt;/span&gt;
 
-from django.core.urlresolvers import reverse
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.core.urlresolvers&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;reverse&lt;/span&gt;
 
-from . import factories
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;.&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;factories&lt;/span&gt;
 
 
-class ActualTasksTest(WebTest):
-    def setUp(self):
-        factories.make_fixtures()
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;ActualTasksTest&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;WebTest&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
 
-    def test_user_not_logined(self):
-        response = self.app.get(reverse('todo_actual_tasks'))
-        self.assertEqual(response.status_int, 302)
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;setUp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;factories&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;make_fixtures&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 
-    def test_designer_logined(self):
-        response = self.app.get(reverse('todo_actual_tasks'), user='kazimir')
-        assert 'Казимир Малевич' in response
-&lt;/pre&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;test_user_not_logined&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;response&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;app&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;reverse&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;todo_actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;assertEqual&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;response&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;status_int&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;302&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;test_designer_logined&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="n"&gt;response&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;app&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;reverse&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;todo_actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;user&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;kazimir&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;assert&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;Казимир Малевич&amp;#39;&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;response&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;В первом случае пользователь не авторизован (метод &lt;em&gt;test_user_not_logined&lt;/em&gt;) и
 браузер должен вернуть статус &lt;em&gt;302&lt;/em&gt; (перенаправление на страницу авторизации),
 во втором случае (метод &lt;em&gt;test_designer_logined&lt;/em&gt;) пользователь авторизован под
@@ -627,21 +624,21 @@ class ActualTasksTest(WebTest):
 кортежа из кортежей, заглавными буквами. Должны быть расположены в начале
 модели &lt;a class="footnote-reference" href="#django" id="id8"&gt;[3]&lt;/a&gt; и названы без использования &amp;quot;магических чисел&amp;quot;
 &lt;a class="footnote-reference" href="#mcconnell" id="id9"&gt;[1]&lt;/a&gt;. Например:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-class Task(models.Model):
-    UNCERTAIN_STATUS = 0
-    DONE_STATUS = 1
-    STOP_STATUS = 2
-    WAIT_STATUS = 3
-    WORK_STATUS = 4
-    STATUS_CHOICES = (
-        (DONE_STATUS, 'done'),
-        (STOP_STATUS, 'stop')
-    )
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Task&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Model&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
 
-    status = models.IntegerField(choices=STATUS_CHOICES,
-                                 default=UNCERTAIN_STATUS)
-&lt;/pre&gt;
+    &lt;span class="n"&gt;UNCERTAIN_STATUS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+    &lt;span class="n"&gt;DONE_STATUS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
+    &lt;span class="n"&gt;STOP_STATUS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;
+    &lt;span class="n"&gt;WAIT_STATUS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;3&lt;/span&gt;
+    &lt;span class="n"&gt;WORK_STATUS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;
+    &lt;span class="n"&gt;STATUS_CHOICES&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+        &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;DONE_STATUS&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;done&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+        &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;STOP_STATUS&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;stop&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="n"&gt;status&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;IntegerField&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;choices&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;STATUS_CHOICES&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                                 &lt;span class="n"&gt;default&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;UNCERTAIN_STATUS&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;div class="section" id="id10"&gt;
 &lt;h3&gt;Методы модели&lt;/h3&gt;
@@ -649,26 +646,26 @@ class Task(models.Model):
 наделять свои объекты дополнительной функциональностью на уровне строк. Методы
 модели подходят для инкапсуляции всей бизнес-логики в одном месте. Например,
 фрагмент модели &lt;em&gt;Цепочка&lt;/em&gt;:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-class Chain(models.Model):
-    &amp;quot;&amp;quot;&amp;quot;Цепочка задач.&amp;quot;&amp;quot;&amp;quot;
-    # Пропущены атрибуты модели для экономии места.
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Chain&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Model&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Цепочка задач.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 
-    # Default manager.
-    objects = PassThroughManager.for_queryset_class(ChainQuerySet)()
+    &lt;span class="c"&gt;# Пропущены атрибуты модели для экономии места.&lt;/span&gt;
 
-    def actual_status(self):
-        &amp;quot;&amp;quot;&amp;quot;Определяет фактический статус цепочки.&amp;quot;&amp;quot;&amp;quot;
-        if self.start_date &amp;gt; datetime.date.today():
-            return self.WAIT_STATUS
-        if self.task_set.filter(status=Task.STOP_STATUS).exists():
-            return self.STOP_STATUS
-        last_task = self.last_task()
-        if last_task.actual_status() == Task.DONE_STATUS:
-            return self.DONE_STATUS
-        else:
-            return self.WORK_STATUS
-&lt;/pre&gt;
+    &lt;span class="c"&gt;# Default manager.&lt;/span&gt;
+    &lt;span class="n"&gt;objects&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;PassThroughManager&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;for_queryset_class&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ChainQuerySet&lt;/span&gt;&lt;span class="p"&gt;)()&lt;/span&gt;
+
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;actual_status&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Определяет фактический статус цепочки.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;start_date&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;datetime&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;date&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;today&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;WAIT_STATUS&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;task_set&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;filter&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;status&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;Task&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;STOP_STATUS&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;exists&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;STOP_STATUS&lt;/span&gt;
+        &lt;span class="n"&gt;last_task&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;last_task&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;last_task&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;actual_status&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;Task&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;DONE_STATUS&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;DONE_STATUS&lt;/span&gt;
+        &lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;WORK_STATUS&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Согласно спроектированной архитектуре системы были разработаны следующие
 методы модели данных &lt;em&gt;Задача&lt;/em&gt;:&lt;/p&gt;
 &lt;ul class="simple"&gt;
@@ -722,20 +719,20 @@ class Chain(models.Model):
 таких как &lt;tt class="docutils literal"&gt;actual_tasks = &lt;span class="pre"&gt;Task.objects.by_worker(user).actual()&lt;/span&gt;&lt;/tt&gt;. Для обхода
 этого ограничения используется сторонняя библиотека &lt;em&gt;django-model-utils&lt;/em&gt;,
 которая позволяет писать QuerySet вместо менеджера &lt;a class="footnote-reference" href="#korobov" id="id13"&gt;[4]&lt;/a&gt;. Например:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-# -*- coding: utf-8 -*-
-from django.db.models.query import QuerySet
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;# -*- coding: utf-8 -*-&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.db.models.query&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;QuerySet&lt;/span&gt;
 
 
-class ChainQuerySet(QuerySet):
-    def by_owner(self, owner):
-        &amp;quot;&amp;quot;&amp;quot;Возвращает цепочки владельца.&amp;quot;&amp;quot;&amp;quot;
-        return self.filter(owner=owner)
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;ChainQuerySet&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;QuerySet&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
 
-    def actual(self):
-        &amp;quot;&amp;quot;&amp;quot;Возвращает актуальтуные цепочки задач.&amp;quot;&amp;quot;&amp;quot;
-        return self.filter(archive=False).order_by('start_date')
-&lt;/pre&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;by_owner&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;owner&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Возвращает цепочки владельца.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;filter&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;owner&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;owner&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;actual&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Возвращает актуальтуные цепочки задач.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;filter&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;archive&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;False&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;order_by&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;start_date&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;div class="section" id="id14"&gt;
 &lt;h3&gt;Миграция схемы модели&lt;/h3&gt;
@@ -788,37 +785,35 @@ todo_tags.py&lt;/tt&gt;.&lt;/p&gt;
 &lt;em&gt;HttpRequest&lt;/em&gt; в качестве первого параметра и возвращает экземпляр класса
 &lt;em&gt;HttpResponse&lt;/em&gt;. Ниже приведен код функции вместе с командами импорта из файла
 &lt;tt class="docutils literal"&gt;views.py&lt;/tt&gt;:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-# -*- coding: utf-8 -*-
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;# -*- coding: utf-8 -*-&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.shortcuts&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;render&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;get_object_or_404&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.contrib.auth.decorators&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;login_required&lt;/span&gt;
 
-from todo.models import Chain, Task
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;todo.models&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;Chain&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Task&lt;/span&gt;
 
 
-&amp;#64;login_required
-def actual_tasks(request):
-    &amp;quot;&amp;quot;&amp;quot;Отображает список актуальных задач для исполнителя.&amp;quot;&amp;quot;&amp;quot;
-    user = request.user
-    actual_tasks = Task.objects.by_worker(user).actual()
-    return render(request, 'todo/task_list.html', {
-        'place': 'tasks',
-        'actual_tasks': actual_tasks,
-    })
-&lt;/pre&gt;
+&lt;span class="nd"&gt;@login_required&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;actual_tasks&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Отображает список актуальных задач для исполнителя.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+    &lt;span class="n"&gt;user&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;user&lt;/span&gt;
+    &lt;span class="n"&gt;actual_tasks&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Task&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;objects&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;by_worker&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;user&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;actual&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;render&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;todo/task_list.html&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;place&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;actual_tasks&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="p"&gt;})&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Чтобы связать функцию представления с URL, в Django используется механизм
 конфигурации URL. Django ожидает найти переменную &lt;em&gt;urlpatterns&lt;/em&gt; в конфигурации
 URL. Она определяет соответствие между URL-адресами и обрабатывающим их кодом.&lt;/p&gt;
 &lt;p&gt;Вот как подключается представление &lt;em&gt;actual_tasks&lt;/em&gt; и &lt;em&gt;task_archive&lt;/em&gt; в файле
 &lt;tt class="docutils literal"&gt;urls.py&lt;/tt&gt;:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-from django.conf.urls.defaults import patterns, url
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.conf.urls.defaults&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;patterns&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;url&lt;/span&gt;
 
-urlpatterns = patterns('todo.views',
-    url(r'^$', 'actual_tasks', name='todo_actual_tasks'),
-    url(r'^task/archive/$', 'task_archive', name='todo_task_archive'),
-)
-&lt;/pre&gt;
+&lt;span class="n"&gt;urlpatterns&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;patterns&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;todo.views&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;r&amp;#39;^$&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;todo_actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+    &lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;r&amp;#39;^task/archive/$&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;task_archive&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;todo_task_archive&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Любой запрос к URL &lt;tt class="docutils literal"&gt;/task/archive/&lt;/tt&gt; должен обрабатываться функцией
 &lt;em&gt;task_archive&lt;/em&gt;, а запрос &lt;tt class="docutils literal"&gt;/&lt;/tt&gt; будет обрабатываться &lt;em&gt;actual_tasks&lt;/em&gt;.&lt;/p&gt;
 &lt;p&gt;Названия шаблонам URL рекомендуется давать в форме &lt;tt class="docutils literal"&gt;APP_MODEL_VIEW&lt;/tt&gt;,
@@ -871,7 +866,7 @@ urlpatterns = patterns('todo.views',
 &lt;p&gt;Разделение системы на подсистемы на уровне архитектуры, позволяет
 концентрироваться в каждый конкретный момент времени на меньшей части системы.&lt;/p&gt;
 &lt;p&gt;Обобщенная схема работы системы приведена на рисунке.&lt;/p&gt;
-&lt;img alt="http://marselester.ru/media/django_todo_block_schema.png" src="http://marselester.ru/media/django_todo_block_schema.png" /&gt;
+&lt;img alt="http://dl.dropbox.com/u/15875449/django_todo_block_schema.png" src="http://dl.dropbox.com/u/15875449/django_todo_block_schema.png" /&gt;
 &lt;p&gt;Работа пользователя с системой начинается с авторизации. После успешной
 аутентификации пользователь попадает на страницу с задачами, поставленными ему
 другими пользователями. Далее он может перейти в раздел проектов, либо в
@@ -1122,60 +1117,54 @@ settings/
 &lt;/pre&gt;
 &lt;p&gt;&lt;tt class="docutils literal"&gt;base.py&lt;/tt&gt; содержит общие настройки для &lt;tt class="docutils literal"&gt;development.py&lt;/tt&gt; и
 &lt;tt class="docutils literal"&gt;production.py&lt;/tt&gt;, например:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-ADMINS = ()
-MANAGERS = ADMINS
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;ADMINS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="n"&gt;MANAGERS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;ADMINS&lt;/span&gt;
 
-TIME_ZONE = 'Asia/Yekaterinburg'
-# ...
-&lt;/pre&gt;
+&lt;span class="n"&gt;TIME_ZONE&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;Asia/Yekaterinburg&amp;#39;&lt;/span&gt;
+&lt;span class="c"&gt;# ...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;&lt;tt class="docutils literal"&gt;production.py&lt;/tt&gt; содержит настройки для эксплуатации. Как минимум, необходимо
 выключить режим отладки:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-from .base import *
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;.base&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;
 
-DEBUG = False
-TEMPLATE_DEBUG = DEBUG
-# ...
-&lt;/pre&gt;
+&lt;span class="n"&gt;DEBUG&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;False&lt;/span&gt;
+&lt;span class="n"&gt;TEMPLATE_DEBUG&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;DEBUG&lt;/span&gt;
+&lt;span class="c"&gt;# ...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;&lt;tt class="docutils literal"&gt;development.py&lt;/tt&gt; содержит настройки, необходимые для разработки. Настройки
 должны быть &lt;strong&gt;одинаковы&lt;/strong&gt; и &lt;strong&gt;полезны для всех участников&lt;/strong&gt; процесса
 разработки, например:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-from .base import *
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;.base&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;
 
-DEBUG = True
-TEMPLATE_DEBUG = DEBUG
-# ...
-&lt;/pre&gt;
+&lt;span class="n"&gt;DEBUG&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;True&lt;/span&gt;
+&lt;span class="n"&gt;TEMPLATE_DEBUG&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;DEBUG&lt;/span&gt;
+&lt;span class="c"&gt;# ...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Все индивидуальные настройки разработчика необходимо вынести в &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt;.
 Например, это могут быть настройки подключения к БД, любимые инструменты
 разработки и так далее:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-from .development import *
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;.development&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': &amp;quot;developer's db name&amp;quot;,
-        'USER': &amp;quot;developer's db user&amp;quot;,
-        'PASSWORD': &amp;quot;developer's db password&amp;quot;,
-        'HOST': ''
-        'PORT': '',
-    }
-}
-&lt;/pre&gt;
+&lt;span class="n"&gt;DATABASES&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="s"&gt;&amp;#39;default&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;ENGINE&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;django.db.backends.mysql&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;NAME&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;developer&amp;#39;s db name&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;USER&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;developer&amp;#39;s db user&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;PASSWORD&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;developer&amp;#39;s db password&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;HOST&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;&amp;#39;&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;PORT&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;На production сервере &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt; обычно содержит настройки подключения к
 БД:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-from .production import *
-&lt;/pre&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;.production&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;&lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt; не должен отслеживаться VCS.&lt;/p&gt;
 &lt;p&gt;Для Django 1.4 в файлах &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;repo-name/project_name/wsgi.py&lt;/span&gt;&lt;/tt&gt; и
 &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;repo-name/manage.py&lt;/span&gt;&lt;/tt&gt; нужно указать путь до &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt;:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-os.environ.setdefault(&amp;quot;DJANGO_SETTINGS_MODULE&amp;quot;, &amp;quot;project_name.settings.local&amp;quot;)
-&lt;/pre&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;environ&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;setdefault&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;DJANGO_SETTINGS_MODULE&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;project_name.settings.local&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;У меня не получилось разместить &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt; на &lt;a class="reference external" href="http://www.heroku.com/"&gt;heroku&lt;/a&gt;, чтобы файл не находился под контролем git (плохо
 искал?). Самое простое решение -- избавиться от &lt;tt class="docutils literal"&gt;local.py&lt;/tt&gt;, в &lt;tt class="docutils literal"&gt;manage.py&lt;/tt&gt;
 указать &lt;tt class="docutils literal"&gt;project_name.settings.development&lt;/tt&gt;, а в &lt;tt class="docutils literal"&gt;wsgi.py&lt;/tt&gt; --
@@ -1258,21 +1247,20 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 версиями проекта. Поле &lt;em&gt;packages&lt;/em&gt; описывает, где размещен Python код проекта
 &lt;a class="footnote-reference" href="#ziade" id="id7"&gt;[2]&lt;/a&gt;. Ниже приведен пример файла &lt;tt class="docutils literal"&gt;setup.py&lt;/tt&gt;, который также включает
 информацию о лицензии и описание проекта:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-#!/usr/bin/env python
-from distutils.core import setup
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;#!/usr/bin/env python&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;distutils.core&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;setup&lt;/span&gt;
 
-setup(
-    name='django-todo',
-    version='0.1dev',
-    long_description=open('README.rst').read(),
-    licence='MIT license',
-    packages=[
-        'todo',
-        'todo.templatetags',
-    ]
-)
-&lt;/pre&gt;
+&lt;span class="n"&gt;setup&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+    &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;django-todo&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="n"&gt;version&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;0.1dev&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="n"&gt;long_description&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;README.rst&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;read&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt;
+    &lt;span class="n"&gt;licence&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;MIT license&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="n"&gt;packages&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;todo&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;todo.templatetags&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="p"&gt;]&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
 &lt;div class="section" id="id8"&gt;
 &lt;h2&gt;Структура репозитория&lt;/h2&gt;
@@ -1310,49 +1298,47 @@ setup(
 Автор применил данное решение для организации тестов в многоразовых Django
 приложениях &lt;a class="footnote-reference" href="#app-skeleton" id="id14"&gt;[7]&lt;/a&gt;. В корне репозитория располагается скрипт
 &lt;tt class="docutils literal"&gt;runtests.py&lt;/tt&gt;, который запускает тесты:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-#!/usr/bin/env python
-import os
-import sys
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;#!/usr/bin/env python&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;sys&lt;/span&gt;
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.settings'
+&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;environ&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;DJANGO_SETTINGS_MODULE&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;tests.settings&amp;#39;&lt;/span&gt;
 
-from django.test.utils import get_runner
-from django.conf import settings
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.test.utils&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;get_runner&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.conf&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;settings&lt;/span&gt;
 
 
-def runtests():
-    TestRunner = get_runner(settings)
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;runtests&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="n"&gt;TestRunner&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;get_runner&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;settings&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-    test_runner = TestRunner(verbosity=1, interactive=True, failfast=False)
-    failures = test_runner.run_tests([])
-    sys.exit(failures)
+    &lt;span class="n"&gt;test_runner&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;TestRunner&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;verbosity&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;interactive&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;True&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;failfast&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;False&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;failures&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;test_runner&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;run_tests&lt;/span&gt;&lt;span class="p"&gt;([])&lt;/span&gt;
+    &lt;span class="n"&gt;sys&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;exit&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;failures&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-if __name__ == '__main__':
-    runtests()
-&lt;/pre&gt;
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;__main__&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;runtests&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Настройки для их запуска указаны в файле &lt;tt class="docutils literal"&gt;tests/settings.py&lt;/tt&gt;:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-import os
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;os&lt;/span&gt;
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-    }
-}
-INSTALLED_APPS = (
-    'app_name',
-)
+&lt;span class="n"&gt;DATABASES&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="s"&gt;&amp;#39;default&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="s"&gt;&amp;#39;ENGINE&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;django.db.backends.sqlite3&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="n"&gt;INSTALLED_APPS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+    &lt;span class="s"&gt;&amp;#39;app_name&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
 
-BASE_PATH = os.path.dirname(os.path.dirname(__file__))
-TEST_DISCOVERY_ROOT = os.path.join(BASE_PATH, 'tests')
+&lt;span class="n"&gt;BASE_PATH&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dirname&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dirname&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;__file__&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="n"&gt;TEST_DISCOVERY_ROOT&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;BASE_PATH&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;tests&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-TEST_RUNNER = 'tests.runner.DiscoveryDjangoTestSuiteRunner'
+&lt;span class="n"&gt;TEST_RUNNER&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;tests.runner.DiscoveryDjangoTestSuiteRunner&amp;#39;&lt;/span&gt;
 
-FIXTURE_DIRS = (
-    os.path.join(TEST_DISCOVERY_ROOT, 'fixtures'),
-)
-&lt;/pre&gt;
+&lt;span class="n"&gt;FIXTURE_DIRS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+    &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TEST_DISCOVERY_ROOT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;fixtures&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Обнаружение тестов осуществляется во всех файлах, которые находятся в каталоге
 &lt;tt class="docutils literal"&gt;tests&lt;/tt&gt; и название которых совпадает с &lt;em&gt;models.py&lt;/em&gt;, &lt;em&gt;tests.py&lt;/em&gt; или
 &lt;em&gt;test*.py&lt;/em&gt;.&lt;/p&gt;
@@ -1464,61 +1450,60 @@ deps=
 распознать нажатие «горячей» комбинации клавиш &lt;tt class="docutils literal"&gt;LeftCtrl+RightShift+F3&lt;/tt&gt; и
 реагировать на него звуковым сигналом. Информации/примеров по этой теме
 маловато, по этому решил опубликовать свою программку.&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-masm
-.model small
-.stack 256
-.data
-    Msg_about db 'Распознать нажатие «горячей» комбинации клавиш', 0Ah, 0Dh
-              db 'LeftCtrl+RightShift+F3', 0Ah, 0Dh
-              db 'и реагировать на него звуковым сигналом', 0Ah, 0Dh, '$'
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="nf"&gt;masm&lt;/span&gt;
+&lt;span class="nf"&gt;.model&lt;/span&gt; &lt;span class="nv"&gt;small&lt;/span&gt;
+&lt;span class="nf"&gt;.stack&lt;/span&gt; &lt;span class="mi"&gt;256&lt;/span&gt;
+&lt;span class="nf"&gt;.data&lt;/span&gt;
+    &lt;span class="nf"&gt;Msg_about&lt;/span&gt; &lt;span class="nv"&gt;db&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;Распознать нажатие «горячей» комбинации клавиш&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Dh&lt;/span&gt;
+              &lt;span class="kd"&gt;db&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;LeftCtrl+RightShift+F3&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Dh&lt;/span&gt;
+              &lt;span class="kd"&gt;db&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;и реагировать на него звуковым сигналом&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Dh&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;$&amp;#39;&lt;/span&gt;
 
-.code
+&lt;span class="nf"&gt;.code&lt;/span&gt;
 
-start:
-    ; Инициализация сегментного регистра ds
-    mov ax, &amp;#64;data
-    mov ds, ax
+&lt;span class="nl"&gt;start:&lt;/span&gt;
+    &lt;span class="c1"&gt;; Инициализация сегментного регистра ds&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="nv"&gt;data&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ds&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;ax&lt;/span&gt;
 
-    ; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)
-    mov ax, 0003h
-    int 10h
+    &lt;span class="c1"&gt;; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0003h&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;10h&lt;/span&gt;
 
-    ; Вывод сообщения на экран
-    mov ah, 9
-    mov dx, offset Msg_about
-    int 21h
+    &lt;span class="c1"&gt;; Вывод сообщения на экран&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;9&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;dx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nv"&gt;offset&lt;/span&gt; &lt;span class="nv"&gt;Msg_about&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;21h&lt;/span&gt;
 
-    ; Чтение символа с ожиданием
-    mov ah, 0
-    int 16h
+    &lt;span class="c1"&gt;; Чтение символа с ожиданием&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;16h&lt;/span&gt;
 
-    ; Проверка нажатия Ctrl+F3
-    cmp ah, 60h
-    jne exit
+    &lt;span class="c1"&gt;; Проверка нажатия Ctrl+F3&lt;/span&gt;
+    &lt;span class="nf"&gt;cmp&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;60h&lt;/span&gt;
+    &lt;span class="nf"&gt;jne&lt;/span&gt; &lt;span class="nv"&gt;exit&lt;/span&gt;
 
-    ; Получение состояния клавиатуры
-    mov ah, 12h
-    int 16h
+    &lt;span class="c1"&gt;; Получение состояния клавиатуры&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;12h&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;16h&lt;/span&gt;
 
-    ; Проверка нажатия LeftCtrl
-    test ah, 1b
-    jz exit
+    &lt;span class="c1"&gt;; Проверка нажатия LeftCtrl&lt;/span&gt;
+    &lt;span class="nf"&gt;test&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="m"&gt;1b&lt;/span&gt;
+    &lt;span class="nf"&gt;jz&lt;/span&gt; &lt;span class="nv"&gt;exit&lt;/span&gt;
 
-    ; Проверка нажатия RightShift
-    test al, 1b
-    jz exit
+    &lt;span class="c1"&gt;; Проверка нажатия RightShift&lt;/span&gt;
+    &lt;span class="nf"&gt;test&lt;/span&gt; &lt;span class="nb"&gt;al&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="m"&gt;1b&lt;/span&gt;
+    &lt;span class="nf"&gt;jz&lt;/span&gt; &lt;span class="nv"&gt;exit&lt;/span&gt;
 
-    mov ah, 2 ; Вывод символа
-    mov dl, 7 ; Сигнал
-    int 21h
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt; &lt;span class="c1"&gt;; Вывод символа&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;dl&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;7&lt;/span&gt; &lt;span class="c1"&gt;; Сигнал&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;21h&lt;/span&gt;
 
-    ; Завершение программы, возврат управления ОС
-    exit:
-    mov ax, 4c00h
-    int 21h
-end start
-&lt;/pre&gt;
+    &lt;span class="c1"&gt;; Завершение программы, возврат управления ОС&lt;/span&gt;
+    &lt;span class="nl"&gt;exit:&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;4c00h&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;21h&lt;/span&gt;
+&lt;span class="nf"&gt;end&lt;/span&gt; &lt;span class="nv"&gt;start&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Для чтения символа используется функция &lt;tt class="docutils literal"&gt;16h BIOS&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;AH = 0&lt;/p&gt;
 &lt;p&gt;На выходе в AL = ASCII-код символа, 0 или префикс скан-кода, АН = скан-код
@@ -1564,76 +1549,75 @@ end start
 распределения. Если к моменту прихода заявки канал занят, заявка покидает
 систему необслуженной.&lt;/p&gt;
 &lt;p&gt;Изначально код был написан на php, вот &lt;a class="reference external" href="https://github.com/marselester/single-channel-queuing"&gt;пример на python 3&lt;/a&gt;:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-import random
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;random&lt;/span&gt;
 
 
-class RequestPoll:
-    &amp;quot;&amp;quot;&amp;quot;Iterator that yields random requests and keeps statistic.&amp;quot;&amp;quot;&amp;quot;
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;RequestPoll&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Iterator that yields random requests and keeps statistic.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 
-    def __init__(self, time_to_finish, intensity_of_service_flow):
-        self.time_to_finish = time_to_finish
-        self.intensity_of_service_flow = intensity_of_service_flow
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;__init__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;time_to_finish&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_to_finish&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time_to_finish&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt;
 
-    def __str__(self):
-        return (
-            'Total: {}\n'.format(self.total()) +
-            'Processed: {}\n'.format(self.qty_of_processed_requests) +
-            'Refused: {}\n'.format(self.qty_of_refused_requests) +
-            'Proportion of processed requests: {}\n'.format(self.proportion_of_processed_requests()) +
-            'Probability of refuse: {}\n'.format(self.probability_of_refuse()) +
-            'Absolute bandwidth: {}'.format(self.abs_bandwidth())
-        )
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;__str__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Total: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;total&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Processed: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Refused: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Proportion of processed requests: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;proportion_of_processed_requests&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Probability of refuse: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;probability_of_refuse&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Absolute bandwidth: {}&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;abs_bandwidth&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+        &lt;span class="p"&gt;)&lt;/span&gt;
 
-    def __iter__(self):
-        self.system_uptime = 0
-        self.time_when_channel_will_be_free = 0
-        self.qty_of_processed_requests = 0
-        self.qty_of_refused_requests = 0
-        return self
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;__iter__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_when_channel_will_be_free&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;
 
-    def __next__(self):
-        if self.system_uptime &amp;gt; self.time_to_finish:
-            raise StopIteration
-        time_when_request_came_in = random.random()
-        self.system_uptime += time_when_request_came_in
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;__next__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_to_finish&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="k"&gt;raise&lt;/span&gt; &lt;span class="ne"&gt;StopIteration&lt;/span&gt;
+        &lt;span class="n"&gt;time_when_request_came_in&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;time_when_request_came_in&lt;/span&gt;
 
-        if self._can_system_process_request():
-            self.qty_of_processed_requests += 1
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;_can_system_process_request&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+            &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
 
-            time_for_which_request_has_taken_channel = random \
-                .expovariate(self.intensity_of_service_flow)
-            self.time_when_channel_will_be_free = self.system_uptime \
-                + time_for_which_request_has_taken_channel
+            &lt;span class="n"&gt;time_for_which_request_has_taken_channel&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;random&lt;/span&gt; \
+                &lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;expovariate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+            &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_when_channel_will_be_free&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; \
+                &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;time_for_which_request_has_taken_channel&lt;/span&gt;
 
-            return 'request added to queue at {}'.format(self.system_uptime)
-        else:
-            self.qty_of_refused_requests += 1
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;request added to queue at {}&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
 
-            return 'requests refused at {}'.format(self.system_uptime)
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;requests refused at {}&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-    def _can_system_process_request(self):
-        return self.system_uptime &amp;gt;= self.time_when_channel_will_be_free
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;_can_system_process_request&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;=&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_when_channel_will_be_free&lt;/span&gt;
 
-    def total(self):
-        return self.qty_of_processed_requests + self.qty_of_refused_requests
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;total&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt;
 
-    def abs_bandwidth(self):
-        return self.qty_of_processed_requests / self.time_to_finish
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;abs_bandwidth&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_to_finish&lt;/span&gt;
 
-    def proportion_of_processed_requests(self):
-        return self.qty_of_processed_requests / self.total()
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;proportion_of_processed_requests&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;total&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 
-    def probability_of_refuse(self):
-        return self.qty_of_refused_requests / self.total()
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;probability_of_refuse&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;total&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 
-intensity_of_service_flow = 0.5
-time_to_finish = 70
-request_poll = RequestPoll(time_to_finish, intensity_of_service_flow)
+&lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.5&lt;/span&gt;
+&lt;span class="n"&gt;time_to_finish&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;70&lt;/span&gt;
+&lt;span class="n"&gt;request_poll&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;RequestPoll&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;time_to_finish&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-for request in request_poll:
-    print(request)
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;request&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;request_poll&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-print(request_poll)
-&lt;/pre&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;request_poll&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 </summary><category term="python"></category><category term="modeling"></category><category term="single-channel queue"></category></entry></feed>

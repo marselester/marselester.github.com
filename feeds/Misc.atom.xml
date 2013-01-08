@@ -22,61 +22,60 @@
 распознать нажатие «горячей» комбинации клавиш &lt;tt class="docutils literal"&gt;LeftCtrl+RightShift+F3&lt;/tt&gt; и
 реагировать на него звуковым сигналом. Информации/примеров по этой теме
 маловато, по этому решил опубликовать свою программку.&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-masm
-.model small
-.stack 256
-.data
-    Msg_about db 'Распознать нажатие «горячей» комбинации клавиш', 0Ah, 0Dh
-              db 'LeftCtrl+RightShift+F3', 0Ah, 0Dh
-              db 'и реагировать на него звуковым сигналом', 0Ah, 0Dh, '$'
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="nf"&gt;masm&lt;/span&gt;
+&lt;span class="nf"&gt;.model&lt;/span&gt; &lt;span class="nv"&gt;small&lt;/span&gt;
+&lt;span class="nf"&gt;.stack&lt;/span&gt; &lt;span class="mi"&gt;256&lt;/span&gt;
+&lt;span class="nf"&gt;.data&lt;/span&gt;
+    &lt;span class="nf"&gt;Msg_about&lt;/span&gt; &lt;span class="nv"&gt;db&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;Распознать нажатие «горячей» комбинации клавиш&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Dh&lt;/span&gt;
+              &lt;span class="kd"&gt;db&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;LeftCtrl+RightShift+F3&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Dh&lt;/span&gt;
+              &lt;span class="kd"&gt;db&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;и реагировать на него звуковым сигналом&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Dh&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;$&amp;#39;&lt;/span&gt;
 
-.code
+&lt;span class="nf"&gt;.code&lt;/span&gt;
 
-start:
-    ; Инициализация сегментного регистра ds
-    mov ax, &amp;#64;data
-    mov ds, ax
+&lt;span class="nl"&gt;start:&lt;/span&gt;
+    &lt;span class="c1"&gt;; Инициализация сегментного регистра ds&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="nv"&gt;data&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ds&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;ax&lt;/span&gt;
 
-    ; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)
-    mov ax, 0003h
-    int 10h
+    &lt;span class="c1"&gt;; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0003h&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;10h&lt;/span&gt;
 
-    ; Вывод сообщения на экран
-    mov ah, 9
-    mov dx, offset Msg_about
-    int 21h
+    &lt;span class="c1"&gt;; Вывод сообщения на экран&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;9&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;dx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nv"&gt;offset&lt;/span&gt; &lt;span class="nv"&gt;Msg_about&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;21h&lt;/span&gt;
 
-    ; Чтение символа с ожиданием
-    mov ah, 0
-    int 16h
+    &lt;span class="c1"&gt;; Чтение символа с ожиданием&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;16h&lt;/span&gt;
 
-    ; Проверка нажатия Ctrl+F3
-    cmp ah, 60h
-    jne exit
+    &lt;span class="c1"&gt;; Проверка нажатия Ctrl+F3&lt;/span&gt;
+    &lt;span class="nf"&gt;cmp&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;60h&lt;/span&gt;
+    &lt;span class="nf"&gt;jne&lt;/span&gt; &lt;span class="nv"&gt;exit&lt;/span&gt;
 
-    ; Получение состояния клавиатуры
-    mov ah, 12h
-    int 16h
+    &lt;span class="c1"&gt;; Получение состояния клавиатуры&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;12h&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;16h&lt;/span&gt;
 
-    ; Проверка нажатия LeftCtrl
-    test ah, 1b
-    jz exit
+    &lt;span class="c1"&gt;; Проверка нажатия LeftCtrl&lt;/span&gt;
+    &lt;span class="nf"&gt;test&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="m"&gt;1b&lt;/span&gt;
+    &lt;span class="nf"&gt;jz&lt;/span&gt; &lt;span class="nv"&gt;exit&lt;/span&gt;
 
-    ; Проверка нажатия RightShift
-    test al, 1b
-    jz exit
+    &lt;span class="c1"&gt;; Проверка нажатия RightShift&lt;/span&gt;
+    &lt;span class="nf"&gt;test&lt;/span&gt; &lt;span class="nb"&gt;al&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="m"&gt;1b&lt;/span&gt;
+    &lt;span class="nf"&gt;jz&lt;/span&gt; &lt;span class="nv"&gt;exit&lt;/span&gt;
 
-    mov ah, 2 ; Вывод символа
-    mov dl, 7 ; Сигнал
-    int 21h
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt; &lt;span class="c1"&gt;; Вывод символа&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;dl&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;7&lt;/span&gt; &lt;span class="c1"&gt;; Сигнал&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;21h&lt;/span&gt;
 
-    ; Завершение программы, возврат управления ОС
-    exit:
-    mov ax, 4c00h
-    int 21h
-end start
-&lt;/pre&gt;
+    &lt;span class="c1"&gt;; Завершение программы, возврат управления ОС&lt;/span&gt;
+    &lt;span class="nl"&gt;exit:&lt;/span&gt;
+    &lt;span class="nf"&gt;mov&lt;/span&gt; &lt;span class="nb"&gt;ax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;4c00h&lt;/span&gt;
+    &lt;span class="nf"&gt;int&lt;/span&gt; &lt;span class="mh"&gt;21h&lt;/span&gt;
+&lt;span class="nf"&gt;end&lt;/span&gt; &lt;span class="nv"&gt;start&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Для чтения символа используется функция &lt;tt class="docutils literal"&gt;16h BIOS&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;AH = 0&lt;/p&gt;
 &lt;p&gt;На выходе в AL = ASCII-код символа, 0 или префикс скан-кода, АН = скан-код
@@ -122,76 +121,75 @@ end start
 распределения. Если к моменту прихода заявки канал занят, заявка покидает
 систему необслуженной.&lt;/p&gt;
 &lt;p&gt;Изначально код был написан на php, вот &lt;a class="reference external" href="https://github.com/marselester/single-channel-queuing"&gt;пример на python 3&lt;/a&gt;:&lt;/p&gt;
-&lt;pre class="literal-block"&gt;
-import random
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;random&lt;/span&gt;
 
 
-class RequestPoll:
-    &amp;quot;&amp;quot;&amp;quot;Iterator that yields random requests and keeps statistic.&amp;quot;&amp;quot;&amp;quot;
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;RequestPoll&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Iterator that yields random requests and keeps statistic.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 
-    def __init__(self, time_to_finish, intensity_of_service_flow):
-        self.time_to_finish = time_to_finish
-        self.intensity_of_service_flow = intensity_of_service_flow
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;__init__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;time_to_finish&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_to_finish&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;time_to_finish&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt;
 
-    def __str__(self):
-        return (
-            'Total: {}\n'.format(self.total()) +
-            'Processed: {}\n'.format(self.qty_of_processed_requests) +
-            'Refused: {}\n'.format(self.qty_of_refused_requests) +
-            'Proportion of processed requests: {}\n'.format(self.proportion_of_processed_requests()) +
-            'Probability of refuse: {}\n'.format(self.probability_of_refuse()) +
-            'Absolute bandwidth: {}'.format(self.abs_bandwidth())
-        )
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;__str__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Total: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;total&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Processed: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Refused: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Proportion of processed requests: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;proportion_of_processed_requests&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Probability of refuse: {}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;probability_of_refuse&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;Absolute bandwidth: {}&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;abs_bandwidth&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+        &lt;span class="p"&gt;)&lt;/span&gt;
 
-    def __iter__(self):
-        self.system_uptime = 0
-        self.time_when_channel_will_be_free = 0
-        self.qty_of_processed_requests = 0
-        self.qty_of_refused_requests = 0
-        return self
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;__iter__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_when_channel_will_be_free&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;
 
-    def __next__(self):
-        if self.system_uptime &amp;gt; self.time_to_finish:
-            raise StopIteration
-        time_when_request_came_in = random.random()
-        self.system_uptime += time_when_request_came_in
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;__next__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_to_finish&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="k"&gt;raise&lt;/span&gt; &lt;span class="ne"&gt;StopIteration&lt;/span&gt;
+        &lt;span class="n"&gt;time_when_request_came_in&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;random&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;time_when_request_came_in&lt;/span&gt;
 
-        if self._can_system_process_request():
-            self.qty_of_processed_requests += 1
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;_can_system_process_request&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+            &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
 
-            time_for_which_request_has_taken_channel = random \
-                .expovariate(self.intensity_of_service_flow)
-            self.time_when_channel_will_be_free = self.system_uptime \
-                + time_for_which_request_has_taken_channel
+            &lt;span class="n"&gt;time_for_which_request_has_taken_channel&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;random&lt;/span&gt; \
+                &lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;expovariate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+            &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_when_channel_will_be_free&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; \
+                &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="n"&gt;time_for_which_request_has_taken_channel&lt;/span&gt;
 
-            return 'request added to queue at {}'.format(self.system_uptime)
-        else:
-            self.qty_of_refused_requests += 1
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;request added to queue at {}&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
 
-            return 'requests refused at {}'.format(self.system_uptime)
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;requests refused at {}&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-    def _can_system_process_request(self):
-        return self.system_uptime &amp;gt;= self.time_when_channel_will_be_free
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;_can_system_process_request&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;system_uptime&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;=&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_when_channel_will_be_free&lt;/span&gt;
 
-    def total(self):
-        return self.qty_of_processed_requests + self.qty_of_refused_requests
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;total&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt;
 
-    def abs_bandwidth(self):
-        return self.qty_of_processed_requests / self.time_to_finish
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;abs_bandwidth&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time_to_finish&lt;/span&gt;
 
-    def proportion_of_processed_requests(self):
-        return self.qty_of_processed_requests / self.total()
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;proportion_of_processed_requests&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_processed_requests&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;total&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 
-    def probability_of_refuse(self):
-        return self.qty_of_refused_requests / self.total()
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;probability_of_refuse&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qty_of_refused_requests&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;total&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 
-intensity_of_service_flow = 0.5
-time_to_finish = 70
-request_poll = RequestPoll(time_to_finish, intensity_of_service_flow)
+&lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.5&lt;/span&gt;
+&lt;span class="n"&gt;time_to_finish&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;70&lt;/span&gt;
+&lt;span class="n"&gt;request_poll&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;RequestPoll&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;time_to_finish&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;intensity_of_service_flow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-for request in request_poll:
-    print(request)
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;request&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;request_poll&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-print(request_poll)
-&lt;/pre&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;request_poll&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 </summary><category term="python"></category><category term="modeling"></category><category term="single-channel queue"></category></entry></feed>

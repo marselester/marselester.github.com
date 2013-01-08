@@ -48,7 +48,9 @@ Questions
 Basic
 ~~~~~
 
-Probably interviewer starts with basic questions. Let us see example::
+Probably interviewer starts with basic questions. Let us see example:
+
+.. code-block:: python
 
     funcs = []
     for i in range(5):
@@ -65,7 +67,9 @@ that variable search in enclosed scope will be done later, **after call** of
 enclosed functions. They all get same value -- value of ``i`` in last
 iteration.
 
-Next example prints numbers from 0 to 4::
+Next example prints numbers from 0 to 4:
+
+.. code-block:: python
 
     funcs = []
     for i in range(5):
@@ -80,7 +84,9 @@ It happens because default value is stored **when enclosed function was
 created**.
 
 There is another popular question related with default value of function.
-N.B. ``names`` is mutable::
+N.B. ``names`` is mutable:
+
+.. code-block:: python
 
     def f(names=[]):
         names.append('some name')
@@ -91,7 +97,7 @@ will be helpful to prepare for questions which are mentioned above.
 What do you think about this code?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-::
+.. code-block:: python
 
     d = {1: 'a', 2: 'b', 3: 'c'}
 

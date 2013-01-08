@@ -3,73 +3,50 @@
 <head>
         <title>marselester's blog - testing</title>
         <meta charset="utf-8" />
-        <link rel="stylesheet" href=".././theme/css/main.css" type="text/css" />
-        
-        <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
-        
-        
-
+        <link rel="stylesheet" href="../theme/css/main.css" type="text/css" />
+                <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
+                
         <!--[if IE]>
                 <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
 
         <!--[if lte IE 7]>
-                <link rel="stylesheet" type="text/css" media="all" href=".././css/ie.css"/>
-                <script src=".././js/IE8.js" type="text/javascript"></script><![endif]-->
+                <link rel="stylesheet" type="text/css" media="all" href="../css/ie.css"/>
+                <script src="../js/IE8.js" type="text/javascript"></script><![endif]-->
 
         <!--[if lt IE 7]>
-                <link rel="stylesheet" type="text/css" media="all" href=".././css/ie6.css"/><![endif]-->
+                <link rel="stylesheet" type="text/css" media="all" href="../css/ie6.css"/><![endif]-->
 
 </head>
 
 <body id="index" class="home">
-
 <a href="https://github.com/marselester/">
-
 <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub" />
-
 </a>
-
         <header id="banner" class="body">
-                <h1><a href="../.">marselester's blog </a></h1>
+                <h1><a href="../">marselester's blog </a></h1>
                 <nav><ul>
-                
-                
-                
-                    <li><a href=".././pages/about.html">About</a></li>
-                
-                
-                
-                    <li ><a href=".././category/misc.html">Misc</a></li>
-                
-                    <li ><a href=".././category/portfolio.html">Portfolio</a></li>
-                
-                    <li ><a href=".././category/python.html">Python</a></li>
-                
-                </ul></nav>
+                                                                    <li><a href="../pages/about.html">About</a></li>
+                                                                    <li ><a href="../category/misc.html">Misc</a></li>
+                                    <li ><a href="../category/portfolio.html">Portfolio</a></li>
+                                    <li ><a href="../category/python.html">Python</a></li>
+                                </ul></nav>
         </header><!-- /#banner -->
                 
-
             
 
-        
-        
-            <aside id="featured" class="body">
+                            <aside id="featured" class="body">
                 <article>
-                    <h1 class="entry-title"><a href=".././django-todo-testing-during-construction.html">Django TODO: тестирование во время конструирования</a></h1> 
+                    <h1 class="entry-title"><a href="../django-todo-testing-during-construction.html">Django TODO: тестирование во время конструирования</a></h1> 
                     <footer class="post-info">
         <abbr class="published" title="2012-06-29T13:00:00">
                 пт 29 июня 2012
         </abbr>
 
-        
-        <address class="vcard author">
-                By <a class="url fn" href=".././author/marsel-mavletkulov.html">Marsel Mavletkulov</a>
+                <address class="vcard author">
+                By <a class="url fn" href="../author/marsel-mavletkulov.html">Marsel Mavletkulov</a>
         </address>
-        
-<p>In <a href=".././category/python.html">Python</a>. </p>
-<p>tags: <a href=".././tag/python.html">python</a><a href=".././tag/django.html">django</a><a href=".././tag/django-todo.html">django-todo</a><a href=".././tag/testing.html">testing</a></p>
-
-
+        <p>In <a href="../category/python.html">Python</a>. </p>
+<p>tags: <a href="../tag/python.html">python</a><a href="../tag/django.html">django</a><a href="../tag/django-todo.html">django-todo</a><a href="../tag/testing.html">testing</a></p>
 </footer><!-- /.post-info --><p>Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
 стратегии тестирования.</p>
 <p>Тестирование может указать только на отдельные дефектные области программы --
@@ -165,27 +142,27 @@ Django использует для импорта в БД), аргументир
 </ul>
 <p>Определив все возможные случаи наступления дедлайна можно спроектировать
 &quot;чистые тесты&quot; для метода <em>days_quantity_after_deadline</em>:</p>
-<pre class="literal-block">
-class DeadlineDaysTest(TaskTest):
-    &quot;&quot;&quot;Тестирует определение количества просроченных дней.&quot;&quot;&quot;
-    def task_wait_overdue(self):
-        &quot;&quot;&quot;Просрочен дедлайн у ожидающей задачи из-за предыдущей задачи.
+<div class="highlight"><pre><span class="k">class</span> <span class="nc">DeadlineDaysTest</span><span class="p">(</span><span class="n">TaskTest</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Тестирует определение количества просроченных дней.&quot;&quot;&quot;</span>
 
-        Предыдущая задача превысила свой дедлайн и дедлайн текущей задачи.
-        &quot;&quot;&quot;
+    <span class="k">def</span> <span class="nf">task_wait_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Просрочен дедлайн у ожидающей задачи из-за предыдущей задачи.</span>
 
-    def task_work_overdue(self):
-        &quot;&quot;&quot;Работающая задача превысила дедлайн.&quot;&quot;&quot;
+<span class="sd">        Предыдущая задача превысила свой дедлайн и дедлайн текущей задачи.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
-    def task_done_overdue(self):
-        &quot;&quot;&quot;Задача выполнена с превышением дедлайна.&quot;&quot;&quot;
+    <span class="k">def</span> <span class="nf">task_work_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Работающая задача превысила дедлайн.&quot;&quot;&quot;</span>
 
-    def task_stop_overdue(self):
-        &quot;&quot;&quot;Просрочен дедлайн у остановленной задачи.
+    <span class="k">def</span> <span class="nf">task_done_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Задача выполнена с превышением дедлайна.&quot;&quot;&quot;</span>
 
-        Владелец цепочки не решил проблему остановки задачи.
-        &quot;&quot;&quot;
-</pre>
+    <span class="k">def</span> <span class="nf">task_stop_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Просрочен дедлайн у остановленной задачи.</span>
+
+<span class="sd">        Владелец цепочки не решил проблему остановки задачи.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+</pre></div>
 <p>Под &quot;чистыми тестами&quot; подразумеваются тесты, которые проверяют работает ли
 код, а не пытаются нарушить его работу всевозможными способами (&quot;грязные
 тесты&quot;). В организациях со зрелым процессом тестирования на каждый &quot;чистый
@@ -238,43 +215,44 @@ class DeadlineDaysTest(TaskTest):
 </ul>
 <p>Демонстрация фрагмента блочного тестирования для метода <em>start_date</em> приведена
 ниже:</p>
-<pre class="literal-block">
-# -*- coding: utf-8 -*-
-import datetime
+<div class="highlight"><pre><span class="c"># -*- coding: utf-8 -*-</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
 
-from django.test import TestCase
-from django.contrib.auth.models import User
+<span class="kn">from</span> <span class="nn">django.test</span> <span class="kn">import</span> <span class="n">TestCase</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">User</span>
 
-from todo.models import Chain, Task
-from . import factories
-
-
-class TaskTest(TestCase):
-    def setUp(self):
-        factories.make_fixtures()
-        # Сотрудники.
-        self.manager = User.objects.get(username='alexander')
-        self.designer = User.objects.get(username='kazimir')
-        self.programmer = User.objects.get(username='ada')
+<span class="kn">from</span> <span class="nn">todo.models</span> <span class="kn">import</span> <span class="n">Chain</span><span class="p">,</span> <span class="n">Task</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">factories</span>
 
 
-class StartDateTest(TaskTest):
-    &quot;&quot;&quot;Тестирует определение даты начала работы над задачей.&quot;&quot;&quot;
-    def test_first_task(self):
-        &quot;&quot;&quot;Тестирует дату начала работы первой задачи.
+<span class="k">class</span> <span class="nc">TaskTest</span><span class="p">(</span><span class="n">TestCase</span><span class="p">):</span>
 
-        Дата начала первой задачи совпадает с датой начала цепочки. Это условие
-        верно для задач с любым статусом.
-        &quot;&quot;&quot;
-        today = datetime.date.today()
-        chain_start_date = today + datetime.timedelta(days=1)
-        chain = Chain.objects.create(name='Chain', start_date=chain_start_date,
-                                     owner=self.manager)
-        deadline = chain_start_date + datetime.timedelta(days=3)
-        first_task = Task.objects.create(worker=self.designer, task='Design',
-                                         deadline=deadline, chain=chain)
-        self.assertEqual(first_task.start_date(), chain.start_date)
-</pre>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">factories</span><span class="o">.</span><span class="n">make_fixtures</span><span class="p">()</span>
+        <span class="c"># Сотрудники.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;alexander&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">designer</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;kazimir&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">programmer</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;ada&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">StartDateTest</span><span class="p">(</span><span class="n">TaskTest</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Тестирует определение даты начала работы над задачей.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">test_first_task</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Тестирует дату начала работы первой задачи.</span>
+
+<span class="sd">        Дата начала первой задачи совпадает с датой начала цепочки. Это условие</span>
+<span class="sd">        верно для задач с любым статусом.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">today</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
+        <span class="n">chain_start_date</span> <span class="o">=</span> <span class="n">today</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">chain</span> <span class="o">=</span> <span class="n">Chain</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;Chain&#39;</span><span class="p">,</span> <span class="n">start_date</span><span class="o">=</span><span class="n">chain_start_date</span><span class="p">,</span>
+                                     <span class="n">owner</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="p">)</span>
+        <span class="n">deadline</span> <span class="o">=</span> <span class="n">chain_start_date</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">first_task</span> <span class="o">=</span> <span class="n">Task</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">worker</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">designer</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="s">&#39;Design&#39;</span><span class="p">,</span>
+                                         <span class="n">deadline</span><span class="o">=</span><span class="n">deadline</span><span class="p">,</span> <span class="n">chain</span><span class="o">=</span><span class="n">chain</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">first_task</span><span class="o">.</span><span class="n">start_date</span><span class="p">(),</span> <span class="n">chain</span><span class="o">.</span><span class="n">start_date</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 <div class="section" id="id13">
@@ -293,27 +271,27 @@ class StartDateTest(TaskTest):
 поддерживает юникод и давно не развивается (последний релиз был в 2007 году).</p>
 <p>В качестве примера приводится тестирование посещения пользователем страницы
 актуальных задач:</p>
-<pre class="literal-block">
-# -*- coding: utf-8 -*-
-from django_webtest import WebTest
+<div class="highlight"><pre><span class="c"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">django_webtest</span> <span class="kn">import</span> <span class="n">WebTest</span>
 
-from django.core.urlresolvers import reverse
+<span class="kn">from</span> <span class="nn">django.core.urlresolvers</span> <span class="kn">import</span> <span class="n">reverse</span>
 
-from . import factories
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">factories</span>
 
 
-class ActualTasksTest(WebTest):
-    def setUp(self):
-        factories.make_fixtures()
+<span class="k">class</span> <span class="nc">ActualTasksTest</span><span class="p">(</span><span class="n">WebTest</span><span class="p">):</span>
 
-    def test_user_not_logined(self):
-        response = self.app.get(reverse('todo_actual_tasks'))
-        self.assertEqual(response.status_int, 302)
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">factories</span><span class="o">.</span><span class="n">make_fixtures</span><span class="p">()</span>
 
-    def test_designer_logined(self):
-        response = self.app.get(reverse('todo_actual_tasks'), user='kazimir')
-        assert 'Казимир Малевич' in response
-</pre>
+    <span class="k">def</span> <span class="nf">test_user_not_logined</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s">&#39;todo_actual_tasks&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_int</span><span class="p">,</span> <span class="mi">302</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_designer_logined</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s">&#39;todo_actual_tasks&#39;</span><span class="p">),</span> <span class="n">user</span><span class="o">=</span><span class="s">&#39;kazimir&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="s">&#39;Казимир Малевич&#39;</span> <span class="ow">in</span> <span class="n">response</span>
+</pre></div>
 <p>В первом случае пользователь не авторизован (метод <em>test_user_not_logined</em>) и
 браузер должен вернуть статус <em>302</em> (перенаправление на страницу авторизации),
 во втором случае (метод <em>test_designer_logined</em>) пользователь авторизован под
@@ -350,47 +328,24 @@ class ActualTasksTest(WebTest):
 </tbody>
 </table>
 </div>
-<p>There are <a href=".././django-todo-testing-during-construction.html#disqus_thread">comments</a>.</p>
-                </article>
-                
-                    
-                
-            </aside><!-- /#featured -->
-            
-        
-        
-        
-            </ol><!-- /#posts-list -->
-            
-            </section><!-- /#content -->
-        
-    
-
-
-        <section id="extras" class="body">
-        
-        
-                <div class="social">
+<p>There are <a href="../django-todo-testing-during-construction.html#disqus_thread">comments</a>.</p>                </article>
+                                                                </aside><!-- /#featured -->
+                                                </ol><!-- /#posts-list -->
+                        </section><!-- /#content -->
+                    <section id="extras" class="body">
+                                <div class="social">
                         <h2>social</h2>
                         <ul>
                             <li><a href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
                             
-
-                        
-                            <li><a href="https://github.com/marselester">GitHub</a></li>
-                        
-                            <li><a href="http://twitter.com/marselester">Twitter</a></li>
-                        
-                            <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
-                        
-                            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
-                        
-                            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
-                        
-                        </ul>
+                                                    <li><a href="https://github.com/marselester">GitHub</a></li>
+                                                    <li><a href="http://twitter.com/marselester">Twitter</a></li>
+                                                    <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
+                                                    <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
+                                                    <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+                                                </ul>
                 </div><!-- /.social -->
-        
-        </section><!-- /#extras -->
+                </section><!-- /#extras -->
 
         <footer id="contentinfo" class="body">
                 <address id="about" class="vcard body">
@@ -399,9 +354,6 @@ class ActualTasksTest(WebTest):
 
                 <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
         </footer><!-- /#contentinfo -->
-
-
-
 
 <script type="text/javascript">
     var disqus_shortname = 'marselester';
@@ -412,6 +364,5 @@ class ActualTasksTest(WebTest):
         (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
     }());
 </script>
-
 </body>
 </html>

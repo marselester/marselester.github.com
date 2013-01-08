@@ -20,7 +20,9 @@ Senko Rašić::
     └── production.py
 
 ``base.py`` содержит общие настройки для ``development.py`` и
-``production.py``, например::
+``production.py``, например:
+
+.. code-block:: python
 
     ADMINS = ()
     MANAGERS = ADMINS
@@ -29,7 +31,9 @@ Senko Rašić::
     # ...
 
 ``production.py`` содержит настройки для эксплуатации. Как минимум, необходимо
-выключить режим отладки::
+выключить режим отладки:
+
+.. code-block:: python
 
     from .base import *
 
@@ -39,7 +43,9 @@ Senko Rašić::
 
 ``development.py`` содержит настройки, необходимые для разработки. Настройки
 должны быть **одинаковы** и **полезны для всех участников** процесса
-разработки, например::
+разработки, например:
+
+.. code-block:: python
 
     from .base import *
 
@@ -49,7 +55,9 @@ Senko Rašić::
 
 Все индивидуальные настройки разработчика необходимо вынести в ``local.py``.
 Например, это могут быть настройки подключения к БД, любимые инструменты
-разработки и так далее::
+разработки и так далее:
+
+.. code-block:: python
 
     from .development import *
 
@@ -65,14 +73,18 @@ Senko Rašić::
     }
 
 На production сервере ``local.py`` обычно содержит настройки подключения к
-БД::
+БД:
+
+.. code-block:: python
 
     from .production import *
 
 ``local.py`` не должен отслеживаться VCS.
 
 Для Django 1.4 в файлах ``repo-name/project_name/wsgi.py`` и
-``repo-name/manage.py`` нужно указать путь до ``local.py``::
+``repo-name/manage.py`` нужно указать путь до ``local.py``:
+
+.. code-block:: python
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project_name.settings.local")
 

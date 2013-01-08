@@ -3,73 +3,50 @@
 <head>
         <title>marselester's blog - construction</title>
         <meta charset="utf-8" />
-        <link rel="stylesheet" href=".././theme/css/main.css" type="text/css" />
-        
-        <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
-        
-        
-
+        <link rel="stylesheet" href="../theme/css/main.css" type="text/css" />
+                <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
+                
         <!--[if IE]>
                 <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
 
         <!--[if lte IE 7]>
-                <link rel="stylesheet" type="text/css" media="all" href=".././css/ie.css"/>
-                <script src=".././js/IE8.js" type="text/javascript"></script><![endif]-->
+                <link rel="stylesheet" type="text/css" media="all" href="../css/ie.css"/>
+                <script src="../js/IE8.js" type="text/javascript"></script><![endif]-->
 
         <!--[if lt IE 7]>
-                <link rel="stylesheet" type="text/css" media="all" href=".././css/ie6.css"/><![endif]-->
+                <link rel="stylesheet" type="text/css" media="all" href="../css/ie6.css"/><![endif]-->
 
 </head>
 
 <body id="index" class="home">
-
 <a href="https://github.com/marselester/">
-
 <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub" />
-
 </a>
-
         <header id="banner" class="body">
-                <h1><a href="../.">marselester's blog </a></h1>
+                <h1><a href="../">marselester's blog </a></h1>
                 <nav><ul>
-                
-                
-                
-                    <li><a href=".././pages/about.html">About</a></li>
-                
-                
-                
-                    <li ><a href=".././category/misc.html">Misc</a></li>
-                
-                    <li ><a href=".././category/portfolio.html">Portfolio</a></li>
-                
-                    <li ><a href=".././category/python.html">Python</a></li>
-                
-                </ul></nav>
+                                                                    <li><a href="../pages/about.html">About</a></li>
+                                                                    <li ><a href="../category/misc.html">Misc</a></li>
+                                    <li ><a href="../category/portfolio.html">Portfolio</a></li>
+                                    <li ><a href="../category/python.html">Python</a></li>
+                                </ul></nav>
         </header><!-- /#banner -->
                 
-
             
 
-        
-        
-            <aside id="featured" class="body">
+                            <aside id="featured" class="body">
                 <article>
-                    <h1 class="entry-title"><a href=".././django-todo-system-construction.html">Django TODO: конструирование системы</a></h1> 
+                    <h1 class="entry-title"><a href="../django-todo-system-construction.html">Django TODO: конструирование системы</a></h1> 
                     <footer class="post-info">
         <abbr class="published" title="2012-06-29T12:00:00">
                 пт 29 июня 2012
         </abbr>
 
-        
-        <address class="vcard author">
-                By <a class="url fn" href=".././author/marsel-mavletkulov.html">Marsel Mavletkulov</a>
+                <address class="vcard author">
+                By <a class="url fn" href="../author/marsel-mavletkulov.html">Marsel Mavletkulov</a>
         </address>
-        
-<p>In <a href=".././category/python.html">Python</a>. </p>
-<p>tags: <a href=".././tag/python.html">python</a><a href=".././tag/django.html">django</a><a href=".././tag/django-todo.html">django-todo</a><a href=".././tag/construction.html">construction</a></p>
-
-
+        <p>In <a href="../category/python.html">Python</a>. </p>
+<p>tags: <a href="../tag/python.html">python</a><a href="../tag/django.html">django</a><a href="../tag/django-todo.html">django-todo</a><a href="../tag/construction.html">construction</a></p>
 </footer><!-- /.post-info --><p>При работе над проектом конструирование включает другие процессы, в том числе
 проектирование. Формальная архитектура дает ответы только на вопросы
 системного уровня, при этом значительная часть проектирования может быть
@@ -158,21 +135,21 @@
 кортежа из кортежей, заглавными буквами. Должны быть расположены в начале
 модели <a class="footnote-reference" href="#django" id="id8">[3]</a> и названы без использования &quot;магических чисел&quot;
 <a class="footnote-reference" href="#mcconnell" id="id9">[1]</a>. Например:</p>
-<pre class="literal-block">
-class Task(models.Model):
-    UNCERTAIN_STATUS = 0
-    DONE_STATUS = 1
-    STOP_STATUS = 2
-    WAIT_STATUS = 3
-    WORK_STATUS = 4
-    STATUS_CHOICES = (
-        (DONE_STATUS, 'done'),
-        (STOP_STATUS, 'stop')
-    )
+<div class="highlight"><pre><span class="k">class</span> <span class="nc">Task</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
 
-    status = models.IntegerField(choices=STATUS_CHOICES,
-                                 default=UNCERTAIN_STATUS)
-</pre>
+    <span class="n">UNCERTAIN_STATUS</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">DONE_STATUS</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">STOP_STATUS</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">WAIT_STATUS</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">WORK_STATUS</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">STATUS_CHOICES</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">DONE_STATUS</span><span class="p">,</span> <span class="s">&#39;done&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">STOP_STATUS</span><span class="p">,</span> <span class="s">&#39;stop&#39;</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">status</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">STATUS_CHOICES</span><span class="p">,</span>
+                                 <span class="n">default</span><span class="o">=</span><span class="n">UNCERTAIN_STATUS</span><span class="p">)</span>
+</pre></div>
 </div>
 <div class="section" id="id10">
 <h3>Методы модели</h3>
@@ -180,26 +157,26 @@ class Task(models.Model):
 наделять свои объекты дополнительной функциональностью на уровне строк. Методы
 модели подходят для инкапсуляции всей бизнес-логики в одном месте. Например,
 фрагмент модели <em>Цепочка</em>:</p>
-<pre class="literal-block">
-class Chain(models.Model):
-    &quot;&quot;&quot;Цепочка задач.&quot;&quot;&quot;
-    # Пропущены атрибуты модели для экономии места.
+<div class="highlight"><pre><span class="k">class</span> <span class="nc">Chain</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Цепочка задач.&quot;&quot;&quot;</span>
 
-    # Default manager.
-    objects = PassThroughManager.for_queryset_class(ChainQuerySet)()
+    <span class="c"># Пропущены атрибуты модели для экономии места.</span>
 
-    def actual_status(self):
-        &quot;&quot;&quot;Определяет фактический статус цепочки.&quot;&quot;&quot;
-        if self.start_date &gt; datetime.date.today():
-            return self.WAIT_STATUS
-        if self.task_set.filter(status=Task.STOP_STATUS).exists():
-            return self.STOP_STATUS
-        last_task = self.last_task()
-        if last_task.actual_status() == Task.DONE_STATUS:
-            return self.DONE_STATUS
-        else:
-            return self.WORK_STATUS
-</pre>
+    <span class="c"># Default manager.</span>
+    <span class="n">objects</span> <span class="o">=</span> <span class="n">PassThroughManager</span><span class="o">.</span><span class="n">for_queryset_class</span><span class="p">(</span><span class="n">ChainQuerySet</span><span class="p">)()</span>
+
+    <span class="k">def</span> <span class="nf">actual_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Определяет фактический статус цепочки.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_date</span> <span class="o">&gt;</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">WAIT_STATUS</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_set</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">Task</span><span class="o">.</span><span class="n">STOP_STATUS</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">STOP_STATUS</span>
+        <span class="n">last_task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_task</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">last_task</span><span class="o">.</span><span class="n">actual_status</span><span class="p">()</span> <span class="o">==</span> <span class="n">Task</span><span class="o">.</span><span class="n">DONE_STATUS</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">DONE_STATUS</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">WORK_STATUS</span>
+</pre></div>
 <p>Согласно спроектированной архитектуре системы были разработаны следующие
 методы модели данных <em>Задача</em>:</p>
 <ul class="simple">
@@ -253,20 +230,20 @@ class Chain(models.Model):
 таких как <tt class="docutils literal">actual_tasks = <span class="pre">Task.objects.by_worker(user).actual()</span></tt>. Для обхода
 этого ограничения используется сторонняя библиотека <em>django-model-utils</em>,
 которая позволяет писать QuerySet вместо менеджера <a class="footnote-reference" href="#korobov" id="id13">[4]</a>. Например:</p>
-<pre class="literal-block">
-# -*- coding: utf-8 -*-
-from django.db.models.query import QuerySet
+<div class="highlight"><pre><span class="c"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">django.db.models.query</span> <span class="kn">import</span> <span class="n">QuerySet</span>
 
 
-class ChainQuerySet(QuerySet):
-    def by_owner(self, owner):
-        &quot;&quot;&quot;Возвращает цепочки владельца.&quot;&quot;&quot;
-        return self.filter(owner=owner)
+<span class="k">class</span> <span class="nc">ChainQuerySet</span><span class="p">(</span><span class="n">QuerySet</span><span class="p">):</span>
 
-    def actual(self):
-        &quot;&quot;&quot;Возвращает актуальтуные цепочки задач.&quot;&quot;&quot;
-        return self.filter(archive=False).order_by('start_date')
-</pre>
+    <span class="k">def</span> <span class="nf">by_owner</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owner</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Возвращает цепочки владельца.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner</span><span class="o">=</span><span class="n">owner</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">actual</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Возвращает актуальтуные цепочки задач.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">archive</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s">&#39;start_date&#39;</span><span class="p">)</span>
+</pre></div>
 </div>
 <div class="section" id="id14">
 <h3>Миграция схемы модели</h3>
@@ -319,37 +296,35 @@ todo_tags.py</tt>.</p>
 <em>HttpRequest</em> в качестве первого параметра и возвращает экземпляр класса
 <em>HttpResponse</em>. Ниже приведен код функции вместе с командами импорта из файла
 <tt class="docutils literal">views.py</tt>:</p>
-<pre class="literal-block">
-# -*- coding: utf-8 -*-
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
+<div class="highlight"><pre><span class="c"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span><span class="p">,</span> <span class="n">get_object_or_404</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
 
-from todo.models import Chain, Task
+<span class="kn">from</span> <span class="nn">todo.models</span> <span class="kn">import</span> <span class="n">Chain</span><span class="p">,</span> <span class="n">Task</span>
 
 
-&#64;login_required
-def actual_tasks(request):
-    &quot;&quot;&quot;Отображает список актуальных задач для исполнителя.&quot;&quot;&quot;
-    user = request.user
-    actual_tasks = Task.objects.by_worker(user).actual()
-    return render(request, 'todo/task_list.html', {
-        'place': 'tasks',
-        'actual_tasks': actual_tasks,
-    })
-</pre>
+<span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">actual_tasks</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Отображает список актуальных задач для исполнителя.&quot;&quot;&quot;</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+    <span class="n">actual_tasks</span> <span class="o">=</span> <span class="n">Task</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">by_worker</span><span class="p">(</span><span class="n">user</span><span class="p">)</span><span class="o">.</span><span class="n">actual</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;todo/task_list.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s">&#39;place&#39;</span><span class="p">:</span> <span class="s">&#39;tasks&#39;</span><span class="p">,</span>
+        <span class="s">&#39;actual_tasks&#39;</span><span class="p">:</span> <span class="n">actual_tasks</span><span class="p">,</span>
+    <span class="p">})</span>
+</pre></div>
 <p>Чтобы связать функцию представления с URL, в Django используется механизм
 конфигурации URL. Django ожидает найти переменную <em>urlpatterns</em> в конфигурации
 URL. Она определяет соответствие между URL-адресами и обрабатывающим их кодом.</p>
 <p>Вот как подключается представление <em>actual_tasks</em> и <em>task_archive</em> в файле
 <tt class="docutils literal">urls.py</tt>:</p>
-<pre class="literal-block">
-from django.conf.urls.defaults import patterns, url
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">django.conf.urls.defaults</span> <span class="kn">import</span> <span class="n">patterns</span><span class="p">,</span> <span class="n">url</span>
 
-urlpatterns = patterns('todo.views',
-    url(r'^$', 'actual_tasks', name='todo_actual_tasks'),
-    url(r'^task/archive/$', 'task_archive', name='todo_task_archive'),
-)
-</pre>
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="n">patterns</span><span class="p">(</span><span class="s">&#39;todo.views&#39;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">(</span><span class="s">r&#39;^$&#39;</span><span class="p">,</span> <span class="s">&#39;actual_tasks&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;todo_actual_tasks&#39;</span><span class="p">),</span>
+    <span class="n">url</span><span class="p">(</span><span class="s">r&#39;^task/archive/$&#39;</span><span class="p">,</span> <span class="s">&#39;task_archive&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;todo_task_archive&#39;</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
 <p>Любой запрос к URL <tt class="docutils literal">/task/archive/</tt> должен обрабатываться функцией
 <em>task_archive</em>, а запрос <tt class="docutils literal">/</tt> будет обрабатываться <em>actual_tasks</em>.</p>
 <p>Названия шаблонам URL рекомендуется давать в форме <tt class="docutils literal">APP_MODEL_VIEW</tt>,
@@ -393,47 +368,24 @@ urlpatterns = patterns('todo.views',
 </tbody>
 </table>
 </div>
-<p>There are <a href=".././django-todo-system-construction.html#disqus_thread">comments</a>.</p>
-                </article>
-                
-                    
-                
-            </aside><!-- /#featured -->
-            
-        
-        
-        
-            </ol><!-- /#posts-list -->
-            
-            </section><!-- /#content -->
-        
-    
-
-
-        <section id="extras" class="body">
-        
-        
-                <div class="social">
+<p>There are <a href="../django-todo-system-construction.html#disqus_thread">comments</a>.</p>                </article>
+                                                                </aside><!-- /#featured -->
+                                                </ol><!-- /#posts-list -->
+                        </section><!-- /#content -->
+                    <section id="extras" class="body">
+                                <div class="social">
                         <h2>social</h2>
                         <ul>
                             <li><a href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
                             
-
-                        
-                            <li><a href="https://github.com/marselester">GitHub</a></li>
-                        
-                            <li><a href="http://twitter.com/marselester">Twitter</a></li>
-                        
-                            <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
-                        
-                            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
-                        
-                            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
-                        
-                        </ul>
+                                                    <li><a href="https://github.com/marselester">GitHub</a></li>
+                                                    <li><a href="http://twitter.com/marselester">Twitter</a></li>
+                                                    <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
+                                                    <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
+                                                    <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+                                                </ul>
                 </div><!-- /.social -->
-        
-        </section><!-- /#extras -->
+                </section><!-- /#extras -->
 
         <footer id="contentinfo" class="body">
                 <address id="about" class="vcard body">
@@ -442,9 +394,6 @@ urlpatterns = patterns('todo.views',
 
                 <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
         </footer><!-- /#contentinfo -->
-
-
-
 
 <script type="text/javascript">
     var disqus_shortname = 'marselester';
@@ -455,6 +404,5 @@ urlpatterns = patterns('todo.views',
         (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
     }());
 </script>
-
 </body>
 </html>

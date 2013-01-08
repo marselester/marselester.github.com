@@ -4,11 +4,8 @@
         <title>Краткий обзор инфраструктуры для разработки reusable Django приложений</title>
         <meta charset="utf-8" />
         <link rel="stylesheet" href="./theme/css/main.css" type="text/css" />
-        
-        <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
-        
-        
-
+                <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
+                
         <!--[if IE]>
                 <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
 
@@ -22,41 +19,25 @@
 </head>
 
 <body id="index" class="home">
-
 <a href="https://github.com/marselester/">
-
 <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub" />
-
 </a>
-
         <header id="banner" class="body">
-                <h1><a href=".">marselester's blog </a></h1>
+                <h1><a href="./">marselester's blog </a></h1>
                 <nav><ul>
-                
-                
-                
-                    <li><a href="./pages/about.html">About</a></li>
-                
-                
-                
-                    <li ><a href="./category/misc.html">Misc</a></li>
-                
-                    <li ><a href="./category/portfolio.html">Portfolio</a></li>
-                
-                    <li class="active"><a href="./category/python.html">Python</a></li>
-                
-                </ul></nav>
+                                                                    <li><a href="./pages/about.html">About</a></li>
+                                                                    <li ><a href="./category/misc.html">Misc</a></li>
+                                    <li ><a href="./category/portfolio.html">Portfolio</a></li>
+                                    <li class="active"><a href="./category/python.html">Python</a></li>
+                                </ul></nav>
         </header><!-- /#banner -->
-        
-<section id="content" class="body">
+        <section id="content" class="body">
   <article>
     <header>
       <h1 class="entry-title">
-        <a href="short-overview-of-infrastructure-for-developing-reusable-django-apps.html" rel="bookmark"
+        <a href="./short-overview-of-infrastructure-for-developing-reusable-django-apps.html" rel="bookmark"
            title="Permalink to Краткий обзор инфраструктуры для разработки reusable Django приложений">Краткий обзор инфраструктуры для разработки reusable Django приложений</a></h1>
-      
-<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
-
+      <a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
     </header>
 
     <div class="entry-content">
@@ -65,17 +46,12 @@
                 ср 13 июня 2012
         </abbr>
 
-        
-        <address class="vcard author">
+                <address class="vcard author">
                 By <a class="url fn" href="./author/marsel-mavletkulov.html">Marsel Mavletkulov</a>
         </address>
-        
-<p>In <a href="./category/python.html">Python</a>. </p>
+        <p>In <a href="./category/python.html">Python</a>. </p>
 <p>tags: <a href="./tag/python.html">python</a><a href="./tag/django.html">django</a><a href="./tag/infrastructure.html">infrastructure</a></p>
-
-
-</footer><!-- /.post-info -->
-      <p>Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
+</footer><!-- /.post-info -->      <p>Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
 зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
 веб-приложений на Django к этим проблемам необходимо отнести организацию
 файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
@@ -149,21 +125,20 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 версиями проекта. Поле <em>packages</em> описывает, где размещен Python код проекта
 <a class="footnote-reference" href="#ziade" id="id7">[2]</a>. Ниже приведен пример файла <tt class="docutils literal">setup.py</tt>, который также включает
 информацию о лицензии и описание проекта:</p>
-<pre class="literal-block">
-#!/usr/bin/env python
-from distutils.core import setup
+<div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<span class="kn">from</span> <span class="nn">distutils.core</span> <span class="kn">import</span> <span class="n">setup</span>
 
-setup(
-    name='django-todo',
-    version='0.1dev',
-    long_description=open('README.rst').read(),
-    licence='MIT license',
-    packages=[
-        'todo',
-        'todo.templatetags',
-    ]
-)
-</pre>
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s">&#39;django-todo&#39;</span><span class="p">,</span>
+    <span class="n">version</span><span class="o">=</span><span class="s">&#39;0.1dev&#39;</span><span class="p">,</span>
+    <span class="n">long_description</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;README.rst&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
+    <span class="n">licence</span><span class="o">=</span><span class="s">&#39;MIT license&#39;</span><span class="p">,</span>
+    <span class="n">packages</span><span class="o">=</span><span class="p">[</span>
+        <span class="s">&#39;todo&#39;</span><span class="p">,</span>
+        <span class="s">&#39;todo.templatetags&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
 </div>
 <div class="section" id="id8">
 <h2>Структура репозитория</h2>
@@ -201,49 +176,47 @@ setup(
 Автор применил данное решение для организации тестов в многоразовых Django
 приложениях <a class="footnote-reference" href="#app-skeleton" id="id14">[7]</a>. В корне репозитория располагается скрипт
 <tt class="docutils literal">runtests.py</tt>, который запускает тесты:</p>
-<pre class="literal-block">
-#!/usr/bin/env python
-import os
-import sys
+<div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.settings'
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&#39;DJANGO_SETTINGS_MODULE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;tests.settings&#39;</span>
 
-from django.test.utils import get_runner
-from django.conf import settings
+<span class="kn">from</span> <span class="nn">django.test.utils</span> <span class="kn">import</span> <span class="n">get_runner</span>
+<span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
 
 
-def runtests():
-    TestRunner = get_runner(settings)
+<span class="k">def</span> <span class="nf">runtests</span><span class="p">():</span>
+    <span class="n">TestRunner</span> <span class="o">=</span> <span class="n">get_runner</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
 
-    test_runner = TestRunner(verbosity=1, interactive=True, failfast=False)
-    failures = test_runner.run_tests([])
-    sys.exit(failures)
+    <span class="n">test_runner</span> <span class="o">=</span> <span class="n">TestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interactive</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">failfast</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">failures</span> <span class="o">=</span> <span class="n">test_runner</span><span class="o">.</span><span class="n">run_tests</span><span class="p">([])</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">failures</span><span class="p">)</span>
 
-if __name__ == '__main__':
-    runtests()
-</pre>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">runtests</span><span class="p">()</span>
+</pre></div>
 <p>Настройки для их запуска указаны в файле <tt class="docutils literal">tests/settings.py</tt>:</p>
-<pre class="literal-block">
-import os
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">os</span>
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-    }
-}
-INSTALLED_APPS = (
-    'app_name',
-)
+<span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s">&#39;django.db.backends.sqlite3&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s">&#39;app_name&#39;</span><span class="p">,</span>
+<span class="p">)</span>
 
-BASE_PATH = os.path.dirname(os.path.dirname(__file__))
-TEST_DISCOVERY_ROOT = os.path.join(BASE_PATH, 'tests')
+<span class="n">BASE_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+<span class="n">TEST_DISCOVERY_ROOT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">BASE_PATH</span><span class="p">,</span> <span class="s">&#39;tests&#39;</span><span class="p">)</span>
 
-TEST_RUNNER = 'tests.runner.DiscoveryDjangoTestSuiteRunner'
+<span class="n">TEST_RUNNER</span> <span class="o">=</span> <span class="s">&#39;tests.runner.DiscoveryDjangoTestSuiteRunner&#39;</span>
 
-FIXTURE_DIRS = (
-    os.path.join(TEST_DISCOVERY_ROOT, 'fixtures'),
-)
-</pre>
+<span class="n">FIXTURE_DIRS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TEST_DISCOVERY_ROOT</span><span class="p">,</span> <span class="s">&#39;fixtures&#39;</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
 <p>Обнаружение тестов осуществляется во всех файлах, которые находятся в каталоге
 <tt class="docutils literal">tests</tt> и название которых совпадает с <em>models.py</em>, <em>tests.py</em> или
 <em>test*.py</em>.</p>
@@ -334,8 +307,7 @@ deps=
 </div>
 
     </div><!-- /.entry-content -->
-    
-    <div class="comments">
+        <div class="comments">
       <h2>Comments !</h2>
       <div id="disqus_thread"></div>
       <script type="text/javascript">
@@ -348,34 +320,22 @@ deps=
       </script>
     </div>
     
-
   </article>
 </section>
-
         <section id="extras" class="body">
-        
-        
-                <div class="social">
+                                <div class="social">
                         <h2>social</h2>
                         <ul>
                             <li><a href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
                             
-
-                        
-                            <li><a href="https://github.com/marselester">GitHub</a></li>
-                        
-                            <li><a href="http://twitter.com/marselester">Twitter</a></li>
-                        
-                            <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
-                        
-                            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
-                        
-                            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
-                        
-                        </ul>
+                                                    <li><a href="https://github.com/marselester">GitHub</a></li>
+                                                    <li><a href="http://twitter.com/marselester">Twitter</a></li>
+                                                    <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
+                                                    <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
+                                                    <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+                                                </ul>
                 </div><!-- /.social -->
-        
-        </section><!-- /#extras -->
+                </section><!-- /#extras -->
 
         <footer id="contentinfo" class="body">
                 <address id="about" class="vcard body">
@@ -384,9 +344,6 @@ deps=
 
                 <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
         </footer><!-- /#contentinfo -->
-
-
-
 
 <script type="text/javascript">
     var disqus_shortname = 'marselester';
@@ -397,6 +354,5 @@ deps=
         (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
     }());
 </script>
-
 </body>
 </html>

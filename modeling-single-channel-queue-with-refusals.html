@@ -4,11 +4,8 @@
         <title>Моделирование одноканальной СМО с отказами</title>
         <meta charset="utf-8" />
         <link rel="stylesheet" href="./theme/css/main.css" type="text/css" />
-        
-        <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
-        
-        
-
+                <link href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="marselester's blog Atom Feed" />
+                
         <!--[if IE]>
                 <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
 
@@ -22,41 +19,25 @@
 </head>
 
 <body id="index" class="home">
-
 <a href="https://github.com/marselester/">
-
 <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub" />
-
 </a>
-
         <header id="banner" class="body">
-                <h1><a href=".">marselester's blog </a></h1>
+                <h1><a href="./">marselester's blog </a></h1>
                 <nav><ul>
-                
-                
-                
-                    <li><a href="./pages/about.html">About</a></li>
-                
-                
-                
-                    <li class="active"><a href="./category/misc.html">Misc</a></li>
-                
-                    <li ><a href="./category/portfolio.html">Portfolio</a></li>
-                
-                    <li ><a href="./category/python.html">Python</a></li>
-                
-                </ul></nav>
+                                                                    <li><a href="./pages/about.html">About</a></li>
+                                                                    <li class="active"><a href="./category/misc.html">Misc</a></li>
+                                    <li ><a href="./category/portfolio.html">Portfolio</a></li>
+                                    <li ><a href="./category/python.html">Python</a></li>
+                                </ul></nav>
         </header><!-- /#banner -->
-        
-<section id="content" class="body">
+        <section id="content" class="body">
   <article>
     <header>
       <h1 class="entry-title">
-        <a href="modeling-single-channel-queue-with-refusals.html" rel="bookmark"
+        <a href="./modeling-single-channel-queue-with-refusals.html" rel="bookmark"
            title="Permalink to Моделирование одноканальной СМО с отказами">Моделирование одноканальной СМО с отказами</a></h1>
-      
-<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
-
+      <a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
     </header>
 
     <div class="entry-content">
@@ -65,99 +46,92 @@
                 сб 30 мая 2009
         </abbr>
 
-        
-        <address class="vcard author">
+                <address class="vcard author">
                 By <a class="url fn" href="./author/marsel-mavletkulov.html">Marsel Mavletkulov</a>
         </address>
-        
-<p>In <a href="./category/misc.html">Misc</a>. </p>
+        <p>In <a href="./category/misc.html">Misc</a>. </p>
 <p>tags: <a href="./tag/python.html">python</a><a href="./tag/modeling.html">modeling</a><a href="./tag/single-channel-queue.html">single-channel queue</a></p>
-
-
-</footer><!-- /.post-info -->
-      <p>Дана одноканальная система массового обслуживания с отказами. В нее поступают
+</footer><!-- /.post-info -->      <p>Дана одноканальная система массового обслуживания с отказами. В нее поступают
 заявки через промежуток времени <tt class="docutils literal">n</tt>, где <tt class="docutils literal">n</tt> – случайная величина,
 подчиненная равномерному закону распределения. Время обслуживания заявки
 системой <tt class="docutils literal">m</tt> также является случайной величиной с показательным законом
 распределения. Если к моменту прихода заявки канал занят, заявка покидает
 систему необслуженной.</p>
 <p>Изначально код был написан на php, вот <a class="reference external" href="https://github.com/marselester/single-channel-queuing">пример на python 3</a>:</p>
-<pre class="literal-block">
-import random
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">random</span>
 
 
-class RequestPoll:
-    &quot;&quot;&quot;Iterator that yields random requests and keeps statistic.&quot;&quot;&quot;
+<span class="k">class</span> <span class="nc">RequestPoll</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Iterator that yields random requests and keeps statistic.&quot;&quot;&quot;</span>
 
-    def __init__(self, time_to_finish, intensity_of_service_flow):
-        self.time_to_finish = time_to_finish
-        self.intensity_of_service_flow = intensity_of_service_flow
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_to_finish</span><span class="p">,</span> <span class="n">intensity_of_service_flow</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_to_finish</span> <span class="o">=</span> <span class="n">time_to_finish</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensity_of_service_flow</span> <span class="o">=</span> <span class="n">intensity_of_service_flow</span>
 
-    def __str__(self):
-        return (
-            'Total: {}\n'.format(self.total()) +
-            'Processed: {}\n'.format(self.qty_of_processed_requests) +
-            'Refused: {}\n'.format(self.qty_of_refused_requests) +
-            'Proportion of processed requests: {}\n'.format(self.proportion_of_processed_requests()) +
-            'Probability of refuse: {}\n'.format(self.probability_of_refuse()) +
-            'Absolute bandwidth: {}'.format(self.abs_bandwidth())
-        )
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="s">&#39;Total: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">())</span> <span class="o">+</span>
+            <span class="s">&#39;Processed: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qty_of_processed_requests</span><span class="p">)</span> <span class="o">+</span>
+            <span class="s">&#39;Refused: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qty_of_refused_requests</span><span class="p">)</span> <span class="o">+</span>
+            <span class="s">&#39;Proportion of processed requests: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proportion_of_processed_requests</span><span class="p">())</span> <span class="o">+</span>
+            <span class="s">&#39;Probability of refuse: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">probability_of_refuse</span><span class="p">())</span> <span class="o">+</span>
+            <span class="s">&#39;Absolute bandwidth: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abs_bandwidth</span><span class="p">())</span>
+        <span class="p">)</span>
 
-    def __iter__(self):
-        self.system_uptime = 0
-        self.time_when_channel_will_be_free = 0
-        self.qty_of_processed_requests = 0
-        self.qty_of_refused_requests = 0
-        return self
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_when_channel_will_be_free</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_processed_requests</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_refused_requests</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
-    def __next__(self):
-        if self.system_uptime &gt; self.time_to_finish:
-            raise StopIteration
-        time_when_request_came_in = random.random()
-        self.system_uptime += time_when_request_came_in
+    <span class="k">def</span> <span class="nf">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_to_finish</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">StopIteration</span>
+        <span class="n">time_when_request_came_in</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span> <span class="o">+=</span> <span class="n">time_when_request_came_in</span>
 
-        if self._can_system_process_request():
-            self.qty_of_processed_requests += 1
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_can_system_process_request</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_processed_requests</span> <span class="o">+=</span> <span class="mi">1</span>
 
-            time_for_which_request_has_taken_channel = random \
-                .expovariate(self.intensity_of_service_flow)
-            self.time_when_channel_will_be_free = self.system_uptime \
-                + time_for_which_request_has_taken_channel
+            <span class="n">time_for_which_request_has_taken_channel</span> <span class="o">=</span> <span class="n">random</span> \
+                <span class="o">.</span><span class="n">expovariate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intensity_of_service_flow</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_when_channel_will_be_free</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span> \
+                <span class="o">+</span> <span class="n">time_for_which_request_has_taken_channel</span>
 
-            return 'request added to queue at {}'.format(self.system_uptime)
-        else:
-            self.qty_of_refused_requests += 1
+            <span class="k">return</span> <span class="s">&#39;request added to queue at {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_refused_requests</span> <span class="o">+=</span> <span class="mi">1</span>
 
-            return 'requests refused at {}'.format(self.system_uptime)
+            <span class="k">return</span> <span class="s">&#39;requests refused at {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span><span class="p">)</span>
 
-    def _can_system_process_request(self):
-        return self.system_uptime &gt;= self.time_when_channel_will_be_free
+    <span class="k">def</span> <span class="nf">_can_system_process_request</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_when_channel_will_be_free</span>
 
-    def total(self):
-        return self.qty_of_processed_requests + self.qty_of_refused_requests
+    <span class="k">def</span> <span class="nf">total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_processed_requests</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_refused_requests</span>
 
-    def abs_bandwidth(self):
-        return self.qty_of_processed_requests / self.time_to_finish
+    <span class="k">def</span> <span class="nf">abs_bandwidth</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_processed_requests</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_to_finish</span>
 
-    def proportion_of_processed_requests(self):
-        return self.qty_of_processed_requests / self.total()
+    <span class="k">def</span> <span class="nf">proportion_of_processed_requests</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_processed_requests</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">()</span>
 
-    def probability_of_refuse(self):
-        return self.qty_of_refused_requests / self.total()
+    <span class="k">def</span> <span class="nf">probability_of_refuse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_refused_requests</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">()</span>
 
-intensity_of_service_flow = 0.5
-time_to_finish = 70
-request_poll = RequestPoll(time_to_finish, intensity_of_service_flow)
+<span class="n">intensity_of_service_flow</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">time_to_finish</span> <span class="o">=</span> <span class="mi">70</span>
+<span class="n">request_poll</span> <span class="o">=</span> <span class="n">RequestPoll</span><span class="p">(</span><span class="n">time_to_finish</span><span class="p">,</span> <span class="n">intensity_of_service_flow</span><span class="p">)</span>
 
-for request in request_poll:
-    print(request)
+<span class="k">for</span> <span class="n">request</span> <span class="ow">in</span> <span class="n">request_poll</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
 
-print(request_poll)
-</pre>
+<span class="nb">print</span><span class="p">(</span><span class="n">request_poll</span><span class="p">)</span>
+</pre></div>
 
     </div><!-- /.entry-content -->
-    
-    <div class="comments">
+        <div class="comments">
       <h2>Comments !</h2>
       <div id="disqus_thread"></div>
       <script type="text/javascript">
@@ -170,34 +144,22 @@ print(request_poll)
       </script>
     </div>
     
-
   </article>
 </section>
-
         <section id="extras" class="body">
-        
-        
-                <div class="social">
+                                <div class="social">
                         <h2>social</h2>
                         <ul>
                             <li><a href="http://marselester.github.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate">atom feed</a></li>
                             
-
-                        
-                            <li><a href="https://github.com/marselester">GitHub</a></li>
-                        
-                            <li><a href="http://twitter.com/marselester">Twitter</a></li>
-                        
-                            <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
-                        
-                            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
-                        
-                            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
-                        
-                        </ul>
+                                                    <li><a href="https://github.com/marselester">GitHub</a></li>
+                                                    <li><a href="http://twitter.com/marselester">Twitter</a></li>
+                                                    <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
+                                                    <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
+                                                    <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+                                                </ul>
                 </div><!-- /.social -->
-        
-        </section><!-- /#extras -->
+                </section><!-- /#extras -->
 
         <footer id="contentinfo" class="body">
                 <address id="about" class="vcard body">
@@ -206,9 +168,6 @@ print(request_poll)
 
                 <p>The theme is by <a href="http://coding.smashingmagazine.com/2009/08/04/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
         </footer><!-- /#contentinfo -->
-
-
-
 
 <script type="text/javascript">
     var disqus_shortname = 'marselester';
@@ -219,6 +178,5 @@ print(request_poll)
         (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
     }());
 </script>
-
 </body>
 </html>
