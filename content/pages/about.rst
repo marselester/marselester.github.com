@@ -23,6 +23,8 @@ the same studio from August 2007 to January 2012. From July 2012 to October
 2012 I worked under contract in `fangid.com startup`_ in Thailand as a python
 programmer.
 
+Nowadays I am working at Uploadcare_ as a python developer.
+
 My skills: Python, Django, Git, MySQL, PHP, CodeIgniter.
 
 Download CV_.
@@ -31,4 +33,5 @@ Download CV_.
 .. _Parus Media: http://mediaidea.ru/
 .. _Bestweb: http://bestweb.ru/
 .. _fangid.com startup: http://fangid.com/
+.. _Uploadcare: https://uploadcare.com
 .. _CV: https://dl.dropbox.com/u/15875449/Marsel%20Mavletkulov%20Python%20Developer.pdf
