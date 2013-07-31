@@ -6,13 +6,13 @@ file upload SaaS -- &lt;a class="reference external" href="https://github.com/up
 appropriate development process, adherence to quality standards.&lt;/p&gt;
 &lt;p&gt;I started to work at Uploadcare from tasks that helped me find out their
 infrastructure quicker (Django, Tornado, Flask). After that I have been
-engaging mostly with Django (receiving payments through &lt;a class="reference external" href="stripe.com"&gt;Stripe&lt;/a&gt;,
-dashboard) and maintaining
+engaging mostly with Django (receiving payments through
+&lt;a class="reference external" href="http://stripe.com"&gt;Stripe&lt;/a&gt;, dashboard) and maintaining
 &lt;a class="reference external" href="https://github.com/uploadcare/pyuploadcare"&gt;pyuploadcare&lt;/a&gt; (mass refactoring,
 &lt;a class="reference external" href="https://pyuploadcare.readthedocs.org"&gt;documentation&lt;/a&gt;, python 3 support,
 first major release).&lt;/p&gt;
 &lt;p&gt;I worked in &lt;a class="reference external" href="http://instagram.com/marselester"&gt;Thailand and Vietnam&lt;/a&gt; meanwhile.&lt;/p&gt;
-</summary><category term="python"></category></entry><entry><title>Стартап fangid.com</title><link href="http://marselester.github.com/fangid-startup.html" rel="alternate"></link><updated>2012-10-13T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-10-13:fangid-startup.html</id><summary type="html">&lt;p&gt;В середине июля 2012 г. команда &lt;a class="reference external" href="http://fangid.com/"&gt;стартапа fangid.com&lt;/a&gt;
+</summary><category term="python"></category><category term="django"></category><category term="tornado"></category><category term="flask"></category><category term="aws"></category></entry><entry><title>Стартап fangid.com</title><link href="http://marselester.github.com/fangid-startup.html" rel="alternate"></link><updated>2012-10-13T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-10-13:fangid-startup.html</id><summary type="html">&lt;p&gt;В середине июля 2012 г. команда &lt;a class="reference external" href="http://fangid.com/"&gt;стартапа fangid.com&lt;/a&gt;
 приступила к воплощению идеи социальной концертной платформы на севере
 Таиланда. Я занимался подготовительными работами (соглашениями по разработке,
 первоначальной подготовкой репозитория, например, продумыванием структуры,

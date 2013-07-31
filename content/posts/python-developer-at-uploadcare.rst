@@ -3,7 +3,7 @@ Python Developer at Uploadcare
 ==============================
 
 :date: 2013-07-31
-:tags: python
+:tags: python, django, tornado, flask, aws
 :category: Portfolio
 :slug: python-developer-at-uploadcare
 
@@ -15,8 +15,8 @@ appropriate development process, adherence to quality standards.
 
 I started to work at Uploadcare from tasks that helped me find out their
 infrastructure quicker (Django, Tornado, Flask). After that I have been
-engaging mostly with Django (receiving payments through `Stripe <stripe.com>`_,
-dashboard) and maintaining
+engaging mostly with Django (receiving payments through
+`Stripe <http://stripe.com>`_, dashboard) and maintaining
 `pyuploadcare <https://github.com/uploadcare/pyuploadcare>`_ (mass refactoring,
 `documentation <https://pyuploadcare.readthedocs.org>`_, python 3 support,
 first major release).
