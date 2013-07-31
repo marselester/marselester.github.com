@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.github.com/" rel="alternate"></link><link href="http://marselester.github.com/feeds/all.atom.xml" rel="self"></link><id>http://marselester.github.com/</id><updated>2012-11-02T00:00:00+06:00</updated><entry><title>Preparation to Python Interview</title><link href="http://marselester.github.com/preparation-to-python-interview.html" rel="alternate"></link><updated>2012-11-02T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-11-02:preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.github.com/" rel="alternate"></link><link href="http://marselester.github.com/feeds/all.atom.xml" rel="self"></link><id>http://marselester.github.com/</id><updated>2013-07-31T00:00:00+06:00</updated><entry><title>Python Developer at Uploadcare</title><link href="http://marselester.github.com/python-developer-at-uploadcare.html" rel="alternate"></link><updated>2013-07-31T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2013-07-31:python-developer-at-uploadcare.html</id><summary type="html">&lt;p&gt;I started to look for a full-time remote job as a Python Developer after
+&lt;a class="reference external" href="http://fangid.com/"&gt;FanGid&lt;/a&gt; contract has been ended. And I found what
+I was looking for -- &lt;a class="reference external" href="https://uploadcare.com"&gt;Uploadcare&lt;/a&gt;, a cloud-based
+file upload SaaS -- &lt;a class="reference external" href="https://github.com/uploadcare?tab=members"&gt;great team&lt;/a&gt;,
+appropriate development process, adherence to quality standards.&lt;/p&gt;
+&lt;p&gt;I started to work at Uploadcare from tasks that helped me find out their
+infrastructure quicker (Django, Tornado, Flask). After that I have been
+engaging mostly with Django (receiving payments through &lt;a class="reference external" href="stripe.com"&gt;Stripe&lt;/a&gt;,
+dashboard) and maintaining
+&lt;a class="reference external" href="https://github.com/uploadcare/pyuploadcare"&gt;pyuploadcare&lt;/a&gt; (mass refactoring,
+&lt;a class="reference external" href="https://pyuploadcare.readthedocs.org"&gt;documentation&lt;/a&gt;, python 3 support,
+first major release).&lt;/p&gt;
+&lt;p&gt;I worked in &lt;a class="reference external" href="http://instagram.com/marselester"&gt;Thailand and Vietnam&lt;/a&gt; meanwhile.&lt;/p&gt;
+</summary><category term="python"></category></entry><entry><title>Preparation to Python Interview</title><link href="http://marselester.github.com/preparation-to-python-interview.html" rel="alternate"></link><updated>2012-11-02T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.github.com,2012-11-02:preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
 preparation to Python developer interview. These are some information and
 links which seemed important to me. Maybe it will be helpful.&lt;/p&gt;
 &lt;div class="section" id="how-does-it-usually-go"&gt;
