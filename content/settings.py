@@ -10,8 +10,9 @@ TWITTER_USERNAME = 'marselester'
 
 SOCIAL = (
     ('GitHub', 'https://github.com/marselester'),
-    ('Twitter', 'http://twitter.com/marselester'),
-    (u'Мой Круг', 'http://mmavletkulov.moikrug.ru/'),
     ('LinkedIn', 'http://www.linkedin.com/in/marselester'),
+    ('Instagram', 'http://instagram.com/marselester'),
+    ('Twitter', 'http://twitter.com/marselester'),
     ('Facebook', 'http://www.facebook.com/marselester'),
+    (u'Мой Круг', 'http://mmavletkulov.moikrug.ru/'),
 )
