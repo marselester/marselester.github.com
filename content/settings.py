@@ -3,6 +3,9 @@ AUTHOR = 'Marsel Mavletkulov'
 SITENAME = "marselester's blog"
 SITEURL = 'http://marselester.ru'
 TIMEZONE = 'Asia/Yekaterinburg'
+LOCALE = (
+    'en_US',
+)
 
 GITHUB_URL = 'https://github.com/marselester/'
 DISQUS_SITENAME = 'marselester'
@@ -20,3 +23,6 @@ SOCIAL = (
     ('Facebook', 'http://www.facebook.com/marselester'),
     (u'Мой Круг', 'http://mmavletkulov.moikrug.ru/'),
 )
+
+THEME = 'tuxlite_zf'
+RELATIVE_URLS = False
