@@ -52,7 +52,10 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 необходимость в *Distribute*. До завершения работ над *distutils2*
 разработчикам рекомендуют использовать *distutils* [#Ziadé]_.
 
-.. image:: http://guide.python-distribute.org/_images/state_of_packaging.jpg
+.. image:: http://blog.ziade.org/history-part1.png
+   :target: http://ziade.org/2012/11/17/chronology-of-packaging/
+.. image:: http://blog.ziade.org/history-part2.png
+   :target: http://ziade.org/2012/11/17/chronology-of-packaging/
 
 Управление экосистемой пакетирования
 ====================================

@@ -728,7 +728,7 @@ URL. Она определяет соответствие между URL-адр�
 &lt;p&gt;Разделение системы на подсистемы на уровне архитектуры, позволяет
 концентрироваться в каждый конкретный момент времени на меньшей части системы.&lt;/p&gt;
 &lt;p&gt;Обобщенная схема работы системы приведена на рисунке.&lt;/p&gt;
-&lt;img alt="http://dl.dropbox.com/u/15875449/django_todo_block_schema.png" src="http://dl.dropbox.com/u/15875449/django_todo_block_schema.png" /&gt;
+&lt;img alt="" src="http://dl.dropbox.com/u/15875449/django_todo_block_schema.png" /&gt;
 &lt;p&gt;Работа пользователя с системой начинается с авторизации. После успешной
 аутентификации пользователь попадает на страницу с задачами, поставленными ему
 другими пользователями. Далее он может перейти в раздел проектов, либо в
@@ -1075,7 +1075,8 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 &lt;em&gt;distutils2&lt;/em&gt; заменит &lt;em&gt;Setuptools&lt;/em&gt; и &lt;em&gt;distutils&lt;/em&gt;, а также устранит
 необходимость в &lt;em&gt;Distribute&lt;/em&gt;. До завершения работ над &lt;em&gt;distutils2&lt;/em&gt;
 разработчикам рекомендуют использовать &lt;em&gt;distutils&lt;/em&gt; &lt;a class="footnote-reference" href="#ziade" id="id4"&gt;[2]&lt;/a&gt;.&lt;/p&gt;
-&lt;img alt="http://guide.python-distribute.org/_images/state_of_packaging.jpg" src="http://guide.python-distribute.org/_images/state_of_packaging.jpg" /&gt;
+&lt;a class="reference external image-reference" href="http://ziade.org/2012/11/17/chronology-of-packaging/"&gt;&lt;img alt="" src="http://blog.ziade.org/history-part1.png" /&gt;&lt;/a&gt;
+&lt;a class="reference external image-reference" href="http://ziade.org/2012/11/17/chronology-of-packaging/"&gt;&lt;img alt="" src="http://blog.ziade.org/history-part2.png" /&gt;&lt;/a&gt;
 &lt;/div&gt;
 &lt;div class="section" id="id5"&gt;
 &lt;h2&gt;Управление экосистемой пакетирования&lt;/h2&gt;
