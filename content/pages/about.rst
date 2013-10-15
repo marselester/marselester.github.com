@@ -23,13 +23,13 @@ the same studio from August 2007 to January 2012. From July 2012 to October
 programmer. From November 2012 till August 2013 I worked remotely at Uploadcare_
 as a python developer.
 
-My skills: Python, Django, Git, MySQL, Redis.
+My skills: Python, Django, Flask, PostgreSQL, Redis, Git.
 
-Download CV_.
+See my CV_.
 
-.. _some: http://marselester.github.com/category/portfolio.html
+.. _some: http://marselester.ru/category/portfolio.html
 .. _Parus Media: http://mediaidea.ru/
 .. _Bestweb: http://bestweb.ru/
 .. _FanGid.com startup: http://fangid.com/
 .. _Uploadcare: https://uploadcare.com
-.. _CV: https://dl.dropbox.com/u/15875449/Marsel%20Mavletkulov%20Python%20Developer.pdf
+.. _CV: http://marselester.ru/cv/

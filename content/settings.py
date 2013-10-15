@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 AUTHOR = 'Marsel Mavletkulov'
 SITENAME = "marselester's blog"
-SITEURL = 'http://marselester.github.com'
+SITEURL = 'http://marselester.ru'
 TIMEZONE = 'Asia/Yekaterinburg'
 
 GITHUB_URL = 'https://github.com/marselester/'
 DISQUS_SITENAME = 'marselester'
 TWITTER_USERNAME = 'marselester'
+
+MENUITEMS = (
+    ('CV', 'http://marselester.ru/cv/'),
+)
 
 SOCIAL = (
     ('GitHub', 'https://github.com/marselester'),
