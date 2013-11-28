@@ -1,5 +1,175 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.ru/" rel="alternate"></link><link href="http://marselester.ru/feeds/all.atom.xml" rel="self"></link><id>http://marselester.ru/</id><updated>2013-11-09T00:00:00+06:00</updated><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.ru/developing-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-09T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2013-11-09:developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.ru/" rel="alternate"></link><link href="http://marselester.ru/feeds/all.atom.xml" rel="self"></link><id>http://marselester.ru/</id><updated>2013-11-28T00:00:00+06:00</updated><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-28T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2013-11-28:developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
+but deployment was not considered in the &lt;a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
+&lt;p&gt;Server configuration is different from local, thus environments will be needed
+(at least production &lt;strong&gt;prod&lt;/strong&gt; and development &lt;strong&gt;dev&lt;/strong&gt;). Salt uses &lt;strong&gt;base&lt;/strong&gt;
+environment by default.&lt;/p&gt;
+&lt;p&gt;Environments are set in &lt;tt class="docutils literal"&gt;minion.conf&lt;/tt&gt; because masterless minion is used.
+When no environment is set, Salt assumes following configuration:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="l-Scalar-Plain"&gt;file_roots&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;base&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt&lt;/span&gt;
+
+&lt;span class="l-Scalar-Plain"&gt;pillar_roots&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;base&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/pillar&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Salt will look for states in &lt;tt class="docutils literal"&gt;/srv/salt&lt;/tt&gt; and pillars in &lt;tt class="docutils literal"&gt;/srv/pillar&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Let's introduce &lt;strong&gt;dev&lt;/strong&gt; and &lt;strong&gt;prod&lt;/strong&gt; environments.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="l-Scalar-Plain"&gt;file_roots&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;base&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/salt/base&lt;/span&gt;
+
+  &lt;span class="l-Scalar-Plain"&gt;dev&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/salt/dev&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/salt/base&lt;/span&gt;
+
+  &lt;span class="l-Scalar-Plain"&gt;prod&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/salt/prod&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/salt/base&lt;/span&gt;
+
+&lt;span class="l-Scalar-Plain"&gt;pillar_roots&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;base&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/pillar/base&lt;/span&gt;
+
+  &lt;span class="l-Scalar-Plain"&gt;dev&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/pillar/dev&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/pillar/base&lt;/span&gt;
+
+  &lt;span class="l-Scalar-Plain"&gt;prod&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/pillar/prod&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/srv/salt_roots/pillar/base&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Each environment describes paths where to find files.
+File is searched in the first directory and if it is not found it is
+searched in the second one.&lt;/p&gt;
+&lt;p&gt;States and pillars which were described in &lt;a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; are splitted
+to environment folders. Most of files are located in &lt;tt class="docutils literal"&gt;base&lt;/tt&gt; folder,
+because they are the same to &lt;strong&gt;dev&lt;/strong&gt; and &lt;strong&gt;prod&lt;/strong&gt; environments.
+You can find &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy"&gt;complete example&lt;/a&gt; on GitHub.&lt;/p&gt;
+&lt;div class="section" id="what-production-environment-introduces"&gt;
+&lt;h2&gt;What Production Environment Introduces&lt;/h2&gt;
+&lt;p&gt;There is a difference between &lt;strong&gt;prod&lt;/strong&gt; and &lt;strong&gt;dev&lt;/strong&gt; project's source code
+delivering. Development environment assumes that code is shared by Vagrant.
+Production environment needs to get code from private git repository.
+In order to do it user &lt;em&gt;jon_snow&lt;/em&gt; must have ssh keys. Here I don't use
+private repository, but keys are still needed to log in to production server
+by Fabric.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;user.present&lt;/span&gt;
+
+&lt;span class="l-Scalar-Plain"&gt;jon_snow public key&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;ssh_auth&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;present&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;user&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;source&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;salt://user/id_rsa.pub&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;require&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;user&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;
+
+&lt;span class="l-Scalar-Plain"&gt;jon_snow secret key&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;file&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;managed&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;name&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/home/jon_snow/.ssh/id_rsa&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;source&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;salt://user/id_rsa&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;user&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;group&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;mode&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;600&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;require&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;ssh_auth&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow public key&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;prod/source_code.sls&lt;/tt&gt; fetches source code from GitHub.
+I have tried to use built in &lt;tt class="docutils literal"&gt;git.latest&lt;/tt&gt; Salt state but it requires
+to configure git name and email on server. I solved this issue by using
+git hard reset.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="l-Scalar-Plain"&gt;git&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;pkg.installed&lt;/span&gt;
+
+&lt;span class="l-Scalar-Plain"&gt;github.com&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;ssh_known_hosts&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;present&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;user&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;fingerprint&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48&lt;/span&gt;
+
+&lt;span class="l-Scalar-Plain"&gt;messaging repository clone&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;cmd&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;run&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;unless&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;test -d /home/jon_snow/messaging_repository&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;user&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;name&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="p-Indicator"&gt;&amp;gt;&lt;/span&gt;
+              &lt;span class="no"&gt;git clone https://github.com/marselester/abstract-internal-messaging.git /home/jon_snow/messaging_repository&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;require&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;pkg&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;git&lt;/span&gt;
+      &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;ssh_known_hosts&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;github.com&lt;/span&gt;
+
+&lt;span class="l-Scalar-Plain"&gt;messaging latest source code&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l-Scalar-Plain"&gt;cmd&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;run&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;cwd&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/home/jon_snow/messaging_repository&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;user&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;name&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="p-Indicator"&gt;&amp;gt;&lt;/span&gt;
+              &lt;span class="no"&gt;git fetch origin &amp;amp;&amp;amp;&lt;/span&gt;
+              &lt;span class="no"&gt;git reset --hard origin/master&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;require&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;cmd&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;messaging repository clone&lt;/span&gt;
+
+  &lt;span class="l-Scalar-Plain"&gt;file&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;symlink&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;name&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="p-Indicator"&gt;{{&lt;/span&gt; &lt;span class="nv"&gt;pillar&lt;/span&gt;&lt;span class="p-Indicator"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;website_src_dir&amp;#39;&lt;/span&gt;&lt;span class="p-Indicator"&gt;]&lt;/span&gt; &lt;span class="p-Indicator"&gt;}}&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;target&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;/home/jon_snow/messaging_repository&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;force&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;True&lt;/span&gt;
+    &lt;span class="p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;user&lt;/span&gt;&lt;span class="p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l-Scalar-Plain"&gt;jon_snow&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="fabric-as-deployment-runner"&gt;
+&lt;h2&gt;Fabric as Deployment Runner&lt;/h2&gt;
+&lt;p&gt;Last thing to do is to run deployment of particular Salt environment
+&lt;strong&gt;salt_env&lt;/strong&gt; in particular host &lt;strong&gt;target&lt;/strong&gt;. Fabric is good at it.&lt;/p&gt;
+&lt;p&gt;I want Fabric to:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p class="first"&gt;bootstrap Salt on given &lt;strong&gt;target&lt;/strong&gt;;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;upload &lt;tt class="docutils literal"&gt;minion.conf&lt;/tt&gt; to given &lt;strong&gt;target&lt;/strong&gt; to &lt;tt class="docutils literal"&gt;/etc/salt/minion&lt;/tt&gt;;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;upload Salt configs to given &lt;strong&gt;target&lt;/strong&gt; how it is described
+in &lt;tt class="docutils literal"&gt;minion.conf&lt;/tt&gt; (to &lt;tt class="docutils literal"&gt;/srv/salt_roots&lt;/tt&gt;);&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p class="first"&gt;invoke &lt;tt class="docutils literal"&gt;&lt;span class="pre"&gt;salt-call&lt;/span&gt;&lt;/tt&gt; on given &lt;strong&gt;target&lt;/strong&gt; with particular &lt;strong&gt;salt_env&lt;/strong&gt;
+(here is &lt;tt class="docutils literal"&gt;prod&lt;/tt&gt;).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; salt-call state.highstate &lt;span class="nv"&gt;env&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;prod
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Let's try to deploy &lt;strong&gt;prod&lt;/strong&gt; environment to VM. I assume that you have
+&lt;tt class="docutils literal"&gt;messaging&lt;/tt&gt; directory (see &lt;a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html"&gt;Developing Django project with SaltStack&lt;/a&gt;).
+You need to clone &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy"&gt;Deploy Abstract Internal Messaging System&lt;/a&gt; in it
+and start VM.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;cd &lt;/span&gt;messaging
+&lt;span class="gp"&gt;$&lt;/span&gt; git clone https://github.com/marselester/abstract-internal-messaging-deploy.git
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;cd &lt;/span&gt;abstract-internal-messaging-deploy/vagrant
+&lt;span class="gp"&gt;$&lt;/span&gt; vagrant up
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;In order to interact with VM you should add &lt;tt class="docutils literal"&gt;11.22.33.44 &lt;span class="pre"&gt;messaging-part-2&lt;/span&gt;&lt;/tt&gt;
+to &lt;tt class="docutils literal"&gt;/etc/hosts&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Install Fabric and set up Salt masterless minion in VM.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;cd &lt;/span&gt;messaging/abstract-internal-messaging-deploy
+&lt;span class="gp"&gt;$&lt;/span&gt; pip install -r requirements.txt
+&lt;span class="gp"&gt;$&lt;/span&gt; fab target:local setup_masterless_minion
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Finally deploy &lt;strong&gt;prod&lt;/strong&gt; environment in VM.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; fab target:local salt_env:prod deploy
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="conclusion"&gt;
+&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;Besides convenient developing, we got ability to deploy arbitrary environments
+to arbitrary targets. It gives us opportunity to test deployment itself.
+You can improve this solution by adding ability to specify git branch
+which will be deployed.&lt;/p&gt;
+&lt;p&gt;As in &lt;a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; project should work:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl -i messaging-part-2
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+</summary><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.ru/developing-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-09T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2013-11-09:developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
 run in VirtualBox which is managed by Vagrant. Infrastructure management
 is provided by SaltStack.&lt;/p&gt;
 &lt;p&gt;I advise you to create separate folder for repositories (currently there
@@ -7,7 +177,7 @@ is only one) of project and clone &lt;a class="reference external" href="https:/
 Also I need a folder for Vagrant files and prefer to name it &lt;tt class="docutils literal"&gt;vagrant&lt;/tt&gt;.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; mkdir messaging
 &lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;cd &lt;/span&gt;messaging
-&lt;span class="gp"&gt;$&lt;/span&gt; git clone git@github.com:marselester/abstract-internal-messaging.git
+&lt;span class="gp"&gt;$&lt;/span&gt; git clone https://github.com/marselester/abstract-internal-messaging.git
 &lt;span class="gp"&gt;$&lt;/span&gt; mkdir abstract-internal-messaging/vagrant
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;In order to make friends of Vagrant and SaltStack, I need to install

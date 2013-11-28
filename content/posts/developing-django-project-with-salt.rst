@@ -19,7 +19,7 @@ Also I need a folder for Vagrant files and prefer to name it ``vagrant``.
 
     $ mkdir messaging
     $ cd messaging
-    $ git clone git@github.com:marselester/abstract-internal-messaging.git
+    $ git clone https://github.com/marselester/abstract-internal-messaging.git
     $ mkdir abstract-internal-messaging/vagrant
 
 In order to make friends of Vagrant and SaltStack, I need to install

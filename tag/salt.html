@@ -48,464 +48,179 @@
         
 
             <article>
-                <a href="http://marselester.ru/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
-<h6 class="subheader" title="2013-11-09T00:00:00">Sat 09 November 2013
+                <a href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
+<h6 class="subheader" title="2013-11-28T00:00:00">Thu 28 November 2013
 </h6>
 
 
-<p>Let's use <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> as an example of Django project. I want it to
-run in VirtualBox which is managed by Vagrant. Infrastructure management
-is provided by SaltStack.</p>
-<p>I advise you to create separate folder for repositories (currently there
-is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there.
-Also I need a folder for Vagrant files and prefer to name it <tt class="docutils literal">vagrant</tt>.</p>
-<div class="highlight"><pre><span class="gp">$</span> mkdir messaging
-<span class="gp">$</span> <span class="nb">cd </span>messaging
-<span class="gp">$</span> git clone git@github.com:marselester/abstract-internal-messaging.git
-<span class="gp">$</span> mkdir abstract-internal-messaging/vagrant
+<p>Eventually you will need to deploy project,
+but deployment was not considered in the <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
+<p>Server configuration is different from local, thus environments will be needed
+(at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
+environment by default.</p>
+<p>Environments are set in <tt class="docutils literal">minion.conf</tt> because masterless minion is used.
+When no environment is set, Salt assumes following configuration:</p>
+<div class="highlight"><pre><span class="l-Scalar-Plain">file_roots</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt</span>
+
+<span class="l-Scalar-Plain">pillar_roots</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/pillar</span>
 </pre></div>
-<p>In order to make friends of Vagrant and SaltStack, I need to install
-Salty Vagrant:</p>
-<div class="highlight"><pre><span class="gp">$</span> vagrant plugin install vagrant-salt
+<p>Salt will look for states in <tt class="docutils literal">/srv/salt</tt> and pillars in <tt class="docutils literal">/srv/pillar</tt>.</p>
+<p>Let's introduce <strong>dev</strong> and <strong>prod</strong> environments.</p>
+<div class="highlight"><pre><span class="l-Scalar-Plain">file_roots</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/base</span>
+
+  <span class="l-Scalar-Plain">dev</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/dev</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/base</span>
+
+  <span class="l-Scalar-Plain">prod</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/prod</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/base</span>
+
+<span class="l-Scalar-Plain">pillar_roots</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
+
+  <span class="l-Scalar-Plain">dev</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/dev</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
+
+  <span class="l-Scalar-Plain">prod</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/prod</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
 </pre></div>
-<p>I want Vagrant to:</p>
-<ul class="simple">
-<li>share source code folder <tt class="docutils literal"><span class="pre">messaging/abstract-internal-messaging</span></tt>;</li>
-<li>share states and pillars of SaltStack
-<tt class="docutils literal"><span class="pre">messaging/abstract-internal-messaging/vagrant/salt/roots</span></tt>;</li>
-<li>run minion masterless by <tt class="docutils literal"><span class="pre">salt-call</span> state.highstate</tt>;</li>
-<li>assign convenient host name, here it is &quot;messaging-part-1&quot;.</li>
-</ul>
-<p><tt class="docutils literal">vagrant/Vagrantfile</tt> config responses for these requirements:</p>
-<div class="highlight"><pre><span class="c1"># -*- mode: ruby -*-</span>
-
-<span class="no">Vagrant</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="s1">&#39;2&#39;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
-  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box</span> <span class="o">=</span> <span class="s1">&#39;precise64&#39;</span>
-  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">box_url</span> <span class="o">=</span> <span class="s1">&#39;http://files.vagrantup.com/precise64.box&#39;</span>
-
-  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provider</span> <span class="ss">:virtualbox</span> <span class="k">do</span> <span class="o">|</span><span class="n">v</span><span class="o">|</span>
-    <span class="n">v</span><span class="o">.</span><span class="n">customize</span> <span class="o">[</span><span class="s1">&#39;modifyvm&#39;</span><span class="p">,</span> <span class="ss">:id</span><span class="p">,</span> <span class="s1">&#39;--name&#39;</span><span class="p">,</span> <span class="s1">&#39;messaging-part-1&#39;</span><span class="o">]</span>
-    <span class="n">v</span><span class="o">.</span><span class="n">customize</span> <span class="o">[</span><span class="s1">&#39;modifyvm&#39;</span><span class="p">,</span> <span class="ss">:id</span><span class="p">,</span> <span class="s1">&#39;--memory&#39;</span><span class="p">,</span> <span class="mi">1024</span><span class="o">]</span>
-  <span class="k">end</span>
-
-  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">hostname</span> <span class="o">=</span> <span class="s1">&#39;messaging-part-1&#39;</span>
-
-  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="ss">:private_network</span><span class="p">,</span> <span class="ss">ip</span><span class="p">:</span> <span class="s1">&#39;1.2.3.4&#39;</span>
-
-  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">synced_folder</span> <span class="s1">&#39;..&#39;</span><span class="p">,</span> <span class="s1">&#39;/home/vagrant/abstract-internal-messaging&#39;</span>
-  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">synced_folder</span> <span class="s1">&#39;salt/roots&#39;</span><span class="p">,</span> <span class="s1">&#39;/srv&#39;</span>
-
-  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:salt</span> <span class="k">do</span> <span class="o">|</span><span class="n">salt</span><span class="o">|</span>
-    <span class="n">salt</span><span class="o">.</span><span class="n">minion_config</span> <span class="o">=</span> <span class="s1">&#39;salt/minion.conf&#39;</span>
-    <span class="n">salt</span><span class="o">.</span><span class="n">run_highstate</span> <span class="o">=</span> <span class="kp">true</span>
-    <span class="n">salt</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kp">true</span>
-  <span class="k">end</span>
-<span class="k">end</span>
-</pre></div>
-<p>As you could notice, I have not had the <tt class="docutils literal">vagrant/salt</tt> folder yet.
-Let's create following directory structure (actually you can just
-<tt class="docutils literal">git checkout <span class="pre">salted-vagrant</span></tt>):</p>
-<div class="highlight"><pre><span class="gp">$</span> tree abstract-internal-messaging/vagrant
-<span class="go">abstract-internal-messaging/vagrant</span>
-<span class="go">|-- Vagrantfile</span>
-<span class="go">`-- salt</span>
-<span class="go">    |-- minion.conf</span>
-<span class="go">    `-- roots</span>
-<span class="go">        |-- pillar</span>
-<span class="go">        |   |-- top.sls</span>
-<span class="go">        |   |-- postgresql.sls</span>
-<span class="go">        |   `-- website.sls</span>
-<span class="go">        `-- salt</span>
-<span class="go">            |-- top.sls</span>
-<span class="go">            |-- user.sls</span>
-<span class="go">            |-- source_code.sls</span>
-<span class="go">            |-- python.sls</span>
-<span class="go">            |-- redis.sls</span>
-<span class="go">            |-- postgresql</span>
-<span class="go">            |   |-- init.sls</span>
-<span class="go">            |   `-- pg_hba.conf</span>
-<span class="go">            `-- website</span>
-<span class="go">                |-- django.sls</span>
-<span class="go">                |-- wsgiserver.sls</span>
-<span class="go">                |-- webserver.sls</span>
-<span class="go">                |-- local.py.template</span>
-<span class="go">                |-- supervisord.conf</span>
-<span class="go">                |-- gunicorn.conf.py</span>
-<span class="go">                `-- nginx.conf</span>
-</pre></div>
-<p><tt class="docutils literal">minion.conf</tt> contains only one string:</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">file_client</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">local</span>
-</pre></div>
-<p>It means &quot;Don't look for master server when running <tt class="docutils literal"><span class="pre">salt-call</span></tt>&quot;.
-It will assume that the local system has all of the file and pillar resources.</p>
-<p>Rest of files I will consider separately.</p>
-<div class="section" id="user-and-source-code-states">
-<h2>User and Source Code states</h2>
-<p><tt class="docutils literal">salt/user.sls</tt> creates user &quot;jon_snow&quot;.</p>
+<p>Each environment describes paths where to find files.
+File is searched in the first directory and if it is not found it is
+searched in the second one.</p>
+<p>States and pillars which were described in <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a> are splitted
+to environment folders. Most of files are located in <tt class="docutils literal">base</tt> folder,
+because they are the same to <strong>dev</strong> and <strong>prod</strong> environments.
+You can find <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy">complete example</a> on GitHub.</p>
+<div class="section" id="what-production-environment-introduces">
+<h2>What Production Environment Introduces</h2>
+<p>There is a difference between <strong>prod</strong> and <strong>dev</strong> project's source code
+delivering. Development environment assumes that code is shared by Vagrant.
+Production environment needs to get code from private git repository.
+In order to do it user <em>jon_snow</em> must have ssh keys. Here I don't use
+private repository, but keys are still needed to log in to production server
+by Fabric.</p>
 <div class="highlight"><pre><span class="l-Scalar-Plain">jon_snow</span><span class="p-Indicator">:</span>
   <span class="l-Scalar-Plain">user.present</span>
+
+<span class="l-Scalar-Plain">jon_snow public key</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">ssh_auth</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">present</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://user/id_rsa.pub</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
+      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
+
+<span class="l-Scalar-Plain">jon_snow secret key</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">managed</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/.ssh/id_rsa</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://user/id_rsa</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">group</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">mode</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">600</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
+      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ssh_auth</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow public key</span>
 </pre></div>
-<p><tt class="docutils literal">salt/source_code.sls</tt> makes shared source code available in jon_snow's home
-by creating symlink.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">messaging source code</span><span class="p-Indicator">:</span>
+<p><tt class="docutils literal">prod/source_code.sls</tt> fetches source code from GitHub.
+I have tried to use built in <tt class="docutils literal">git.latest</tt> Salt state but it requires
+to configure git name and email on server. I solved this issue by using
+git hard reset.</p>
+<div class="highlight"><pre><span class="l-Scalar-Plain">git</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">pkg.installed</span>
+
+<span class="l-Scalar-Plain">github.com</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">ssh_known_hosts</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">present</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">fingerprint</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48</span>
+
+<span class="l-Scalar-Plain">messaging repository clone</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">cmd</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">run</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">unless</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">test -d /home/jon_snow/messaging_repository</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">&gt;</span>
+              <span class="no">git clone https://github.com/marselester/abstract-internal-messaging.git /home/jon_snow/messaging_repository</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
+      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">git</span>
+      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ssh_known_hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">github.com</span>
+
+<span class="l-Scalar-Plain">messaging latest source code</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">cmd</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">run</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">cwd</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/messaging_repository</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">&gt;</span>
+              <span class="no">git fetch origin &amp;&amp;</span>
+              <span class="no">git reset --hard origin/master</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
+      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">cmd</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">messaging repository clone</span>
+
   <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
     <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">symlink</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/abstract-internal-messaging</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">target</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/vagrant/abstract-internal-messaging</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_src_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">target</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/messaging_repository</span>
     <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">force</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-</pre></div>
-<p>Hardcoded path can be replaced by <tt class="docutils literal">{{ <span class="pre">pillar['website_src_dir']</span> }}</tt>,
-which will be introduced further.</p>
-</div>
-<div class="section" id="python-state">
-<h2>Python state</h2>
-<p><tt class="docutils literal">salt/python.sls</tt> installs Python 2, pip and Virtualenv.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">python2</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">installed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">names</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">python-dev</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">python</span>
-
-<span class="l-Scalar-Plain">pip</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">installed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">python-pip</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">python2</span>
-
-<span class="l-Scalar-Plain">virtualenv</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">pip</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">installed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pip</span>
-</pre></div>
-</div>
-<div class="section" id="redis-and-postgresql-states">
-<h2>Redis and PostgreSQL states</h2>
-<p><tt class="docutils literal">salt/redis.sls</tt> installs Redis.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">redis-server</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">pkg.installed</span>
-</pre></div>
-<p><tt class="docutils literal">salt/postgresql/init.sls</tt> installs PostgreSQL 9.1, copies <tt class="docutils literal">pg_hba.conf</tt>,
-starts <tt class="docutils literal">postgresql</tt> service, creates user and database based on pillar's
-data.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">postgresql</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">installed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">names</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">postgresql-9.1</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">python-dev</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">libpq-dev</span>
-
-  <span class="l-Scalar-Plain">service.running</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">watch</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/etc/postgresql/9.1/main/pg_hba.conf</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">postgresql</span>
-
-  <span class="l-Scalar-Plain">file.managed</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/etc/postgresql/9.1/main/pg_hba.conf</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://postgresql/pg_hba.conf</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">postgres</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">group</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">postgres</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">mode</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">644</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">postgresql</span>
-
-<span class="l-Scalar-Plain">postgresql-database-setup</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">postgres_user</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">present</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;postgresql_user&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;postgresql_password&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">createdb</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">postgres</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">service</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">postgresql</span>
-
-  <span class="l-Scalar-Plain">postgres_database</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">present</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;postgresql_db&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">UTF8</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">lc_ctype</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">en_US.UTF8</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">lc_collate</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">en_US.UTF8</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">template0</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">owner</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;postgresql_user&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">postgres</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">postgres_user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">postgresql-database-setup</span>
-</pre></div>
-<p><tt class="docutils literal">pillar/postgresql.sls</tt></p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">postgresql_user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-<span class="l-Scalar-Plain">postgresql_password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">ghost</span>
-<span class="l-Scalar-Plain">postgresql_db</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-</pre></div>
-<p><tt class="docutils literal">salt/postgresql/pg_hba.conf</tt></p>
-<div class="highlight"><pre><span class="c1"># This file controls: which hosts are allowed to connect, how clients</span>
-<span class="c1"># are authenticated, which PostgreSQL user names they can use, which</span>
-<span class="c1"># databases they can access. Records take one of these forms:</span>
-<span class="c1">#</span>
-<span class="c1"># local DATABASE        USER            METHOD  [OPTIONS]</span>
-<span class="l-Scalar-Plain">local   jon_snow        jon_snow        md5</span>
-
-<span class="l-Scalar-Plain"># Database administrative login by Unix domain socket</span>
-<span class="l-Scalar-Plain">local   all             postgres                                peer</span>
-
-<span class="l-Scalar-Plain"># TYPE  DATABASE        USER            ADDRESS                 METHOD</span>
-
-<span class="l-Scalar-Plain"># &quot;local&quot; is for Unix domain socket connections only</span>
-<span class="l-Scalar-Plain">local   all             all                                     trust</span>
-<span class="l-Scalar-Plain"># IPv4 local connections</span><span class="p-Indicator">:</span>
-<span class="l-Scalar-Plain">host    all             all             127.0.0.1/32            md5</span>
-</pre></div>
-</div>
-<div class="section" id="website-s-django-state">
-<h2>Website's Django state</h2>
-<p><tt class="docutils literal">salt/website/django.sls</tt> creates virtual environment and installs
-project's dependencies there. It copies django settings, collects static
-files and migrate db as well.</p>
-<div class="highlight"><pre><span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_venv_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}:</span>
-  <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">directory</span>
     <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">group</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">makedirs</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-
-  <span class="l-Scalar-Plain">virtualenv</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">managed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">no_site_packages</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">distribute</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">requirements</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_requirements_path&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">no_chown</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pip</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">virtualenv</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_venv_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-
-<span class="l-Scalar-Plain">django settings</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">managed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_settings_path&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://website/local.py.template</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jinja</span>
-
-<span class="l-Scalar-Plain">django-admin collectstatic</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">module</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">run</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">django.collectstatic</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">bin_env</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_venv_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">settings_module</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">messaging.settings.local</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pythonpath</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_src_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">noinput</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">virtualenv</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_venv_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">django settings</span>
-
-<span class="l-Scalar-Plain">django-admin migrate</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">module</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">run</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">django.syncdb</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">bin_env</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_venv_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">settings_module</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">messaging.settings.local</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pythonpath</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_src_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">migrate</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">virtualenv</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_venv_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">django settings</span>
-</pre></div>
-<p>State above actively uses pillar file <tt class="docutils literal">pillar/website.sls</tt>:</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">website_venv_dir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/venv</span>
-<span class="l-Scalar-Plain">website_venv_activate_path</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/venv/bin/activate</span>
-<span class="l-Scalar-Plain">website_src_dir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/abstract-internal-messaging</span>
-<span class="l-Scalar-Plain">website_requirements_path</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/abstract-internal-messaging/requirements_tests.txt</span>
-<span class="l-Scalar-Plain">website_settings_path</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/abstract-internal-messaging/messaging/settings/local.py</span>
-<span class="l-Scalar-Plain">website_static_dir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/abstract-internal-messaging/collected_static/</span>
-
-<span class="l-Scalar-Plain">website_gunicorn_bin_path</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/venv/bin/gunicorn</span>
-<span class="l-Scalar-Plain">website_gunicorn_conf_path</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/gunicorn.conf.py</span>
-</pre></div>
-<p>Here is <tt class="docutils literal">salt/website/local.py.template</tt>:</p>
-<div class="highlight"><pre><span class="c"># coding: utf-8</span>
-<span class="kn">from</span> <span class="nn">.dev</span> <span class="kn">import</span> <span class="o">*</span>
-
-
-<span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s">&quot;django.db.backends.postgresql_psycopg2&quot;</span><span class="p">,</span>
-        <span class="s">&#39;NAME&#39;</span><span class="p">:</span> <span class="s">&quot;{{ pillar[&#39;postgresql_db&#39;] }}&quot;</span><span class="p">,</span>
-        <span class="s">&#39;USER&#39;</span><span class="p">:</span> <span class="s">&quot;{{ pillar[&#39;postgresql_user&#39;] }}&quot;</span><span class="p">,</span>
-        <span class="s">&#39;PASSWORD&#39;</span><span class="p">:</span> <span class="s">&quot;{{ pillar[&#39;postgresql_password&#39;] }}&quot;</span><span class="p">,</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-<span class="n">SECRET_KEY</span> <span class="o">=</span> <span class="s">&#39;some secret key&#39;</span>
 </pre></div>
 </div>
-<div class="section" id="website-s-wsgi-server-state">
-<h2>Website's WSGI Server state</h2>
-<p><tt class="docutils literal">salt/website/wsgiserver.sls</tt> provides supervisored gunicorn running.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">supervisord conf</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">managed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/etc/supervisor/conf.d/website_gunicorn.conf</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://website/supervisord.conf</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jinja</span>
-
-<span class="l-Scalar-Plain">gunicorn conf</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">managed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span> <span class="p-Indicator">[</span><span class="s">&#39;website_gunicorn_conf_path&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://website/gunicorn.conf.py</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">group</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-
-<span class="l-Scalar-Plain">supervisor</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">installed</span>
-
-<span class="l-Scalar-Plain">supervisored gunicorn</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">supervisord</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">running</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">website_gunicorn</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">update</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">restart</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">watch</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">supervisord conf</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">gunicorn conf</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">supervisor</span>
+<div class="section" id="fabric-as-deployment-runner">
+<h2>Fabric as Deployment Runner</h2>
+<p>Last thing to do is to run deployment of particular Salt environment
+<strong>salt_env</strong> in particular host <strong>target</strong>. Fabric is good at it.</p>
+<p>I want Fabric to:</p>
+<ul>
+<li><p class="first">bootstrap Salt on given <strong>target</strong>;</p>
+</li>
+<li><p class="first">upload <tt class="docutils literal">minion.conf</tt> to given <strong>target</strong> to <tt class="docutils literal">/etc/salt/minion</tt>;</p>
+</li>
+<li><p class="first">upload Salt configs to given <strong>target</strong> how it is described
+in <tt class="docutils literal">minion.conf</tt> (to <tt class="docutils literal">/srv/salt_roots</tt>);</p>
+</li>
+<li><p class="first">invoke <tt class="docutils literal"><span class="pre">salt-call</span></tt> on given <strong>target</strong> with particular <strong>salt_env</strong>
+(here is <tt class="docutils literal">prod</tt>).</p>
+<div class="highlight"><pre><span class="gp">$</span> salt-call state.highstate <span class="nv">env</span><span class="o">=</span>prod
 </pre></div>
-<p><tt class="docutils literal">salt/website/gunicorn.conf.py</tt></p>
-<div class="highlight"><pre><span class="c"># coding: utf-8</span>
-<span class="kn">import</span> <span class="nn">multiprocessing</span>
-
-
-<span class="n">bind</span> <span class="o">=</span> <span class="s">&#39;127.0.0.1:5000&#39;</span>
-<span class="n">workers</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">*</span> <span class="mi">2</span>
+</li>
+</ul>
+<p>Let's try to deploy <strong>prod</strong> environment to VM. I assume that you have
+<tt class="docutils literal">messaging</tt> directory (see <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">Developing Django project with SaltStack</a>).
+You need to clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy">Deploy Abstract Internal Messaging System</a> in it
+and start VM.</p>
+<div class="highlight"><pre><span class="gp">$</span> <span class="nb">cd </span>messaging
+<span class="gp">$</span> git clone https://github.com/marselester/abstract-internal-messaging-deploy.git
+<span class="gp">$</span> <span class="nb">cd </span>abstract-internal-messaging-deploy/vagrant
+<span class="gp">$</span> vagrant up
 </pre></div>
-<p><tt class="docutils literal">salt/website/supervisord.conf</tt></p>
-<div class="highlight"><pre><span class="p-Indicator">[</span><span class="nv">program</span><span class="p-Indicator">:</span><span class="nv">website_gunicorn</span><span class="p-Indicator">]</span>
-<span class="l-Scalar-Plain">command = {{ pillar[&#39;website_gunicorn_bin_path&#39;] }} -c {{ pillar[&#39;website_gunicorn_conf_path&#39;] }} messaging.wsgi:application</span>
-<span class="l-Scalar-Plain">directory = {{ pillar[&#39;website_src_dir&#39;] }}</span>
-<span class="l-Scalar-Plain">user = vagrant</span>
-<span class="l-Scalar-Plain">autostart = true</span>
-<span class="l-Scalar-Plain">autorestart = true</span>
-<span class="l-Scalar-Plain">redirect_stderr = True</span>
-<span class="l-Scalar-Plain">stdout_logfile = /var/log/supervisor/website_gunicorn.log</span>
+<p>In order to interact with VM you should add <tt class="docutils literal">11.22.33.44 <span class="pre">messaging-part-2</span></tt>
+to <tt class="docutils literal">/etc/hosts</tt>.</p>
+<p>Install Fabric and set up Salt masterless minion in VM.</p>
+<div class="highlight"><pre><span class="gp">$</span> <span class="nb">cd </span>messaging/abstract-internal-messaging-deploy
+<span class="gp">$</span> pip install -r requirements.txt
+<span class="gp">$</span> fab target:local setup_masterless_minion
 </pre></div>
-</div>
-<div class="section" id="website-s-web-server-state">
-<h2>Website's Web Server state</h2>
-<p><tt class="docutils literal">salt/website/webserver.sls</tt> installs latest stable Nginx, copies config
-file and runs service.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">nginx</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">pkgrepo</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">managed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">deb http://nginx.org/packages/ubuntu/ precise nginx</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">key_url</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">http://nginx.org/keys/nginx_signing.key</span>
-
-  <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">installed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkgrepo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">nginx</span>
-
-  <span class="l-Scalar-Plain">service</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">running</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">watch</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">nginx</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/etc/nginx/nginx.conf</span>
-
-<span class="l-Scalar-Plain">/etc/nginx/nginx.conf</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">managed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://website/nginx.conf</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">root</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">group</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">root</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">mode</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">644</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jinja</span>
-</pre></div>
-<p>Notable in <tt class="docutils literal">salt/website/nginx.conf</tt> is <tt class="docutils literal">sendfile off</tt>. It fixes
-<a class="reference external" href="http://jeremyfelt.com/code/2013/01/08/clear-nginx-cache-in-vagrant/">trouble</a>
-when Nginx runs in a virtual machine environment.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">worker_processes 2;</span>
-
-
-<span class="l-Scalar-Plain">events {</span>
-    <span class="l-Scalar-Plain">worker_connections 1024;</span>
-<span class="l-Scalar-Plain">}</span>
-
-
-<span class="l-Scalar-Plain">http {</span>
-    <span class="l-Scalar-Plain">include mime.types;</span>
-    <span class="l-Scalar-Plain">default_type application/octet-stream;</span>
-
-    <span class="l-Scalar-Plain">sendfile off;</span>
-
-    <span class="l-Scalar-Plain">keepalive_timeout 65;</span>
-
-    <span class="l-Scalar-Plain">server {</span>
-        <span class="l-Scalar-Plain">listen 80;</span>
-        <span class="l-Scalar-Plain">server_name messaging-part-1;</span>
-
-        <span class="l-Scalar-Plain">location /static/ {</span>
-            <span class="l-Scalar-Plain">alias {{ pillar[&#39;website_static_dir&#39;] }};</span>
-        <span class="l-Scalar-Plain">}</span>
-
-        <span class="l-Scalar-Plain">location / {</span>
-            <span class="l-Scalar-Plain">proxy_pass http://localhost:5000;</span>
-            <span class="l-Scalar-Plain">proxy_redirect off;</span>
-            <span class="l-Scalar-Plain">proxy_set_header Host $host;</span>
-            <span class="l-Scalar-Plain">proxy_set_header X-Real-IP $remote_addr;</span>
-            <span class="l-Scalar-Plain">proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;</span>
-        <span class="l-Scalar-Plain">}</span>
-
-        <span class="l-Scalar-Plain"># Redirects server error pages to the static page /50x.html</span>
-        <span class="l-Scalar-Plain">error_page 500 502 503 504 /50x.html;</span>
-        <span class="l-Scalar-Plain">location = /50x.html {</span>
-            <span class="l-Scalar-Plain">root html;</span>
-        <span class="l-Scalar-Plain">}</span>
-    <span class="l-Scalar-Plain">}</span>
-<span class="l-Scalar-Plain">}</span>
-</pre></div>
-</div>
-<div class="section" id="top-states">
-<h2>Top states</h2>
-<p>There is only one thing to do — to add top files and this tree is over.</p>
-<p><tt class="docutils literal">salt/top.sls</tt></p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
-  <span class="s">&#39;*&#39;</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source_code</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">python</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">redis</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">postgresql</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">website.django</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">website.wsgiserver</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">website.webserver</span>
-</pre></div>
-<p><tt class="docutils literal">pillar/top.sls</tt></p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
-  <span class="s">&#39;*&#39;</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">postgresql</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">website</span>
+<p>Finally deploy <strong>prod</strong> environment in VM.</p>
+<div class="highlight"><pre><span class="gp">$</span> fab target:local salt_env:prod deploy
 </pre></div>
 </div>
 <div class="section" id="conclusion">
 <h2>Conclusion</h2>
-<p>This article was mostly about states examples.
-It's time to test configuration.</p>
-<div class="highlight"><pre><span class="gp">$</span> <span class="nb">cd </span>abstract-internal-messaging/vagrant
-<span class="gp">$</span> vagrant up
-</pre></div>
-<p>In order to reach website you can add <tt class="docutils literal">1.2.3.4 <span class="pre">messaging-part-1</span></tt> to
-<tt class="docutils literal">/etc/hosts</tt>. Now it should work:</p>
-<div class="highlight"><pre><span class="gp">$</span> curl -i messaging-part-1
-</pre></div>
-<p>Tests should be passed as well:</p>
-<div class="highlight"><pre><span class="gp">$</span> vagrant ssh
-<span class="gp">$</span> <span class="nb">source</span> /home/jon_snow/venv/bin/activate
-<span class="gp">(venv)$</span> <span class="nb">cd</span> /home/jon_snow/abstract-internal-messaging
-<span class="gp">(venv)$</span> ./manage.py <span class="nb">test</span>
+<p>Besides convenient developing, we got ability to deploy arbitrary environments
+to arbitrary targets. It gives us opportunity to test deployment itself.
+You can improve this solution by adding ability to specify git branch
+which will be deployed.</p>
+<p>As in <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a> project should work:</p>
+<div class="highlight"><pre><span class="gp">$</span> curl -i messaging-part-2
 </pre></div>
 </div>
 <p class="subheader">Category: <a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a>
@@ -520,10 +235,40 @@ It's time to test configuration.</p>
 
 
 
-<p><a href="http://marselester.ru/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>            </article>
+<p><a href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
+                <a href="http://marselester.ru/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
+<h6 class="subheader" title="2013-11-09T00:00:00">Sat 09 November 2013
+</h6>
+
+
+<p>Let's use <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> as an example of Django project. I want it to
+run in VirtualBox which is managed by Vagrant. Infrastructure management
+is provided by SaltStack.</p>
+<p>I advise you to create separate folder for repositories (currently there
+is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="http://marselester.ru/tag/python.html">python </a>
+    <a href="http://marselester.ru/tag/django.html">django </a>
+    <a href="http://marselester.ru/tag/vagrant.html">vagrant </a>
+    <a href="http://marselester.ru/tag/salt.html">salt </a>
+    <a href="http://marselester.ru/tag/saltstack.html">saltstack </a>
+</p>
 
 
 
+<p><a href="http://marselester.ru/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/developing-django-project-with-saltstack.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
 
             <!-- /#posts-list -->
 

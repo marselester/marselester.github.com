@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - vagrant</title>
+    <title>Developing & Deploying Django project with SaltStack</title>
 
     <link rel="stylesheet" href="http://marselester.ru/theme/css/normalize.css" />
     <link rel="stylesheet" href="http://marselester.ru/theme/css/foundation.min.css" />
@@ -44,16 +44,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html" rel="bookmark"
+        title="Permalink to Developing & Deploying Django project with SaltStack">Developing &amp; Deploying Django project with SaltStack</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
 <h6 class="subheader" title="2013-11-28T00:00:00">Thu 28 November 2013
 </h6>
 
 
-<p>Eventually you will need to deploy project,
+    <p>Eventually you will need to deploy project,
 but deployment was not considered in the <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
 <p>Server configuration is different from local, thus environments will be needed
 (at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
@@ -223,6 +225,7 @@ which will be deployed.</p>
 <div class="highlight"><pre><span class="gp">$</span> curl -i messaging-part-2
 </pre></div>
 </div>
+
 <p class="subheader">Category: <a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
@@ -235,43 +238,22 @@ which will be deployed.</p>
 
 
 
-<p><a href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "developing-and-deploying-django-project-with-saltstack.html";
+        var disqus_url = "http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="http://marselester.ru/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
-<h6 class="subheader" title="2013-11-09T00:00:00">Sat 09 November 2013
-</h6>
-
-
-<p>Let's use <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> as an example of Django project. I want it to
-run in VirtualBox which is managed by Vagrant. Infrastructure management
-is provided by SaltStack.</p>
-<p>I advise you to create separate folder for repositories (currently there
-is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/vagrant.html">vagrant </a>
-    <a href="http://marselester.ru/tag/salt.html">salt </a>
-    <a href="http://marselester.ru/tag/saltstack.html">saltstack </a>
-</p>
-
-
-
-<p><a href="http://marselester.ru/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/developing-django-project-with-saltstack.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 
