@@ -48,6 +48,80 @@
         
 
             <article>
+                <a href="http://marselester.ru/api-based-on-flask.html"><h3 class="article-title">API based on Flask</h3></a>
+<h6 class="subheader" title="2013-12-09T00:00:00">Mon 09 December 2013
+</h6>
+
+
+<p>Here I want to consider implementation of API best practices which
+usually don't follow Fielding's REST strictly. <a class="reference external" href="https://github.com/marselester/api-example-based-on-flask">Example Flask project</a>
+is on GitHub.</p>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">Post will be updated.</p>
+</div>
+<div class="section" id="api-versioning">
+<h2>API Versioning</h2>
+<p>Interfaces are changed hence versioning is mandatory in order to not annoy
+your users. You might need to add new resource or field to particular resource.
+You write code, tests and update documentation. Users are happy.
+It's possible that you have to rename or delete field of some resource.
+This case is harder and you might make the easiest decision — spawn
+a lot of <tt class="docutils literal">if</tt> statements and write more tests consequently.
+Code base maintaining is getting worse.</p>
+<p>I think it's better to make API versions isolated.
+It will keep things simple and tests as well. You may even want to change
+framework if legacy API implementation is not good enough.
+For example, you have two WSGI applications. Each application implements
+certain API version, e.g, <strong>messaging_api_v1</strong>, <strong>messaging_api_v2</strong>.
+In order to hide versioning information from applications, e.g., URL prefix,
+you can dispatch requests by Werkzeug's <tt class="docutils literal">DispatcherMiddleware</tt>.</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">werkzeug.wsgi</span> <span class="kn">import</span> <span class="n">DispatcherMiddleware</span>
+<span class="kn">from</span> <span class="nn">werkzeug.exceptions</span> <span class="kn">import</span> <span class="n">NotFound</span>
+
+<span class="kn">import</span> <span class="nn">messaging_api_v1</span>
+<span class="kn">import</span> <span class="nn">messaging_api_v2</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">DispatcherMiddleware</span><span class="p">(</span><span class="n">NotFound</span><span class="p">(),</span> <span class="p">{</span>
+    <span class="s">&#39;/v1&#39;</span><span class="p">:</span> <span class="n">messaging_api_v1</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+    <span class="s">&#39;/v2&#39;</span><span class="p">:</span> <span class="n">messaging_api_v2</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+<span class="p">})</span>
+</pre></div>
+<p>Dispatcher in work:</p>
+<div class="highlight"><pre><span class="gp">$</span> gunicorn messaging_api:app
+</pre></div>
+<p>Let's request the same API resource from different WSGI applications:</p>
+<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v1/messages/1
+<span class="go">{</span>
+<span class="go">  &quot;content&quot;: &quot;hi world from V1&quot;</span>
+<span class="go">}</span>
+<span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/1
+<span class="go">{</span>
+<span class="go">  &quot;content&quot;: &quot;hi world from V2&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="http://marselester.ru/tag/python.html">python </a>
+    <a href="http://marselester.ru/tag/flask.html">flask </a>
+    <a href="http://marselester.ru/tag/api.html">api </a>
+</p>
+
+
+
+<p><a href="http://marselester.ru/api-based-on-flask.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="http://marselester.ru/preparation-to-python-interview.html"><h3 class="article-title">Preparation to Python Interview</h3></a>
 <h6 class="subheader" title="2012-11-02T00:00:00">Fri 02 November 2012
 </h6>
@@ -60,118 +134,7 @@ links which seemed important to me. Maybe it will be helpful.</p>
 <h2>How does it usually go?</h2>
 <div class="section" id="what-kind-of-projects-did-you-participate-in">
 <h3>What kind of projects did you participate in?</h3>
-<p>What did you do at your previous job? It is expected that you will told
-the essence in simple words.</p>
-</div>
-<div class="section" id="tricky-question">
-<h3>Tricky question</h3>
-<p>It is expected that you will search for solution of task independently.
-Reasonings aloud are welcomed.</p>
-</div>
-<div class="section" id="writing-code">
-<h3>Writing code</h3>
-<p>Interviewer is interested in critical analysis of code. For example,
-efficiency of used data structures, algorithm's complexity evaluation.</p>
-</div>
-<div class="section" id="design">
-<h3>Design</h3>
-<p>In this step it is important to ask as much as possible about a task before
-starting to look for solution.</p>
-</div>
-<div class="section" id="provocative-question">
-<h3>Provocative question</h3>
-<p>You have to stay in your lane.</p>
-</div>
-</div>
-<div class="section" id="questions">
-<h2>Questions</h2>
-<div class="section" id="basic">
-<h3>Basic</h3>
-<p>Probably interviewer starts with basic questions. Let us see example:</p>
-<div class="highlight"><pre><span class="n">funcs</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
-        <span class="k">print</span> <span class="n">i</span>
-    <span class="n">funcs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">funcs</span><span class="p">:</span>
-    <span class="n">f</span><span class="p">()</span>
-</pre></div>
-<p>I guess he examines knowledge about namespace. It will print <tt class="docutils literal">4</tt> five times.
-To explain that you supposed to know about <a class="reference external" href="http://stackoverflow.com/questions/291978/short-description-of-python-scoping-rules">LEGB</a> rule. Also you should know
-that variable search in enclosed scope will be done later, <strong>after call</strong> of
-enclosed functions. They all get same value -- value of <tt class="docutils literal">i</tt> in last
-iteration.</p>
-<p>Next example prints numbers from 0 to 4:</p>
-<div class="highlight"><pre><span class="n">funcs</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="p">):</span>
-        <span class="k">print</span> <span class="n">i</span>
-    <span class="n">funcs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">funcs</span><span class="p">:</span>
-    <span class="n">f</span><span class="p">()</span>
-</pre></div>
-<p>It happens because default value is stored <strong>when enclosed function was
-created</strong>.</p>
-<p>There is another popular question related with default value of function.
-N.B. <tt class="docutils literal">names</tt> is mutable:</p>
-<div class="highlight"><pre><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="p">[]):</span>
-    <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;some name&#39;</span><span class="p">)</span>
-</pre></div>
-<p><a class="reference external" href="http://pythontutor.com">Visualizing code execution</a> and <a class="reference external" href="https://alexbers.com/python_quiz/">quiz of non-trivial features of Python</a>
-will be helpful to prepare for questions which are mentioned above.</p>
-</div>
-<div class="section" id="what-do-you-think-about-this-code">
-<h3>What do you think about this code?</h3>
-<div class="highlight"><pre><span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="s">&#39;a&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s">&#39;c&#39;</span><span class="p">}</span>
-
-
-<span class="k">def</span> <span class="nf">safe_get</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-        <span class="k">return</span> <span class="n">d</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">value</span>
-
-<span class="k">print</span> <span class="n">safe_get</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;blah&#39;</span><span class="p">)</span>
-</pre></div>
-<p>Apparently interviewer expects these answers:</p>
-<ul class="simple">
-<li>it repeats functionality of <tt class="docutils literal">d.get(0, 'blah')</tt>.</li>
-<li>it uses <tt class="docutils literal">if key in d.keys()</tt> instead of <tt class="docutils literal">if key in d</tt>.</li>
-<li>actually it is looking for <tt class="docutils literal">key</tt> in <tt class="docutils literal">[1, 2, 3]</tt> (for Python 2).
-Therefore O(n) is worse than O(1) for dictionary lookup.</li>
-</ul>
-<p>It would be appropriate to read about <a class="reference external" href="http://habrahabr.ru/post/128457/">data structures</a> and their
-<a class="reference external" href="http://wiki.python.org/moin/TimeComplexity">time complexity</a>, about <a class="reference external" href="http://docs.python.org/3/library/collections.html">collections</a>, <a class="reference external" href="http://docs.python.org/3/library/itertools">itertools</a> and <a class="reference external" href="http://wiki.python.org/moin/HowTo/Sorting/">sorting</a>.</p>
-</div>
-<div class="section" id="advanced-knowledge">
-<h3>Advanced knowledge</h3>
-<p>These articles are for complete picture of Python:</p>
-<ul class="simple">
-<li><a class="reference external" href="http://www.cafepy.com/article/python_types_and_objects/">Python Types and Objects</a></li>
-<li><a class="reference external" href="http://stackoverflow.com/questions/100003/what-is-a-metaclass-in-python/6581949#6581949">What is a metaclass in Python?</a></li>
-<li><a class="reference external" href="http://www.cafepy.com/article/python_attributes_and_methods/">Python Attributes and Methods</a>, <a class="reference external" href="http://habrahabr.ru/post/137415/">Пользовательские атрибуты в Python</a></li>
-</ul>
-</div>
-<div class="section" id="misc">
-<h3>Misc</h3>
-<p>Questions:</p>
-<ul class="simple">
-<li><a class="reference external" href="http://pragmaticstartup.wordpress.com/2012/08/25/what-every-new-pythondjango-web-developer-should-know-in-3-months/">What Every New Python/Django Web Developer Should Know in 3 Months</a></li>
-<li><a class="reference external" href="https://groups.google.com/d/topic/comp.lang.python/rhW_rIYY5HM/discussion">Python Interview Questions</a></li>
-<li><a class="reference external" href="http://www.techinterviews.com/python-interview-questions-and-answers">Python interview questions and answers</a></li>
-<li><a class="reference external" href="http://habrahabr.ru/qa/5783/">Что спрашивают на собеседовании в Яндекс?</a></li>
-<li><a class="reference external" href="http://pyobject.ru/blog/2010/02/04/python-quiz/">Вопросы и задания по Python</a></li>
-</ul>
-<p>Useful articles:</p>
-<ul class="simple">
-<li><a class="reference external" href="http://programmers.stackexchange.com/questions/43409/dealing-with-engineers-that-frequently-leave-their-jobs">Dealing with engineers that frequently leave their jobs</a></li>
-<li><a class="reference external" href="http://steve-yegge.blogspot.ch/2008/03/get-that-job-at-google.html">Get that job at Google</a></li>
-<li><a class="reference external" href="http://stackoverflow.com/questions/101268/hidden-features-of-python">Hidden features of Python</a></li>
-</ul>
-</div>
-</div>
-<p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+<p>What did you do at ...</p></div></div><p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
 
     Tagged: 
     <a href="http://marselester.ru/tag/python.html">python </a>
@@ -180,11 +143,9 @@ Therefore O(n) is worse than O(1) for dictionary lookup.</li>
 
 
 
-<p><a href="http://marselester.ru/preparation-to-python-interview.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="http://marselester.ru/preparation-to-python-interview.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/preparation-to-python-interview.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

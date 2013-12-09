@@ -48,6 +48,80 @@
         
 
             <article>
+                <a href="http://marselester.ru/api-based-on-flask.html"><h3 class="article-title">API based on Flask</h3></a>
+<h6 class="subheader" title="2013-12-09T00:00:00">Mon 09 December 2013
+</h6>
+
+
+<p>Here I want to consider implementation of API best practices which
+usually don't follow Fielding's REST strictly. <a class="reference external" href="https://github.com/marselester/api-example-based-on-flask">Example Flask project</a>
+is on GitHub.</p>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">Post will be updated.</p>
+</div>
+<div class="section" id="api-versioning">
+<h2>API Versioning</h2>
+<p>Interfaces are changed hence versioning is mandatory in order to not annoy
+your users. You might need to add new resource or field to particular resource.
+You write code, tests and update documentation. Users are happy.
+It's possible that you have to rename or delete field of some resource.
+This case is harder and you might make the easiest decision — spawn
+a lot of <tt class="docutils literal">if</tt> statements and write more tests consequently.
+Code base maintaining is getting worse.</p>
+<p>I think it's better to make API versions isolated.
+It will keep things simple and tests as well. You may even want to change
+framework if legacy API implementation is not good enough.
+For example, you have two WSGI applications. Each application implements
+certain API version, e.g, <strong>messaging_api_v1</strong>, <strong>messaging_api_v2</strong>.
+In order to hide versioning information from applications, e.g., URL prefix,
+you can dispatch requests by Werkzeug's <tt class="docutils literal">DispatcherMiddleware</tt>.</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">werkzeug.wsgi</span> <span class="kn">import</span> <span class="n">DispatcherMiddleware</span>
+<span class="kn">from</span> <span class="nn">werkzeug.exceptions</span> <span class="kn">import</span> <span class="n">NotFound</span>
+
+<span class="kn">import</span> <span class="nn">messaging_api_v1</span>
+<span class="kn">import</span> <span class="nn">messaging_api_v2</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">DispatcherMiddleware</span><span class="p">(</span><span class="n">NotFound</span><span class="p">(),</span> <span class="p">{</span>
+    <span class="s">&#39;/v1&#39;</span><span class="p">:</span> <span class="n">messaging_api_v1</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+    <span class="s">&#39;/v2&#39;</span><span class="p">:</span> <span class="n">messaging_api_v2</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+<span class="p">})</span>
+</pre></div>
+<p>Dispatcher in work:</p>
+<div class="highlight"><pre><span class="gp">$</span> gunicorn messaging_api:app
+</pre></div>
+<p>Let's request the same API resource from different WSGI applications:</p>
+<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v1/messages/1
+<span class="go">{</span>
+<span class="go">  &quot;content&quot;: &quot;hi world from V1&quot;</span>
+<span class="go">}</span>
+<span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/1
+<span class="go">{</span>
+<span class="go">  &quot;content&quot;: &quot;hi world from V2&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="http://marselester.ru/tag/python.html">python </a>
+    <a href="http://marselester.ru/tag/flask.html">flask </a>
+    <a href="http://marselester.ru/tag/api.html">api </a>
+</p>
+
+
+
+<p><a href="http://marselester.ru/api-based-on-flask.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="http://marselester.ru/saltstack-slides.html"><h3 class="article-title">Slides about SaltStack</h3></a>
 <h6 class="subheader" title="2013-12-03T00:00:00">Tue 03 December 2013
 </h6>
@@ -63,11 +137,9 @@
 
 
 
-<p><a href="http://marselester.ru/saltstack-slides.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="http://marselester.ru/saltstack-slides.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/saltstack-slides.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

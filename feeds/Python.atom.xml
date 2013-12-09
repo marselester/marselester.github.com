@@ -1,5 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.ru/" rel="alternate"></link><link href="http://marselester.ru/feeds/python.atom.xml" rel="self"></link><id>http://marselester.ru/</id><updated>2012-11-02T00:00:00+06:00</updated><entry><title>Preparation to Python Interview</title><link href="http://marselester.ru/preparation-to-python-interview.html" rel="alternate"></link><updated>2012-11-02T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2012-11-02:preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.ru/" rel="alternate"></link><link href="http://marselester.ru/feeds/python.atom.xml" rel="self"></link><id>http://marselester.ru/</id><updated>2013-12-09T00:00:00+06:00</updated><entry><title>API based on Flask</title><link href="http://marselester.ru/api-based-on-flask.html" rel="alternate"></link><updated>2013-12-09T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2013-12-09:api-based-on-flask.html</id><summary type="html">&lt;p&gt;Here I want to consider implementation of API best practices which
+usually don't follow Fielding's REST strictly. &lt;a class="reference external" href="https://github.com/marselester/api-example-based-on-flask"&gt;Example Flask project&lt;/a&gt;
+is on GitHub.&lt;/p&gt;
+&lt;div class="note"&gt;
+&lt;p class="first admonition-title"&gt;Note&lt;/p&gt;
+&lt;p class="last"&gt;Post will be updated.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="api-versioning"&gt;
+&lt;h2&gt;API Versioning&lt;/h2&gt;
+&lt;p&gt;Interfaces are changed hence versioning is mandatory in order to not annoy
+your users. You might need to add new resource or field to particular resource.
+You write code, tests and update documentation. Users are happy.
+It's possible that you have to rename or delete field of some resource.
+This case is harder and you might make the easiest decision — spawn
+a lot of &lt;tt class="docutils literal"&gt;if&lt;/tt&gt; statements and write more tests consequently.
+Code base maintaining is getting worse.&lt;/p&gt;
+&lt;p&gt;I think it's better to make API versions isolated.
+It will keep things simple and tests as well. You may even want to change
+framework if legacy API implementation is not good enough.
+For example, you have two WSGI applications. Each application implements
+certain API version, e.g, &lt;strong&gt;messaging_api_v1&lt;/strong&gt;, &lt;strong&gt;messaging_api_v2&lt;/strong&gt;.
+In order to hide versioning information from applications, e.g., URL prefix,
+you can dispatch requests by Werkzeug's &lt;tt class="docutils literal"&gt;DispatcherMiddleware&lt;/tt&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;werkzeug.wsgi&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;DispatcherMiddleware&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;werkzeug.exceptions&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;NotFound&lt;/span&gt;
+
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;messaging_api_v1&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;messaging_api_v2&lt;/span&gt;
+
+
+&lt;span class="n"&gt;app&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;DispatcherMiddleware&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;NotFound&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="s"&gt;&amp;#39;/v1&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;messaging_api_v1&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;app&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="s"&gt;&amp;#39;/v2&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;messaging_api_v2&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;app&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;span class="p"&gt;})&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Dispatcher in work:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; gunicorn messaging_api:app
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's request the same API resource from different WSGI applications:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl http://127.0.0.1:8000/v1/messages/1
+&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;content&amp;quot;: &amp;quot;hi world from V1&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; curl http://127.0.0.1:8000/v2/messages/1
+&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;content&amp;quot;: &amp;quot;hi world from V2&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+</summary><category term="python"></category><category term="flask"></category><category term="api"></category></entry><entry><title>Preparation to Python Interview</title><link href="http://marselester.ru/preparation-to-python-interview.html" rel="alternate"></link><updated>2012-11-02T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2012-11-02:preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
 preparation to Python developer interview. These are some information and
 links which seemed important to me. Maybe it will be helpful.&lt;/p&gt;
 &lt;div class="section" id="how-does-it-usually-go"&gt;
