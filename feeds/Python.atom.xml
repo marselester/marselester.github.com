@@ -48,6 +48,41 @@ you can dispatch requests by Werkzeug's &lt;tt class="docutils literal"&gt;Dispa
 &lt;span class="go"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
+&lt;div class="section" id="urls"&gt;
+&lt;h2&gt;URLs&lt;/h2&gt;
+&lt;p&gt;API resources are nouns, so &lt;tt class="docutils literal"&gt;/messages/&lt;/tt&gt; URL is for a collection of messages.
+You should think about it as UNIX folder. Hence &lt;tt class="docutils literal"&gt;/messages&lt;/tt&gt; is correct
+folder path and Flask will redirect to the canonical URL &lt;tt class="docutils literal"&gt;/messages/&lt;/tt&gt;.
+Certain message's &lt;tt class="docutils literal"&gt;/messages/1&lt;/tt&gt; URL must not contain trailing slash
+in order to look like UNIX file path.&lt;/p&gt;
+&lt;p&gt;Resources usually have relationships and they might be expressed in URLs,
+e.g., get messages from account which id is &lt;tt class="docutils literal"&gt;1&lt;/tt&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl https://api.example.com/v1/accounts/1/messages/
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="representation"&gt;
+&lt;h2&gt;Representation&lt;/h2&gt;
+&lt;p&gt;There are two popular approaches to specify response format. First one
+is based on &lt;strong&gt;Accept&lt;/strong&gt; header, second — URL based. Here I use header based
+approach.&lt;/p&gt;
+&lt;p&gt;I wrote &lt;tt class="docutils literal"&gt;ResponsiveFlask&lt;/tt&gt; class which extends &lt;tt class="docutils literal"&gt;Flask&lt;/tt&gt; by supporting
+dictionary response. Views can return dict and it will be represented
+based on &lt;strong&gt;Accept&lt;/strong&gt; header. When &lt;tt class="docutils literal"&gt;ResponsiveFlask.make_response()&lt;/tt&gt; receives
+dictionary it creates real response object using appropriate formatter.
+Formatter is picked by mimetype.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl http://127.0.0.1:8000/v2/messages/1 -i -H &lt;span class="s1"&gt;&amp;#39;Accept: application/json&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;HTTP/1.1 200 OK&lt;/span&gt;
+&lt;span class="go"&gt;Server: gunicorn/18.0&lt;/span&gt;
+&lt;span class="go"&gt;Date: Tue, 10 Dec 2013 07:52:31 GMT&lt;/span&gt;
+&lt;span class="go"&gt;Connection: close&lt;/span&gt;
+&lt;span class="go"&gt;Content-Type: application/json&lt;/span&gt;
+&lt;span class="go"&gt;Content-Length: 35&lt;/span&gt;
+
+&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;content&amp;quot;: &amp;quot;hi world from V2&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
 </summary><category term="python"></category><category term="flask"></category><category term="api"></category></entry><entry><title>Preparation to Python Interview</title><link href="http://marselester.ru/preparation-to-python-interview.html" rel="alternate"></link><updated>2012-11-02T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2012-11-02:preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
 preparation to Python developer interview. These are some information and
 links which seemed important to me. Maybe it will be helpful.&lt;/p&gt;
