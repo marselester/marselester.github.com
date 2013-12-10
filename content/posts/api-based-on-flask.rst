@@ -82,4 +82,31 @@ e.g., get messages from account which id is ``1``.
 
     $ curl https://api.example.com/v1/accounts/1/messages/
 
+Representation
+--------------
+
+There are two popular approaches to specify response format. First one
+is based on **Accept** header, second — URL based. Here I use header based
+approach.
+
+I wrote ``ResponsiveFlask`` class which extends ``Flask`` by supporting
+dictionary response. Views can return dict and it will be represented
+based on **Accept** header. When ``ResponsiveFlask.make_response()`` receives
+dictionary it creates real response object using appropriate formatter.
+Formatter is picked by mimetype.
+
+.. code-block:: console
+
+    $ curl http://127.0.0.1:8000/v2/messages/1 -i -H 'Accept: application/json'
+    HTTP/1.1 200 OK
+    Server: gunicorn/18.0
+    Date: Tue, 10 Dec 2013 07:52:31 GMT
+    Connection: close
+    Content-Type: application/json
+    Content-Length: 35
+
+    {
+      "content": "hi world from V2"
+    }
+
 .. _Example Flask project: https://github.com/marselester/api-example-based-on-flask
