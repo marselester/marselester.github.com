@@ -66,4 +66,20 @@ Let's request the same API resource from different WSGI applications:
       "content": "hi world from V2"
     }
 
+URLs
+----
+
+API resources are nouns, so ``/messages/`` URL is for a collection of messages.
+You should think about it as UNIX folder. Hence ``/messages`` is correct
+folder path and Flask will redirect to the canonical URL ``/messages/``.
+Certain message's ``/messages/1`` URL must not contain trailing slash
+in order to look like UNIX file path.
+
+Resources usually have relationships and they might be expressed in URLs,
+e.g., get messages from account which id is ``1``.
+
+.. code-block:: console
+
+    $ curl https://api.example.com/v1/accounts/1/messages/
+
 .. _Example Flask project: https://github.com/marselester/api-example-based-on-flask
