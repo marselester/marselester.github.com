@@ -119,7 +119,7 @@ e.g., get messages from account which id is <tt class="docutils literal">1</tt>.
 <p>There are two popular approaches to specify response format. First one
 is based on <strong>Accept</strong> header, second — URL based. Here I use header based
 approach.</p>
-<p>I wrote <tt class="docutils literal">ResponsiveFlask</tt> class which extends <tt class="docutils literal">Flask</tt> by supporting
+<p>I wrote <a class="reference external" href="https://github.com/marselester/flask-api-utils#accept-header-based-response">ResponsiveFlask</a> class which extends <tt class="docutils literal">Flask</tt> by supporting
 dictionary response. Views can return dict and it will be represented
 based on <strong>Accept</strong> header. When <tt class="docutils literal">ResponsiveFlask.make_response()</tt> receives
 dictionary it creates real response object using appropriate formatter.
@@ -136,6 +136,47 @@ Formatter is picked by mimetype.</p>
 <span class="go">  &quot;content&quot;: &quot;hi world from V2&quot;</span>
 <span class="go">}</span>
 </pre></div>
+</div>
+<div class="section" id="error-handling">
+<h2>Error Handling</h2>
+<p>Flask shows error pages by default with basic description in
+<strong>text/html</strong> format. It would be better if error representation depends
+on <strong>Accept</strong> header. <tt class="docutils literal">ResponsiveFlask</tt> class concerns about it.</p>
+<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/666 -i
+<span class="go">HTTP/1.1 404 NOT FOUND</span>
+<span class="go">Server: gunicorn/18.0</span>
+<span class="go">Date: Fri, 03 Jan 2014 05:16:03 GMT</span>
+<span class="go">Connection: close</span>
+<span class="go">Content-Type: application/json</span>
+<span class="go">Content-Length: 49</span>
+
+<span class="go">{</span>
+<span class="go">  &quot;code&quot;: 404,</span>
+<span class="go">  &quot;message&quot;: &quot;404: Not Found&quot;</span>
+<span class="go">}</span>
+</pre></div>
+<p>You can set your own HTTP error handler by using
+<a class="reference external" href="https://github.com/marselester/flask-api-utils#error-handling">app.default_errorhandler</a> decorator. Note that it might override
+already defined error handlers, so you should declare it before them.</p>
+<p>It's convenient to add URL of detailed error description into response.</p>
+<div class="highlight"><pre><span class="go">{</span>
+<span class="go">  &quot;code&quot;: 404,</span>
+<span class="go">  &quot;info_url&quot;: &quot;http://developer.example.com/errors.html#error-code-404&quot;,</span>
+<span class="go">  &quot;message&quot;: &quot;404: Not Found&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<div class="section" id="misc">
+<h2>Misc</h2>
+<p>It's good idea to keep in mind following:</p>
+<ul class="simple">
+<li>HTTPS;</li>
+<li>response should contain resource url, e.g.,
+<tt class="docutils literal">{'url': <span class="pre">'https://api.example.com/v2/messages/1'}</span></tt>;</li>
+<li>pagination by <tt class="docutils literal">offset</tt> and <tt class="docutils literal">limit</tt> QS arguments with default values;</li>
+<li>filtration and search by QS arguments;</li>
+<li>partial response by <tt class="docutils literal">fields=id,lastname</tt> QS argument.</li>
+</ul>
 </div>
 <p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
 

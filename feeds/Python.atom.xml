@@ -65,7 +65,7 @@ e.g., get messages from account which id is &lt;tt class="docutils literal"&gt;1
 &lt;p&gt;There are two popular approaches to specify response format. First one
 is based on &lt;strong&gt;Accept&lt;/strong&gt; header, second — URL based. Here I use header based
 approach.&lt;/p&gt;
-&lt;p&gt;I wrote &lt;tt class="docutils literal"&gt;ResponsiveFlask&lt;/tt&gt; class which extends &lt;tt class="docutils literal"&gt;Flask&lt;/tt&gt; by supporting
+&lt;p&gt;I wrote &lt;a class="reference external" href="https://github.com/marselester/flask-api-utils#accept-header-based-response"&gt;ResponsiveFlask&lt;/a&gt; class which extends &lt;tt class="docutils literal"&gt;Flask&lt;/tt&gt; by supporting
 dictionary response. Views can return dict and it will be represented
 based on &lt;strong&gt;Accept&lt;/strong&gt; header. When &lt;tt class="docutils literal"&gt;ResponsiveFlask.make_response()&lt;/tt&gt; receives
 dictionary it creates real response object using appropriate formatter.
@@ -82,6 +82,47 @@ Formatter is picked by mimetype.&lt;/p&gt;
 &lt;span class="go"&gt;  &amp;quot;content&amp;quot;: &amp;quot;hi world from V2&amp;quot;&lt;/span&gt;
 &lt;span class="go"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="error-handling"&gt;
+&lt;h2&gt;Error Handling&lt;/h2&gt;
+&lt;p&gt;Flask shows error pages by default with basic description in
+&lt;strong&gt;text/html&lt;/strong&gt; format. It would be better if error representation depends
+on &lt;strong&gt;Accept&lt;/strong&gt; header. &lt;tt class="docutils literal"&gt;ResponsiveFlask&lt;/tt&gt; class concerns about it.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl http://127.0.0.1:8000/v2/messages/666 -i
+&lt;span class="go"&gt;HTTP/1.1 404 NOT FOUND&lt;/span&gt;
+&lt;span class="go"&gt;Server: gunicorn/18.0&lt;/span&gt;
+&lt;span class="go"&gt;Date: Fri, 03 Jan 2014 05:16:03 GMT&lt;/span&gt;
+&lt;span class="go"&gt;Connection: close&lt;/span&gt;
+&lt;span class="go"&gt;Content-Type: application/json&lt;/span&gt;
+&lt;span class="go"&gt;Content-Length: 49&lt;/span&gt;
+
+&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;code&amp;quot;: 404,&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;message&amp;quot;: &amp;quot;404: Not Found&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You can set your own HTTP error handler by using
+&lt;a class="reference external" href="https://github.com/marselester/flask-api-utils#error-handling"&gt;app.default_errorhandler&lt;/a&gt; decorator. Note that it might override
+already defined error handlers, so you should declare it before them.&lt;/p&gt;
+&lt;p&gt;It's convenient to add URL of detailed error description into response.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;code&amp;quot;: 404,&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;info_url&amp;quot;: &amp;quot;http://developer.example.com/errors.html#error-code-404&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;message&amp;quot;: &amp;quot;404: Not Found&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="misc"&gt;
+&lt;h2&gt;Misc&lt;/h2&gt;
+&lt;p&gt;It's good idea to keep in mind following:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;HTTPS;&lt;/li&gt;
+&lt;li&gt;response should contain resource url, e.g.,
+&lt;tt class="docutils literal"&gt;{'url': &lt;span class="pre"&gt;'https://api.example.com/v2/messages/1'}&lt;/span&gt;&lt;/tt&gt;;&lt;/li&gt;
+&lt;li&gt;pagination by &lt;tt class="docutils literal"&gt;offset&lt;/tt&gt; and &lt;tt class="docutils literal"&gt;limit&lt;/tt&gt; QS arguments with default values;&lt;/li&gt;
+&lt;li&gt;filtration and search by QS arguments;&lt;/li&gt;
+&lt;li&gt;partial response by &lt;tt class="docutils literal"&gt;fields=id,lastname&lt;/tt&gt; QS argument.&lt;/li&gt;
+&lt;/ul&gt;
 &lt;/div&gt;
 </summary><category term="python"></category><category term="flask"></category><category term="api"></category></entry><entry><title>Preparation to Python Interview</title><link href="http://marselester.ru/preparation-to-python-interview.html" rel="alternate"></link><updated>2012-11-02T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2012-11-02:preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
 preparation to Python developer interview. These are some information and
