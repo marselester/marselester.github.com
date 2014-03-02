@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 AUTHOR = 'Marsel Mavletkulov'
 SITENAME = "marselester's blog"
-SITEURL = 'http://marselester.ru'
+SITEURL = 'http://marselester.com'
 TIMEZONE = 'Asia/Yekaterinburg'
 LOCALE = (
     'en_US',
@@ -12,7 +12,7 @@ DISQUS_SITENAME = 'marselester'
 TWITTER_USERNAME = 'marselester'
 
 MENUITEMS = (
-    ('CV', 'http://marselester.ru/cv/'),
+    ('CV', 'http://marselester.com/cv/'),
 )
 
 SOCIAL = (

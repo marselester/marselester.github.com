@@ -209,6 +209,6 @@ As in `previous post`_ project should work:
     $ curl -i messaging-part-2
 
 .. _Developing Django project with SaltStack:
-.. _previous post: http://marselester.ru/developing-django-project-with-saltstack.html
+.. _previous post: http://marselester.com/developing-django-project-with-saltstack.html
 .. _Deploy Abstract Internal Messaging System:
 .. _complete example: https://github.com/marselester/abstract-internal-messaging-deploy
