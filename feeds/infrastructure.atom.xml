@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.ru/" rel="alternate"></link><link href="http://marselester.ru/feeds/infrastructure.atom.xml" rel="self"></link><id>http://marselester.ru/</id><updated>2013-12-03T00:00:00+06:00</updated><entry><title>Slides about SaltStack</title><link href="http://marselester.ru/saltstack-slides.html" rel="alternate"></link><updated>2013-12-03T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2013-12-03:saltstack-slides.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/infrastructure.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2013-12-03T00:00:00+07:00</updated><entry><title>Slides about SaltStack</title><link href="http://marselester.com/saltstack-slides.html" rel="alternate"></link><updated>2013-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-03:saltstack-slides.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
 Thailand on 12 Dec 2013. We compared Salt and &lt;a class="reference external" href="http://slid.es/simonrobson/ansible"&gt;Ansible&lt;/a&gt;.
 Here are my slides.&lt;/p&gt;
-&lt;iframe src="http://slid.es/marselester/saltstack/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;</summary><category term="salt"></category><category term="saltstack"></category><category term="slides"></category><category term="talk"></category></entry><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-28T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2013-11-28:developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
-but deployment was not considered in the &lt;a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
+&lt;iframe src="http://slid.es/marselester/saltstack/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;</summary><category term="salt"></category><category term="saltstack"></category><category term="slides"></category><category term="talk"></category></entry><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-28:developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
+but deployment was not considered in the &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
 &lt;p&gt;Server configuration is different from local, thus environments will be needed
 (at least production &lt;strong&gt;prod&lt;/strong&gt; and development &lt;strong&gt;dev&lt;/strong&gt;). Salt uses &lt;strong&gt;base&lt;/strong&gt;
 environment by default.&lt;/p&gt;
@@ -46,7 +46,7 @@ When no environment is set, Salt assumes following configuration:&lt;/p&gt;
 &lt;p&gt;Each environment describes paths where to find files.
 File is searched in the first directory and if it is not found it is
 searched in the second one.&lt;/p&gt;
-&lt;p&gt;States and pillars which were described in &lt;a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; are splitted
+&lt;p&gt;States and pillars which were described in &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; are splitted
 to environment folders. Most of files are located in &lt;tt class="docutils literal"&gt;base&lt;/tt&gt; folder,
 because they are the same to &lt;strong&gt;dev&lt;/strong&gt; and &lt;strong&gt;prod&lt;/strong&gt; environments.
 You can find &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy"&gt;complete example&lt;/a&gt; on GitHub.&lt;/p&gt;
@@ -143,7 +143,7 @@ in &lt;tt class="docutils literal"&gt;minion.conf&lt;/tt&gt; (to &lt;tt class="d
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;Let's try to deploy &lt;strong&gt;prod&lt;/strong&gt; environment to VM. I assume that you have
-&lt;tt class="docutils literal"&gt;messaging&lt;/tt&gt; directory (see &lt;a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html"&gt;Developing Django project with SaltStack&lt;/a&gt;).
+&lt;tt class="docutils literal"&gt;messaging&lt;/tt&gt; directory (see &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;Developing Django project with SaltStack&lt;/a&gt;).
 You need to clone &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy"&gt;Deploy Abstract Internal Messaging System&lt;/a&gt; in it
 and start VM.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;cd &lt;/span&gt;messaging
@@ -168,11 +168,11 @@ to &lt;tt class="docutils literal"&gt;/etc/hosts&lt;/tt&gt;.&lt;/p&gt;
 to arbitrary targets. It gives us opportunity to test deployment itself.
 You can improve this solution by adding ability to specify git branch
 which will be deployed.&lt;/p&gt;
-&lt;p&gt;As in &lt;a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; project should work:&lt;/p&gt;
+&lt;p&gt;As in &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; project should work:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl -i messaging-part-2
 &lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.ru/developing-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-09T00:00:00+06:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.ru,2013-11-09:developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
+</summary><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.com/developing-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-09:developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
 run in VirtualBox which is managed by Vagrant. Infrastructure management
 is provided by SaltStack.&lt;/p&gt;
 &lt;p&gt;I advise you to create separate folder for repositories (currently there

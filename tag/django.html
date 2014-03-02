@@ -6,11 +6,11 @@
 
     <title>marselester's blog - django</title>
 
-    <link rel="stylesheet" href="http://marselester.ru/theme/css/normalize.css" />
-    <link rel="stylesheet" href="http://marselester.ru/theme/css/foundation.min.css" />
-    <link rel="stylesheet" href="http://marselester.ru/theme/css/style.css" />
-    <link rel="stylesheet" href="http://marselester.ru/theme/css/pygments.css" />	
-    <script src="http://marselester.ru/theme/js/custom.modernizr.js"></script>
+    <link rel="stylesheet" href="http://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="http://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="http://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="http://marselester.com/theme/css/pygments.css" />	
+    <script src="http://marselester.com/theme/js/custom.modernizr.js"></script>
 </head>
 
 <body>
@@ -20,7 +20,7 @@
 <div class="top-bar">
 <div class="row">
     <div class="large-9 large-centered columns">
-	    <h1><a href="http://marselester.ru">marselester's blog</a></h1>
+	    <h1><a href="http://marselester.com">marselester's blog</a></h1>
     </div>
 </div>
 </div>
@@ -29,9 +29,9 @@
 <div class="row">
 <div class="large-9 columns">
     <ul class="button-group navigation">
-    <li><a href="http://marselester.ru/cv/" class="button secondary small">CV</a></li>
+    <li><a href="http://marselester.com/cv/" class="button secondary small">CV</a></li>
 
-            <li><a href="http://marselester.ru/pages/about.html" class="button secondary small">About</a></li>
+            <li><a href="http://marselester.com/pages/about.html" class="button secondary small">About</a></li>
     </ul>
 </div>
 </div>
@@ -48,13 +48,13 @@
         
 
             <article>
-                <a href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
+                <a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
 <h6 class="subheader" title="2013-11-28T00:00:00">Thu 28 November 2013
 </h6>
 
 
 <p>Eventually you will need to deploy project,
-but deployment was not considered in the <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
+but deployment was not considered in the <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
 <p>Server configuration is different from local, thus environments will be needed
 (at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
 environment by default.</p>
@@ -97,7 +97,7 @@ When no environment is set, Salt assumes following configuration:</p>
 <p>Each environment describes paths where to find files.
 File is searched in the first directory and if it is not found it is
 searched in the second one.</p>
-<p>States and pillars which were described in <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a> are splitted
+<p>States and pillars which were described in <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a> are splitted
 to environment folders. Most of files are located in <tt class="docutils literal">base</tt> folder,
 because they are the same to <strong>dev</strong> and <strong>prod</strong> environments.
 You can find <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy">complete example</a> on GitHub.</p>
@@ -194,7 +194,7 @@ in <tt class="docutils literal">minion.conf</tt> (to <tt class="docutils literal
 </li>
 </ul>
 <p>Let's try to deploy <strong>prod</strong> environment to VM. I assume that you have
-<tt class="docutils literal">messaging</tt> directory (see <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">Developing Django project with SaltStack</a>).
+<tt class="docutils literal">messaging</tt> directory (see <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">Developing Django project with SaltStack</a>).
 You need to clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy">Deploy Abstract Internal Messaging System</a> in it
 and start VM.</p>
 <div class="highlight"><pre><span class="gp">$</span> <span class="nb">cd </span>messaging
@@ -219,23 +219,23 @@ to <tt class="docutils literal">/etc/hosts</tt>.</p>
 to arbitrary targets. It gives us opportunity to test deployment itself.
 You can improve this solution by adding ability to specify git branch
 which will be deployed.</p>
-<p>As in <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a> project should work:</p>
+<p>As in <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a> project should work:</p>
 <div class="highlight"><pre><span class="gp">$</span> curl -i messaging-part-2
 </pre></div>
 </div>
-<p class="subheader">Category: <a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a>
+<p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/vagrant.html">vagrant </a>
-    <a href="http://marselester.ru/tag/salt.html">salt </a>
-    <a href="http://marselester.ru/tag/saltstack.html">saltstack </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="http://marselester.com/tag/salt.html">salt </a>
+    <a href="http://marselester.com/tag/saltstack.html">saltstack </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>            </article>
+<p><a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>            </article>
 
 
                 <hr  class="gradient"/>
@@ -245,7 +245,7 @@ which will be deployed.</p>
 
 
             <article>
-                <a href="http://marselester.ru/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
+                <a href="http://marselester.com/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
 <h6 class="subheader" title="2013-11-09T00:00:00">Sat 09 November 2013
 </h6>
 
@@ -254,19 +254,19 @@ which will be deployed.</p>
 run in VirtualBox which is managed by Vagrant. Infrastructure management
 is provided by SaltStack.</p>
 <p>I advise you to create separate folder for repositories (currently there
-is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a>
+is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there ...</p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/vagrant.html">vagrant </a>
-    <a href="http://marselester.ru/tag/salt.html">salt </a>
-    <a href="http://marselester.ru/tag/saltstack.html">saltstack </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="http://marselester.com/tag/salt.html">salt </a>
+    <a href="http://marselester.com/tag/saltstack.html">saltstack </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/developing-django-project-with-saltstack.html">Read More</a>
+<p><a href="http://marselester.com/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/developing-django-project-with-saltstack.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -274,7 +274,7 @@ is only one) of project and clone <a class="reference external" href="https://gi
 
 
             <article>
-                <a href="http://marselester.ru/python-developer-at-uploadcare.html"><h3 class="article-title">Python Developer at Uploadcare</h3></a>
+                <a href="http://marselester.com/python-developer-at-uploadcare.html"><h3 class="article-title">Python Developer at Uploadcare</h3></a>
 <h6 class="subheader" title="2013-07-31T00:00:00">Wed 31 July 2013
 </h6>
 
@@ -284,19 +284,19 @@ is only one) of project and clone <a class="reference external" href="https://gi
 I was looking for -- <a class="reference external" href="https://uploadcare.com">Uploadcare</a>, a cloud-based
 file upload SaaS -- <a class="reference external" href="https://github.com/uploadcare?tab=members">great team</a>,
 appropriate development process, adherence to quality standards.</p>
-<p>I started to work at Uploadcare from tasks ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/portfolio.html">Portfolio</a>
+<p>I started to work at Uploadcare from tasks ...</p><p class="subheader">Category: <a href="http://marselester.com/category/portfolio.html">Portfolio</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/tornado.html">tornado </a>
-    <a href="http://marselester.ru/tag/flask.html">flask </a>
-    <a href="http://marselester.ru/tag/aws.html">aws </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/tornado.html">tornado </a>
+    <a href="http://marselester.com/tag/flask.html">flask </a>
+    <a href="http://marselester.com/tag/aws.html">aws </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/python-developer-at-uploadcare.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/python-developer-at-uploadcare.html">Read More</a>
+<p><a href="http://marselester.com/python-developer-at-uploadcare.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/python-developer-at-uploadcare.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -304,7 +304,7 @@ appropriate development process, adherence to quality standards.</p>
 
 
             <article>
-                <a href="http://marselester.ru/fangid-startup.html"><h3 class="article-title">Стартап fangid.com</h3></a>
+                <a href="http://marselester.com/fangid-startup.html"><h3 class="article-title">Стартап fangid.com</h3></a>
 <h6 class="subheader" title="2012-10-13T00:00:00">Sat 13 October 2012
 </h6>
 
@@ -315,18 +315,18 @@ appropriate development process, adherence to quality standards.</p>
 первоначальной подготовкой репозитория, например, продумыванием структуры,
 организацией тестов, разделением настроек), принимал участие в выработке
 требований к системе и проектировании архитектуры. При конструировании системы
-моими ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/portfolio.html">Portfolio</a>
+моими ...</p><p class="subheader">Category: <a href="http://marselester.com/category/portfolio.html">Portfolio</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/startup.html">startup </a>
-    <a href="http://marselester.ru/tag/thailand.html">thailand </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/startup.html">startup </a>
+    <a href="http://marselester.com/tag/thailand.html">thailand </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/fangid-startup.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/fangid-startup.html">Read More</a>
+<p><a href="http://marselester.com/fangid-startup.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/fangid-startup.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -334,7 +334,7 @@ appropriate development process, adherence to quality standards.</p>
 
 
             <article>
-                <a href="http://marselester.ru/portfolio-2007-2011.html"><h3 class="article-title">Портфолио 2007–2011</h3></a>
+                <a href="http://marselester.com/portfolio-2007-2011.html"><h3 class="article-title">Портфолио 2007–2011</h3></a>
 <h6 class="subheader" title="2012-10-12T00:00:00">Fri 12 October 2012
 </h6>
 
@@ -347,19 +347,19 @@ appropriate development process, adherence to quality standards.</p>
 <ul class="simple">
 <li>электронный архив ежемесячного литературно-публицистического журнала
 «<a class="reference external" href="http://agidel-magazine.ru/">Агидель</a>» на Django. Предполагается, что ресурс будет содержать архив
-журналов с 1923 года. Для удобной навигации сделал ...</li></ul></div><p class="subheader">Category: <a href="http://marselester.ru/category/portfolio.html">Portfolio</a>
+журналов с 1923 года. Для удобной навигации сделал ...</li></ul></div><p class="subheader">Category: <a href="http://marselester.com/category/portfolio.html">Portfolio</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/php.html">php </a>
-    <a href="http://marselester.ru/tag/codeigniter.html">codeigniter </a>
-    <a href="http://marselester.ru/tag/cms-myscon.html">cms myscon </a>
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/php.html">php </a>
+    <a href="http://marselester.com/tag/codeigniter.html">codeigniter </a>
+    <a href="http://marselester.com/tag/cms-myscon.html">cms myscon </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/portfolio-2007-2011.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/portfolio-2007-2011.html">Read More</a>
+<p><a href="http://marselester.com/portfolio-2007-2011.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/portfolio-2007-2011.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -367,7 +367,7 @@ appropriate development process, adherence to quality standards.</p>
 
 
             <article>
-                <a href="http://marselester.ru/django-todo-testing-during-construction.html"><h3 class="article-title">Django TODO: тестирование во время конструирования</h3></a>
+                <a href="http://marselester.com/django-todo-testing-during-construction.html"><h3 class="article-title">Django TODO: тестирование во время конструирования</h3></a>
 <h6 class="subheader" title="2012-06-29T13:00:00">Fri 29 June 2012
 </h6>
 
@@ -378,18 +378,18 @@ appropriate development process, adherence to quality standards.</p>
 оно не сделает программу удобнее в использовании, более быстрой, компактной,
 удобочитаемой или расширяемой.</p>
 <p>Цель тестирования противоположна целям других этапов разработки. Его целью
-является нахождение ошибок. Успешным считается тест, нарушающий работу ПО ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+является нахождение ошибок. Успешным считается тест, нарушающий работу ПО ...</p><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/django-todo.html">django-todo </a>
-    <a href="http://marselester.ru/tag/testing.html">testing </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="http://marselester.com/tag/testing.html">testing </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/django-todo-testing-during-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/django-todo-testing-during-construction.html">Read More</a>
+<p><a href="http://marselester.com/django-todo-testing-during-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/django-todo-testing-during-construction.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -397,7 +397,7 @@ appropriate development process, adherence to quality standards.</p>
 
 
             <article>
-                <a href="http://marselester.ru/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
+                <a href="http://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
 <h6 class="subheader" title="2012-06-29T12:00:00">Fri 29 June 2012
 </h6>
 
@@ -407,18 +407,18 @@ appropriate development process, adherence to quality standards.</p>
 системного уровня, при этом значительная часть проектирования может быть
 намеренно оставлена на этап конструирования. Проектирование -- это
 &quot;постепенный&quot; процесс. Проекты приложений не возникают в умах разработчиков
-сразу в готовом виде. Они развиваются ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+сразу в готовом виде. Они развиваются ...</p><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/django-todo.html">django-todo </a>
-    <a href="http://marselester.ru/tag/construction.html">construction </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="http://marselester.com/tag/construction.html">construction </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/django-todo-system-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/django-todo-system-construction.html">Read More</a>
+<p><a href="http://marselester.com/django-todo-system-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/django-todo-system-construction.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -426,7 +426,7 @@ appropriate development process, adherence to quality standards.</p>
 
 
             <article>
-                <a href="http://marselester.ru/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
+                <a href="http://marselester.com/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
 <h6 class="subheader" title="2012-06-29T11:00:00">Fri 29 June 2012
 </h6>
 
@@ -437,18 +437,18 @@ appropriate development process, adherence to quality standards.</p>
 основной проблемой, характерной для крупных систем, является поддержание их
 концептуальной целостности. Хорошая архитектура должна соответствовать
 проблеме <a class="footnote-reference" href="#mcconnell" id="id1">[1]</a>.</p>
-<p>Разделение системы на подсистемы на уровне архитектуры, позволяет ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+<p>Разделение системы на подсистемы на уровне архитектуры, позволяет ...</p><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/django-todo.html">django-todo </a>
-    <a href="http://marselester.ru/tag/architecture.html">architecture </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="http://marselester.com/tag/architecture.html">architecture </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/django-todo-design-architecture.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/django-todo-design-architecture.html">Read More</a>
+<p><a href="http://marselester.com/django-todo-design-architecture.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/django-todo-design-architecture.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -456,7 +456,7 @@ appropriate development process, adherence to quality standards.</p>
 
 
             <article>
-                <a href="http://marselester.ru/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
+                <a href="http://marselester.com/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
 <h6 class="subheader" title="2012-06-29T11:00:00">Fri 29 June 2012
 </h6>
 
@@ -466,18 +466,18 @@ appropriate development process, adherence to quality standards.</p>
 системе.</p>
 <p>Требования подробно описывают, что должна делать система. Внимание к
 требованиям помогает свести к минимуму изменения системы после начала
-разработки. Явные требования помогают гарантировать, что ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+разработки. Явные требования помогают гарантировать, что ...</p><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/django-todo.html">django-todo </a>
-    <a href="http://marselester.ru/tag/requirements.html">requirements </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="http://marselester.com/tag/requirements.html">requirements </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/django-todo-development-of-system-requirements.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/django-todo-development-of-system-requirements.html">Read More</a>
+<p><a href="http://marselester.com/django-todo-development-of-system-requirements.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/django-todo-development-of-system-requirements.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -485,7 +485,7 @@ appropriate development process, adherence to quality standards.</p>
 
 
             <article>
-                <a href="http://marselester.ru/links-to-best-practices-of-python-django.html"><h3 class="article-title">Соглашения по разработке на Python/Django</h3></a>
+                <a href="http://marselester.com/links-to-best-practices-of-python-django.html"><h3 class="article-title">Соглашения по разработке на Python/Django</h3></a>
 <h6 class="subheader" title="2012-06-29T00:00:00">Fri 29 June 2012
 </h6>
 
@@ -498,17 +498,17 @@ appropriate development process, adherence to quality standards.</p>
 В нем я нашел ответы на вопросы форматирования длинных строк:</p>
 <pre class="literal-block">
 expended_time = (self.finish_date() - self.start_date
-                 + datetime ...</pre><p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+                 + datetime ...</pre><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/best-practices.html">best practices </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/best-practices.html">best practices </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/links-to-best-practices-of-python-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/links-to-best-practices-of-python-django.html">Read More</a>
+<p><a href="http://marselester.com/links-to-best-practices-of-python-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/links-to-best-practices-of-python-django.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -516,7 +516,7 @@ expended_time = (self.finish_date() - self.start_date
 
 
             <article>
-                <a href="http://marselester.ru/splitting-settings-in-django.html"><h3 class="article-title">Разделение настроек в Django</h3></a>
+                <a href="http://marselester.com/splitting-settings-in-django.html"><h3 class="article-title">Разделение настроек в Django</h3></a>
 <h6 class="subheader" title="2012-06-29T00:00:00">Fri 29 June 2012
 </h6>
 
@@ -540,17 +540,17 @@ settings/
 <span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s">&#39;Asia/Yekaterinburg&#39;</span>
 <span class="c"># ...</span>
 </pre></div>
-<p><tt class="docutils literal">production.py</tt> содержит настройки для ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+<p><tt class="docutils literal">production.py</tt> содержит настройки для ...</p><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/settings.html">settings </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/settings.html">settings </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/splitting-settings-in-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/splitting-settings-in-django.html">Read More</a>
+<p><a href="http://marselester.com/splitting-settings-in-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/splitting-settings-in-django.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -558,7 +558,7 @@ settings/
 
 
             <article>
-                <a href="http://marselester.ru/short-overview-of-infrastructure-for-developing-reusable-django-apps.html"><h3 class="article-title">Краткий обзор инфраструктуры для разработки reusable Django приложений</h3></a>
+                <a href="http://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html"><h3 class="article-title">Краткий обзор инфраструктуры для разработки reusable Django приложений</h3></a>
 <h6 class="subheader" title="2012-06-13T00:00:00">Wed 13 June 2012
 </h6>
 
@@ -569,17 +569,17 @@ settings/
 файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
 организации автоматизированного тестирования. В данной статье приведены пути
 решения этих проблем.</p>
-<p>Важно знать различия между двумя ...</p><p class="subheader">Category: <a href="http://marselester.ru/category/python.html">Python</a>
+<p>Важно знать различия между двумя ...</p><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/infrastructure.html">infrastructure </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/infrastructure.html">infrastructure </a>
 </p>
 
 
 
-<p><a href="http://marselester.ru/short-overview-of-infrastructure-for-developing-reusable-django-apps.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.ru/short-overview-of-infrastructure-for-developing-reusable-django-apps.html">Read More</a>
+<p><a href="http://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -592,17 +592,17 @@ settings/
     <aside class="large-3 columns">
         <h5 class="sidebar-title">Site</h5>
         <ul class="side-nav">
-            <li><a href="http://marselester.ru/archives.html">Archives</a>
-            <li><a href="http://marselester.ru/tags.html">Tags</a>
+            <li><a href="http://marselester.com/archives.html">Archives</a>
+            <li><a href="http://marselester.com/tags.html">Tags</a>
         </ul>
 
 		
         <h5 class="sidebar-title">Categories</h5>
         <ul class="side-nav">
-            <li><a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a></li>
-            <li><a href="http://marselester.ru/category/misc.html">Misc</a></li>
-            <li><a href="http://marselester.ru/category/portfolio.html">Portfolio</a></li>
-            <li><a href="http://marselester.ru/category/python.html">Python</a></li>
+            <li><a href="http://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="http://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="http://marselester.com/category/portfolio.html">Portfolio</a></li>
+            <li><a href="http://marselester.com/category/python.html">Python</a></li>
    
         </ul>
 

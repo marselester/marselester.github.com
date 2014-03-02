@@ -6,11 +6,11 @@
 
     <title>Developing & Deploying Django project with SaltStack</title>
 
-    <link rel="stylesheet" href="http://marselester.ru/theme/css/normalize.css" />
-    <link rel="stylesheet" href="http://marselester.ru/theme/css/foundation.min.css" />
-    <link rel="stylesheet" href="http://marselester.ru/theme/css/style.css" />
-    <link rel="stylesheet" href="http://marselester.ru/theme/css/pygments.css" />	
-    <script src="http://marselester.ru/theme/js/custom.modernizr.js"></script>
+    <link rel="stylesheet" href="http://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="http://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="http://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="http://marselester.com/theme/css/pygments.css" />	
+    <script src="http://marselester.com/theme/js/custom.modernizr.js"></script>
 </head>
 
 <body>
@@ -20,7 +20,7 @@
 <div class="top-bar">
 <div class="row">
     <div class="large-9 large-centered columns">
-	    <h1><a href="http://marselester.ru">marselester's blog</a></h1>
+	    <h1><a href="http://marselester.com">marselester's blog</a></h1>
     </div>
 </div>
 </div>
@@ -29,9 +29,9 @@
 <div class="row">
 <div class="large-9 columns">
     <ul class="button-group navigation">
-    <li><a href="http://marselester.ru/cv/" class="button secondary small">CV</a></li>
+    <li><a href="http://marselester.com/cv/" class="button secondary small">CV</a></li>
 
-            <li><a href="http://marselester.ru/pages/about.html" class="button secondary small">About</a></li>
+            <li><a href="http://marselester.com/pages/about.html" class="button secondary small">About</a></li>
     </ul>
 </div>
 </div>
@@ -46,7 +46,7 @@
     <div class="large-9 columns">
 <article>
     <header>
-        <h3 class="article-title"><a href="http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html" rel="bookmark"
+        <h3 class="article-title"><a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html" rel="bookmark"
         title="Permalink to Developing & Deploying Django project with SaltStack">Developing &amp; Deploying Django project with SaltStack</a></h3>
 <a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
     </header>
@@ -56,7 +56,7 @@
 
 
     <p>Eventually you will need to deploy project,
-but deployment was not considered in the <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
+but deployment was not considered in the <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
 <p>Server configuration is different from local, thus environments will be needed
 (at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
 environment by default.</p>
@@ -99,7 +99,7 @@ When no environment is set, Salt assumes following configuration:</p>
 <p>Each environment describes paths where to find files.
 File is searched in the first directory and if it is not found it is
 searched in the second one.</p>
-<p>States and pillars which were described in <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a> are splitted
+<p>States and pillars which were described in <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a> are splitted
 to environment folders. Most of files are located in <tt class="docutils literal">base</tt> folder,
 because they are the same to <strong>dev</strong> and <strong>prod</strong> environments.
 You can find <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy">complete example</a> on GitHub.</p>
@@ -196,7 +196,7 @@ in <tt class="docutils literal">minion.conf</tt> (to <tt class="docutils literal
 </li>
 </ul>
 <p>Let's try to deploy <strong>prod</strong> environment to VM. I assume that you have
-<tt class="docutils literal">messaging</tt> directory (see <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">Developing Django project with SaltStack</a>).
+<tt class="docutils literal">messaging</tt> directory (see <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">Developing Django project with SaltStack</a>).
 You need to clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy">Deploy Abstract Internal Messaging System</a> in it
 and start VM.</p>
 <div class="highlight"><pre><span class="gp">$</span> <span class="nb">cd </span>messaging
@@ -221,19 +221,19 @@ to <tt class="docutils literal">/etc/hosts</tt>.</p>
 to arbitrary targets. It gives us opportunity to test deployment itself.
 You can improve this solution by adding ability to specify git branch
 which will be deployed.</p>
-<p>As in <a class="reference external" href="http://marselester.ru/developing-django-project-with-saltstack.html">previous post</a> project should work:</p>
+<p>As in <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a> project should work:</p>
 <div class="highlight"><pre><span class="gp">$</span> curl -i messaging-part-2
 </pre></div>
 </div>
 
-<p class="subheader">Category: <a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a>
+<p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
-    <a href="http://marselester.ru/tag/python.html">python </a>
-    <a href="http://marselester.ru/tag/django.html">django </a>
-    <a href="http://marselester.ru/tag/vagrant.html">vagrant </a>
-    <a href="http://marselester.ru/tag/salt.html">salt </a>
-    <a href="http://marselester.ru/tag/saltstack.html">saltstack </a>
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="http://marselester.com/tag/salt.html">salt </a>
+    <a href="http://marselester.com/tag/saltstack.html">saltstack </a>
 </p>
 
 
@@ -244,7 +244,7 @@ which will be deployed.</p>
     <script type="text/javascript">
         var disqus_shortname = 'marselester'
         var disqus_identifier = "developing-and-deploying-django-project-with-saltstack.html";
-        var disqus_url = "http://marselester.ru/developing-and-deploying-django-project-with-saltstack.html";
+        var disqus_url = "http://marselester.com/developing-and-deploying-django-project-with-saltstack.html";
 
         (function() {
             var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
@@ -261,17 +261,17 @@ which will be deployed.</p>
     <aside class="large-3 columns">
         <h5 class="sidebar-title">Site</h5>
         <ul class="side-nav">
-            <li><a href="http://marselester.ru/archives.html">Archives</a>
-            <li><a href="http://marselester.ru/tags.html">Tags</a>
+            <li><a href="http://marselester.com/archives.html">Archives</a>
+            <li><a href="http://marselester.com/tags.html">Tags</a>
         </ul>
 
 		
         <h5 class="sidebar-title">Categories</h5>
         <ul class="side-nav">
-            <li><a href="http://marselester.ru/category/infrastructure.html">Infrastructure</a></li>
-            <li><a href="http://marselester.ru/category/misc.html">Misc</a></li>
-            <li><a href="http://marselester.ru/category/portfolio.html">Portfolio</a></li>
-            <li><a href="http://marselester.ru/category/python.html">Python</a></li>
+            <li><a href="http://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="http://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="http://marselester.com/category/portfolio.html">Portfolio</a></li>
+            <li><a href="http://marselester.com/category/python.html">Python</a></li>
    
         </ul>
 
