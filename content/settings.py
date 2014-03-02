@@ -2,7 +2,7 @@
 AUTHOR = 'Marsel Mavletkulov'
 SITENAME = "marselester's blog"
 SITEURL = 'http://marselester.com'
-TIMEZONE = 'Asia/Yekaterinburg'
+TIMEZONE = 'Asia/Bangkok'
 LOCALE = (
     'en_US',
 )
