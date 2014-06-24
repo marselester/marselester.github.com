@@ -2,10 +2,6 @@
 <feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/all-en.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2013-12-09T00:00:00+07:00</updated><entry><title>API based on Flask</title><link href="http://marselester.com/api-based-on-flask.html" rel="alternate"></link><updated>2013-12-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-09:api-based-on-flask.html</id><summary type="html">&lt;p&gt;Here I want to consider implementation of API best practices which
 usually don't follow Fielding's REST strictly. &lt;a class="reference external" href="https://github.com/marselester/api-example-based-on-flask"&gt;Example Flask project&lt;/a&gt;
 is on GitHub.&lt;/p&gt;
-&lt;div class="note"&gt;
-&lt;p class="first admonition-title"&gt;Note&lt;/p&gt;
-&lt;p class="last"&gt;Post will be updated.&lt;/p&gt;
-&lt;/div&gt;
 &lt;div class="section" id="api-versioning"&gt;
 &lt;h2&gt;API Versioning&lt;/h2&gt;
 &lt;p&gt;Interfaces are changed hence versioning is mandatory in order to not annoy

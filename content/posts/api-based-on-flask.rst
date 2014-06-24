@@ -11,9 +11,6 @@ Here I want to consider implementation of API best practices which
 usually don't follow Fielding's REST strictly. `Example Flask project`_
 is on GitHub.
 
-.. note::
-    Post will be updated.
-
 API Versioning
 --------------
 
