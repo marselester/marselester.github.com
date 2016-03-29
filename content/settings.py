@@ -19,6 +19,7 @@ SOCIAL = (
     ('GitHub', 'https://github.com/marselester'),
     ('LinkedIn', 'http://www.linkedin.com/in/marselester'),
     ('Instagram', 'http://instagram.com/marselester'),
+    ('Medium', 'https://medium.com/@marselester/'),
     ('Twitter', 'http://twitter.com/marselester'),
     ('Facebook', 'http://www.facebook.com/marselester'),
     (u'Мой Круг', 'http://mmavletkulov.moikrug.ru/'),
