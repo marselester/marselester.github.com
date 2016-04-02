@@ -76,7 +76,7 @@ a model signal is not "attached" to DB transaction. For example,
 a Celery task is run before a DB transaction is committed.
 That is usually quick fixed with ``task_name.apply_async(countdown=1)``
 to delay a task execution, but I would rather recommend something like
-django-transaction-hooks.
+`django-transaction-hooks`_.
 
 What about SQL trigger option? A bad thing is that a business logic leaks from an app to DB.
 But with a good documentation and tests it's maintainable: SQL code is stored in
@@ -134,7 +134,7 @@ same DB transaction, then ``books_count`` value might be overwritten.
         author.save()
 
 You can either explicitly list fields to update ``author.save(update_fields=['name'])``
-or use django-save-the-change. Let's document that in the model docstring.
+or use `django-save-the-change`_. Let's document that in the model docstring.
 
 .. code-block:: python
 
@@ -216,3 +216,6 @@ from ``Author`` model and return it, instead of default
         pass
 
 I hope this helps. Cheers!
+
+.. _django-transaction-hooks: https://django-transaction-hooks.readthedocs.org/en/latest/
+.. _django-save-the-change: https://django-save-the-change.readthedocs.org/en/latest/
