@@ -28,5 +28,5 @@ SOCIAL = (
 THEME = 'tuxlite_zf'
 RELATIVE_URLS = False
 
-PLUGIN_PATH = '../../pelican-plugins'
+PLUGIN_PATHS = ['../../pelican-plugins']
 PLUGINS = ['html_rst_directive']
