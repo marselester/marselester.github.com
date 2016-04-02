@@ -49,7 +49,7 @@
 
             <article>
                 <a href="http://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html"><h3 class="article-title">Определение нажатия комбинации клавиш средствами BIOS на ассемблере</h3></a>
-<h6 class="subheader" title="2009-12-03T00:00:00">Thu 03 December 2009
+<h6 class="subheader" title="2009-12-03T00:00:00+07:00">Thu 03 December 2009
 </h6>
 
 
@@ -57,7 +57,7 @@
 распознать нажатие «горячей» комбинации клавиш <tt class="docutils literal">LeftCtrl+RightShift+F3</tt> и
 реагировать на него звуковым сигналом. Информации/примеров по этой теме
 маловато, по этому решил опубликовать свою программку.</p>
-<div class="highlight"><pre><span class="nf">masm</span>
+<div class="highlight"><pre><span></span><span class="nf">masm</span>
 <span class="nf">.model</span> <span class="nv">small</span>
 <span class="nf">.stack</span> <span class="mi">256</span>
 <span class="nf">.data</span>
@@ -94,11 +94,11 @@
     <span class="nf">int</span> <span class="mh">16h</span>
 
     <span class="c1">; Проверка нажатия LeftCtrl</span>
-    <span class="nf">test</span> <span class="nb">ah</span><span class="p">,</span> <span class="m">1b</span>
+    <span class="nf">test</span> <span class="nb">ah</span><span class="p">,</span> <span class="mb">1b</span>
     <span class="nf">jz</span> <span class="nv">exit</span>
 
     <span class="c1">; Проверка нажатия RightShift</span>
-    <span class="nf">test</span> <span class="nb">al</span><span class="p">,</span> <span class="m">1b</span>
+    <span class="nf">test</span> <span class="nb">al</span><span class="p">,</span> <span class="mb">1b</span>
     <span class="nf">jz</span> <span class="nv">exit</span>
 
     <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mi">2</span> <span class="c1">; Вывод символа</span>
@@ -191,6 +191,7 @@
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

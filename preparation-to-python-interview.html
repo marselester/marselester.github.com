@@ -51,7 +51,7 @@
 <a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
     </header>
 
-<h6 class="subheader" title="2012-11-02T00:00:00">Fri 02 November 2012
+<h6 class="subheader" title="2012-11-02T00:00:00+07:00">Fri 02 November 2012
 </h6>
 
 
@@ -90,7 +90,7 @@ starting to look for solution.</p>
 <div class="section" id="basic">
 <h3>Basic</h3>
 <p>Probably interviewer starts with basic questions. Let us see example:</p>
-<div class="highlight"><pre><span class="n">funcs</span> <span class="o">=</span> <span class="p">[]</span>
+<div class="highlight"><pre><span></span><span class="n">funcs</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
         <span class="k">print</span> <span class="n">i</span>
@@ -105,7 +105,7 @@ that variable search in enclosed scope will be done later, <strong>after call</s
 enclosed functions. They all get same value -- value of <tt class="docutils literal">i</tt> in last
 iteration.</p>
 <p>Next example prints numbers from 0 to 4:</p>
-<div class="highlight"><pre><span class="n">funcs</span> <span class="o">=</span> <span class="p">[]</span>
+<div class="highlight"><pre><span></span><span class="n">funcs</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="p">):</span>
         <span class="k">print</span> <span class="n">i</span>
@@ -118,15 +118,15 @@ iteration.</p>
 created</strong>.</p>
 <p>There is another popular question related with default value of function.
 N.B. <tt class="docutils literal">names</tt> is mutable:</p>
-<div class="highlight"><pre><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="p">[]):</span>
-    <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;some name&#39;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="p">[]):</span>
+    <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;some name&#39;</span><span class="p">)</span>
 </pre></div>
 <p><a class="reference external" href="http://pythontutor.com">Visualizing code execution</a> and <a class="reference external" href="https://alexbers.com/python_quiz/">quiz of non-trivial features of Python</a>
 will be helpful to prepare for questions which are mentioned above.</p>
 </div>
 <div class="section" id="what-do-you-think-about-this-code">
 <h3>What do you think about this code?</h3>
-<div class="highlight"><pre><span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="s">&#39;a&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s">&#39;c&#39;</span><span class="p">}</span>
+<div class="highlight"><pre><span></span><span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s1">&#39;c&#39;</span><span class="p">}</span>
 
 
 <span class="k">def</span> <span class="nf">safe_get</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
@@ -134,7 +134,7 @@ will be helpful to prepare for questions which are mentioned above.</p>
         <span class="k">return</span> <span class="n">d</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">value</span>
 
-<span class="k">print</span> <span class="n">safe_get</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;blah&#39;</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">safe_get</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;blah&#39;</span><span class="p">)</span>
 </pre></div>
 <p>Apparently interviewer expects these answers:</p>
 <ul class="simple">
@@ -226,6 +226,7 @@ Therefore O(n) is worse than O(1) for dictionary lookup.</li>
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

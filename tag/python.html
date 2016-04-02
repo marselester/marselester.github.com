@@ -48,143 +48,207 @@
         
 
             <article>
-                <a href="http://marselester.com/api-based-on-flask.html"><h3 class="article-title">API based on Flask</h3></a>
-<h6 class="subheader" title="2013-12-09T00:00:00">Mon 09 December 2013
+                <a href="http://marselester.com/drf-pagination.html"><h3 class="article-title">Django REST framework: pagination on PostgreSQL triggers</h3></a>
+<h6 class="subheader" title="2016-04-02T00:00:00+07:00">Sat 02 April 2016
 </h6>
 
 
-<p>Here I want to consider implementation of API best practices which
-usually don't follow Fielding's REST strictly. <a class="reference external" href="https://github.com/marselester/api-example-based-on-flask">Example Flask project</a>
-is on GitHub.</p>
-<div class="section" id="api-versioning">
-<h2>API Versioning</h2>
-<p>Interfaces are changed hence versioning is mandatory in order to not annoy
-your users. You might need to add new resource or field to particular resource.
-You write code, tests and update documentation. Users are happy.
-It's possible that you have to rename or delete field of some resource.
-This case is harder and you might make the easiest decision — spawn
-a lot of <tt class="docutils literal">if</tt> statements and write more tests consequently.
-Code base maintaining is getting worse.</p>
-<p>I think it's better to make API versions isolated.
-It will keep things simple and tests as well. You may even want to change
-framework if legacy API implementation is not good enough.
-For example, you have two WSGI applications. Each application implements
-certain API version, e.g, <strong>messaging_api_v1</strong>, <strong>messaging_api_v2</strong>.
-In order to hide versioning information from applications, e.g., URL prefix,
-you can dispatch requests by Werkzeug's <tt class="docutils literal">DispatcherMiddleware</tt>.</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">werkzeug.wsgi</span> <span class="kn">import</span> <span class="n">DispatcherMiddleware</span>
-<span class="kn">from</span> <span class="nn">werkzeug.exceptions</span> <span class="kn">import</span> <span class="n">NotFound</span>
+<p>Django and Django REST Framework use SQL COUNT in pagination.
+As your database grows SQL COUNT becomes too slow. Fortunately the frameworks
+are well designed and allow to customize a way items are count.
+Let me illustrate that on a typical &quot;books&quot; example.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
 
-<span class="kn">import</span> <span class="nn">messaging_api_v1</span>
-<span class="kn">import</span> <span class="nn">messaging_api_v2</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;author&#39;</span>
 
 
-<span class="n">app</span> <span class="o">=</span> <span class="n">DispatcherMiddleware</span><span class="p">(</span><span class="n">NotFound</span><span class="p">(),</span> <span class="p">{</span>
-    <span class="s">&#39;/v1&#39;</span><span class="p">:</span> <span class="n">messaging_api_v1</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
-    <span class="s">&#39;/v2&#39;</span><span class="p">:</span> <span class="n">messaging_api_v2</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
-<span class="p">})</span>
-</pre></div>
-<p>Dispatcher in work:</p>
-<div class="highlight"><pre><span class="gp">$</span> gunicorn messaging_api:app
-</pre></div>
-<p>Let's request the same API resource from different WSGI applications:</p>
-<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v1/messages/1
-<span class="go">{</span>
-<span class="go">  &quot;content&quot;: &quot;hi world from V1&quot;</span>
-<span class="go">}</span>
-<span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/1
-<span class="go">{</span>
-<span class="go">  &quot;content&quot;: &quot;hi world from V2&quot;</span>
-<span class="go">}</span>
-</pre></div>
-</div>
-<div class="section" id="urls">
-<h2>URLs</h2>
-<p>API resources are nouns, so <tt class="docutils literal">/messages/</tt> URL is for a collection of messages.
-You should think about it as UNIX folder. Hence <tt class="docutils literal">/messages</tt> is correct
-folder path and Flask will redirect to the canonical URL <tt class="docutils literal">/messages/</tt>.
-Certain message's <tt class="docutils literal">/messages/1</tt> URL must not contain trailing slash
-in order to look like UNIX file path.</p>
-<p>Resources usually have relationships and they might be expressed in URLs,
-e.g., get messages from account which id is <tt class="docutils literal">1</tt>.</p>
-<div class="highlight"><pre><span class="gp">$</span> curl https://api.example.com/v1/accounts/1/messages/
-</pre></div>
-</div>
-<div class="section" id="representation">
-<h2>Representation</h2>
-<p>There are two popular approaches to specify response format. First one
-is based on <strong>Accept</strong> header, second — URL based. Here I use header based
-approach.</p>
-<p>I wrote <a class="reference external" href="https://github.com/marselester/flask-api-utils#accept-header-based-response">ResponsiveFlask</a> class which extends <tt class="docutils literal">Flask</tt> by supporting
-dictionary response. Views can return dict and it will be represented
-based on <strong>Accept</strong> header. When <tt class="docutils literal">ResponsiveFlask.make_response()</tt> receives
-dictionary it creates real response object using appropriate formatter.
-Formatter is picked by mimetype.</p>
-<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/1 -i -H <span class="s1">&#39;Accept: application/json&#39;</span>
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">Server: gunicorn/18.0</span>
-<span class="go">Date: Tue, 10 Dec 2013 07:52:31 GMT</span>
-<span class="go">Connection: close</span>
-<span class="go">Content-Type: application/json</span>
-<span class="go">Content-Length: 35</span>
+<span class="k">class</span> <span class="nc">Book</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Author</span><span class="p">,</span> <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;books&#39;</span><span class="p">)</span>
 
-<span class="go">{</span>
-<span class="go">  &quot;content&quot;: &quot;hi world from V2&quot;</span>
-<span class="go">}</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;book&#39;</span>
 </pre></div>
-</div>
-<div class="section" id="error-handling">
-<h2>Error Handling</h2>
-<p>Flask shows error pages by default with basic description in
-<strong>text/html</strong> format. It would be better if error representation depends
-on <strong>Accept</strong> header. <tt class="docutils literal">ResponsiveFlask</tt> class concerns about it.</p>
-<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/666 -i
-<span class="go">HTTP/1.1 404 NOT FOUND</span>
-<span class="go">Server: gunicorn/18.0</span>
-<span class="go">Date: Fri, 03 Jan 2014 05:16:03 GMT</span>
-<span class="go">Connection: close</span>
-<span class="go">Content-Type: application/json</span>
-<span class="go">Content-Length: 49</span>
+<p>It has been working fine for some time but authors are so productive and wrote thousands of books.
+As a result <tt class="docutils literal">alice.books.count()</tt> takes a few seconds to execute.
+One option is to store books count in <tt class="docutils literal">Author</tt> model which might be helpful in
+other SQL queries. Another one is to keep count somewhere else, e.g., Redis.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
+    <span class="n">books_count</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-<span class="go">{</span>
-<span class="go">  &quot;code&quot;: 404,</span>
-<span class="go">  &quot;message&quot;: &quot;404: Not Found&quot;</span>
-<span class="go">}</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;author&#39;</span>
 </pre></div>
-<p>You can set your own HTTP error handler by using
-<a class="reference external" href="https://github.com/marselester/flask-api-utils#error-handling">app.default_errorhandler</a> decorator. Note that it might override
-already defined error handlers, so you should declare it before them.</p>
-<p>It's convenient to add URL of detailed error description into response.</p>
-<div class="highlight"><pre><span class="go">{</span>
-<span class="go">  &quot;code&quot;: 404,</span>
-<span class="go">  &quot;info_url&quot;: &quot;http://developer.example.com/errors.html#error-code-404&quot;,</span>
-<span class="go">  &quot;message&quot;: &quot;404: Not Found&quot;</span>
-<span class="go">}</span>
+<p>Note that <tt class="docutils literal">books_count</tt> is nullable due to existing data on production servers.
+Setting a default value <tt class="docutils literal">0</tt> on schema migration would take long to update
+every author record, also it's hard to tell whether an author record is
+already migrated (<tt class="docutils literal">books_count</tt> is calculated or not).</p>
+<p>Now we have <tt class="docutils literal">Author.books_count</tt> field which should keep track of new books.
+You can implement that based on Django signals or SQL triggers.</p>
+<p>Signals might fail, even with <tt class="docutils literal">send_robust</tt>. Updating a books count in
+a signal receiver slows down an application (two to three DB queries and
+acquiring a DB lock on author record):</p>
+<div class="highlight"><pre><span></span><span class="nd">@receiver</span><span class="p">(</span><span class="n">post_save</span><span class="p">,</span> <span class="n">sender</span><span class="o">=</span><span class="n">Book</span><span class="p">,</span> <span class="n">dispatch_uid</span><span class="o">=</span><span class="s1">&#39;update_author_books_count&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">update_author_books_count</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">created</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">created</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">book</span> <span class="o">=</span> <span class="n">instance</span>
+
+    <span class="k">with</span> <span class="n">atomic</span><span class="p">():</span>
+        <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">select_for_update</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">book</span><span class="o">.</span><span class="n">author_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="o">=</span> <span class="n">author</span><span class="o">.</span><span class="n">books</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">author</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
 </pre></div>
-</div>
-<div class="section" id="misc">
-<h2>Misc</h2>
-<p>It's good idea to keep in mind following:</p>
-<ul class="simple">
-<li>HTTPS;</li>
-<li>response should contain resource url, e.g.,
-<tt class="docutils literal">{'url': <span class="pre">'https://api.example.com/v2/messages/1'}</span></tt>;</li>
-<li>pagination by <tt class="docutils literal">offset</tt> and <tt class="docutils literal">limit</tt> QS arguments with default values;</li>
-<li>filtration and search by QS arguments;</li>
-<li>partial response by <tt class="docutils literal">fields=id,lastname</tt> QS argument.</li>
-</ul>
-</div>
+<p>Moving an update logic from a signal receiver to Celery task doesn't look
+promising -- <tt class="docutils literal">books_count</tt> would be inconsistent between a task trigger and
+its execution or simply Celery task might fail. Another issue is that
+a model signal is not &quot;attached&quot; to DB transaction. For example,
+a Celery task is run before a DB transaction is committed.
+That is usually quick fixed with <tt class="docutils literal">task_name.apply_async(countdown=1)</tt>
+to delay a task execution, but I would rather recommend something like
+<a class="reference external" href="https://django-transaction-hooks.readthedocs.org/en/latest/">django-transaction-hooks</a>.</p>
+<p>What about SQL trigger option? A bad thing is that a business logic leaks from an app to DB.
+But with a good documentation and tests it's maintainable: SQL code is stored in
+a data migration module.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> python manage.py makemigrations --empty yourappname
+</pre></div>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">migrations</span>
+
+<span class="n">CREATE_FUNCTION_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CREATE OR REPLACE FUNCTION update_books_count_on_author() RETURNS trigger AS $$</span>
+<span class="s2">    BEGIN</span>
+<span class="s2">        UPDATE author SET books_count =</span>
+<span class="s2">            CASE</span>
+<span class="s2">                WHEN books_count IS NULL THEN (</span>
+<span class="s2">                    SELECT count(*) FROM book WHERE author_id = author.id</span>
+<span class="s2">                )</span>
+<span class="s2">                ELSE books_count + 1</span>
+<span class="s2">            END</span>
+<span class="s2">        WHERE id = NEW.author_id;</span>
+
+<span class="s2">        RETURN NEW;</span>
+<span class="s2">    END;</span>
+<span class="s2">$$ LANGUAGE plpgsql;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">CREATE_TRIGGER_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CREATE TRIGGER books_count_update</span>
+<span class="s2">    AFTER INSERT ON book</span>
+<span class="s2">    FOR EACH ROW</span>
+<span class="s2">    EXECUTE PROCEDURE update_books_count_on_author();</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">Migration</span><span class="p">(</span><span class="n">migrations</span><span class="o">.</span><span class="n">Migration</span><span class="p">):</span>
+    <span class="n">dependencies</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">operations</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">migrations</span><span class="o">.</span><span class="n">RunSQL</span><span class="p">(</span><span class="n">CREATE_FUNCTION_SQL</span><span class="p">),</span>
+        <span class="n">migrations</span><span class="o">.</span><span class="n">RunSQL</span><span class="p">(</span><span class="n">CREATE_TRIGGER_SQL</span><span class="p">),</span>
+    <span class="p">]</span>
+</pre></div>
+<p>Here is a pitfall though. When a new book is created and author is updated on the
+same DB transaction, then <tt class="docutils literal">books_count</tt> value might be overwritten.</p>
+<div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">atomic</span><span class="p">():</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">select_for_update</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">author_id</span><span class="p">)</span>
+    <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="n">author</span><span class="p">)</span>
+    <span class="n">author</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Bob&#39;</span>
+    <span class="n">author</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+<p>You can either explicitly list fields to update <tt class="docutils literal"><span class="pre">author.save(update_fields=['name'])</span></tt>
+or use <a class="reference external" href="https://django-save-the-change.readthedocs.org/en/latest/">django-save-the-change</a>. Let's document that in the model docstring.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">save_the_change.mixins</span> <span class="kn">import</span> <span class="n">SaveTheChange</span>
+
+
+<span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">SaveTheChange</span><span class="p">,</span> <span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Author, e.g., Terry Pratchett.</span>
+
+<span class="sd">    :attribute books_count: How many books writer has. SQL COUNT is</span>
+<span class="sd">        expensive operation, so we store calculated value and update it</span>
+<span class="sd">        by SQL trigger (check a data migration module for details).</span>
+<span class="sd">        It&#39;s important to save only fields that were updated in the model.</span>
+<span class="sd">        Otherwise SQL trigger&#39;s results are overwritten by Django ORM.</span>
+<span class="sd">        For example:</span>
+
+<span class="sd">        1. author is requested with a lock (books_count = 1)</span>
+<span class="sd">        2. new book is created</span>
+<span class="sd">        3. SQL trigger updates author&#39;s books_count field (now it is 2)</span>
+<span class="sd">        4. author instance is saved with the old value of books_count = 1.</span>
+
+<span class="sd">        SaveTheChange mixin helps to prevent it.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+</pre></div>
+<p>To benefit from <tt class="docutils literal">books_count</tt> field in Django REST Framework we need
+a custom pagination class which implements <tt class="docutils literal">Paginator.count</tt> property.
+The idea is to extract author ID from paginator's SQL, query a books count
+from <tt class="docutils literal">Author</tt> model and return it, instead of default
+<tt class="docutils literal"><span class="pre">Book.objects.filter(author_id=author_id).count()</span></tt>.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.core.paginator</span> <span class="kn">import</span> <span class="n">Paginator</span>
+<span class="kn">from</span> <span class="nn">rest_framework</span> <span class="kn">import</span> <span class="n">pagination</span>
+<span class="kn">from</span> <span class="nn">rest_framework.viewsets</span> <span class="kn">import</span> <span class="n">ReadOnlyModelViewSet</span>
+
+
+<span class="k">class</span> <span class="nc">BookViewSet</span><span class="p">(</span><span class="n">ReadOnlyModelViewSet</span><span class="p">):</span>
+    <span class="n">pagination_class</span> <span class="o">=</span> <span class="n">BookPagination</span>
+
+
+<span class="k">class</span> <span class="nc">BookPagination</span><span class="p">(</span><span class="n">pagination</span><span class="o">.</span><span class="n">PageNumberPagination</span><span class="p">):</span>
+    <span class="n">django_paginator_class</span> <span class="o">=</span> <span class="n">CachedBookCountPaginator</span>
+
+
+<span class="k">class</span> <span class="nc">CachedBookCountPaginator</span><span class="p">(</span><span class="n">Paginator</span><span class="p">):</span>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the total number of books, across all pages.</span>
+
+<span class="sd">        It parses a SQL and learns what author ID was requested</span>
+<span class="sd">        based on ``self.object_list.query``. After that we can get</span>
+<span class="sd">        a cached books count from Author model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># There is query.where, but I could&#39;t find an author ID easily.</span>
+        <span class="c1"># Moreover query.where internals might be changed.</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object_list</span><span class="o">.</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">author_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_author_id_from_sql</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+
+        <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">author_id</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;books_count&#39;</span><span class="p">)</span>
+        <span class="c1"># In case we got unsynced author, we fallback to SQL COUNT.</span>
+        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_count</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span>
+
+    <span class="k">def</span> <span class="nf">query_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Request books count from DB.</span>
+
+<span class="sd">        We need this method to facilitate testing (mocks).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">CachedBookCountPaginator</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">count</span>
+
+<span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">_get_author_id_from_sql</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">sql</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+<p>I hope this helps. Cheers!</p>
 <p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
     Tagged: 
     <a href="http://marselester.com/tag/python.html">python </a>
-    <a href="http://marselester.com/tag/flask.html">flask </a>
-    <a href="http://marselester.com/tag/api.html">api </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/postgresql.html">postgresql </a>
+    <a href="http://marselester.com/tag/django-rest-framework.html">django rest framework </a>
+    <a href="http://marselester.com/tag/pagination.html">pagination </a>
 </p>
 
 
 
-<p><a href="http://marselester.com/api-based-on-flask.html#disqus_thread">comments</a></p>            </article>
+<p><a href="http://marselester.com/drf-pagination.html#disqus_thread">comments</a></p>            </article>
 
 
                 <hr  class="gradient"/>
@@ -194,8 +258,37 @@ already defined error handlers, so you should declare it before them.</p>
 
 
             <article>
+                <a href="http://marselester.com/api-based-on-flask.html"><h3 class="article-title">API based on Flask</h3></a>
+<h6 class="subheader" title="2013-12-09T00:00:00+07:00">Mon 09 December 2013
+</h6>
+
+
+<p>Here I want to consider implementation of API best practices which
+usually don't follow Fielding's REST strictly. <a class="reference external" href="https://github.com/marselester/api-example-based-on-flask">Example Flask project</a>
+is on GitHub.</p>
+<div class="section" id="api-versioning">
+<h2>API Versioning</h2>
+<p>Interfaces are changed hence versioning is mandatory in order to not annoy
+your users. You might need to add new resource or field ...</p></div><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/flask.html">flask </a>
+    <a href="http://marselester.com/tag/api.html">api </a>
+</p>
+
+
+
+<p><a href="http://marselester.com/api-based-on-flask.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/api-based-on-flask.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
                 <a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
-<h6 class="subheader" title="2013-11-28T00:00:00">Thu 28 November 2013
+<h6 class="subheader" title="2013-11-28T00:00:00+07:00">Thu 28 November 2013
 </h6>
 
 
@@ -225,7 +318,7 @@ environment by default.</p>
 
             <article>
                 <a href="http://marselester.com/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
-<h6 class="subheader" title="2013-11-09T00:00:00">Sat 09 November 2013
+<h6 class="subheader" title="2013-11-09T00:00:00+07:00">Sat 09 November 2013
 </h6>
 
 
@@ -254,7 +347,7 @@ is only one) of project and clone <a class="reference external" href="https://gi
 
             <article>
                 <a href="http://marselester.com/python-developer-at-uploadcare.html"><h3 class="article-title">Python Developer at Uploadcare</h3></a>
-<h6 class="subheader" title="2013-07-31T00:00:00">Wed 31 July 2013
+<h6 class="subheader" title="2013-07-31T00:00:00+07:00">Wed 31 July 2013
 </h6>
 
 
@@ -284,7 +377,7 @@ appropriate development process, adherence to quality standards.</p>
 
             <article>
                 <a href="http://marselester.com/preparation-to-python-interview.html"><h3 class="article-title">Preparation to Python Interview</h3></a>
-<h6 class="subheader" title="2012-11-02T00:00:00">Fri 02 November 2012
+<h6 class="subheader" title="2012-11-02T00:00:00+07:00">Fri 02 November 2012
 </h6>
 
 
@@ -313,7 +406,7 @@ links which seemed important to me. Maybe it will be helpful.</p>
 
             <article>
                 <a href="http://marselester.com/fangid-startup.html"><h3 class="article-title">Стартап fangid.com</h3></a>
-<h6 class="subheader" title="2012-10-13T00:00:00">Sat 13 October 2012
+<h6 class="subheader" title="2012-10-13T00:00:00+07:00">Sat 13 October 2012
 </h6>
 
 
@@ -343,7 +436,7 @@ links which seemed important to me. Maybe it will be helpful.</p>
 
             <article>
                 <a href="http://marselester.com/portfolio-2007-2011.html"><h3 class="article-title">Портфолио 2007–2011</h3></a>
-<h6 class="subheader" title="2012-10-12T00:00:00">Fri 12 October 2012
+<h6 class="subheader" title="2012-10-12T00:00:00+07:00">Fri 12 October 2012
 </h6>
 
 
@@ -376,7 +469,7 @@ links which seemed important to me. Maybe it will be helpful.</p>
 
             <article>
                 <a href="http://marselester.com/django-todo-testing-during-construction.html"><h3 class="article-title">Django TODO: тестирование во время конструирования</h3></a>
-<h6 class="subheader" title="2012-06-29T13:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T13:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -406,7 +499,7 @@ links which seemed important to me. Maybe it will be helpful.</p>
 
             <article>
                 <a href="http://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
-<h6 class="subheader" title="2012-06-29T12:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T12:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -435,7 +528,7 @@ links which seemed important to me. Maybe it will be helpful.</p>
 
             <article>
                 <a href="http://marselester.com/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
-<h6 class="subheader" title="2012-06-29T11:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -465,7 +558,7 @@ links which seemed important to me. Maybe it will be helpful.</p>
 
             <article>
                 <a href="http://marselester.com/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
-<h6 class="subheader" title="2012-06-29T11:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -494,7 +587,7 @@ links which seemed important to me. Maybe it will be helpful.</p>
 
             <article>
                 <a href="http://marselester.com/links-to-best-practices-of-python-django.html"><h3 class="article-title">Соглашения по разработке на Python/Django</h3></a>
-<h6 class="subheader" title="2012-06-29T00:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -525,7 +618,7 @@ expended_time = (self.finish_date() - self.start_date
 
             <article>
                 <a href="http://marselester.com/splitting-settings-in-django.html"><h3 class="article-title">Разделение настроек в Django</h3></a>
-<h6 class="subheader" title="2012-06-29T00:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -542,11 +635,11 @@ settings/
 </pre>
 <p><tt class="docutils literal">base.py</tt> содержит общие настройки для <tt class="docutils literal">development.py</tt> и
 <tt class="docutils literal">production.py</tt>, например:</p>
-<div class="highlight"><pre><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
+<div class="highlight"><pre><span></span><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
 <span class="n">MANAGERS</span> <span class="o">=</span> <span class="n">ADMINS</span>
 
-<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s">&#39;Asia/Yekaterinburg&#39;</span>
-<span class="c"># ...</span>
+<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s1">&#39;Asia/Yekaterinburg&#39;</span>
+<span class="c1"># ...</span>
 </pre></div>
 <p><tt class="docutils literal">production.py</tt> содержит настройки для ...</p><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
@@ -567,7 +660,7 @@ settings/
 
             <article>
                 <a href="http://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html"><h3 class="article-title">Краткий обзор инфраструктуры для разработки reusable Django приложений</h3></a>
-<h6 class="subheader" title="2012-06-13T00:00:00">Wed 13 June 2012
+<h6 class="subheader" title="2012-06-13T00:00:00+07:00">Wed 13 June 2012
 </h6>
 
 
@@ -596,7 +689,7 @@ settings/
 
             <article>
                 <a href="http://marselester.com/modeling-single-channel-queue-with-refusals.html"><h3 class="article-title">Моделирование одноканальной СМО с отказами</h3></a>
-<h6 class="subheader" title="2009-05-30T00:00:00">Sat 30 May 2009
+<h6 class="subheader" title="2009-05-30T00:00:00+07:00">Sat 30 May 2009
 </h6>
 
 
@@ -649,6 +742,7 @@ settings/
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

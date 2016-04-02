@@ -51,7 +51,7 @@
 <a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
     </header>
 
-<h6 class="subheader" title="2013-12-09T00:00:00">Mon 09 December 2013
+<h6 class="subheader" title="2013-12-09T00:00:00+07:00">Mon 09 December 2013
 </h6>
 
 
@@ -74,7 +74,7 @@ For example, you have two WSGI applications. Each application implements
 certain API version, e.g, <strong>messaging_api_v1</strong>, <strong>messaging_api_v2</strong>.
 In order to hide versioning information from applications, e.g., URL prefix,
 you can dispatch requests by Werkzeug's <tt class="docutils literal">DispatcherMiddleware</tt>.</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">werkzeug.wsgi</span> <span class="kn">import</span> <span class="n">DispatcherMiddleware</span>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">werkzeug.wsgi</span> <span class="kn">import</span> <span class="n">DispatcherMiddleware</span>
 <span class="kn">from</span> <span class="nn">werkzeug.exceptions</span> <span class="kn">import</span> <span class="n">NotFound</span>
 
 <span class="kn">import</span> <span class="nn">messaging_api_v1</span>
@@ -82,15 +82,15 @@ you can dispatch requests by Werkzeug's <tt class="docutils literal">DispatcherM
 
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">DispatcherMiddleware</span><span class="p">(</span><span class="n">NotFound</span><span class="p">(),</span> <span class="p">{</span>
-    <span class="s">&#39;/v1&#39;</span><span class="p">:</span> <span class="n">messaging_api_v1</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
-    <span class="s">&#39;/v2&#39;</span><span class="p">:</span> <span class="n">messaging_api_v2</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+    <span class="s1">&#39;/v1&#39;</span><span class="p">:</span> <span class="n">messaging_api_v1</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+    <span class="s1">&#39;/v2&#39;</span><span class="p">:</span> <span class="n">messaging_api_v2</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
 <span class="p">})</span>
 </pre></div>
 <p>Dispatcher in work:</p>
-<div class="highlight"><pre><span class="gp">$</span> gunicorn messaging_api:app
+<div class="highlight"><pre><span></span><span class="gp">$</span> gunicorn messaging_api:app
 </pre></div>
 <p>Let's request the same API resource from different WSGI applications:</p>
-<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v1/messages/1
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl http://127.0.0.1:8000/v1/messages/1
 <span class="go">{</span>
 <span class="go">  &quot;content&quot;: &quot;hi world from V1&quot;</span>
 <span class="go">}</span>
@@ -109,7 +109,7 @@ Certain message's <tt class="docutils literal">/messages/1</tt> URL must not con
 in order to look like UNIX file path.</p>
 <p>Resources usually have relationships and they might be expressed in URLs,
 e.g., get messages from account which id is <tt class="docutils literal">1</tt>.</p>
-<div class="highlight"><pre><span class="gp">$</span> curl https://api.example.com/v1/accounts/1/messages/
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl https://api.example.com/v1/accounts/1/messages/
 </pre></div>
 </div>
 <div class="section" id="representation">
@@ -122,7 +122,7 @@ dictionary response. Views can return dict and it will be represented
 based on <strong>Accept</strong> header. When <tt class="docutils literal">ResponsiveFlask.make_response()</tt> receives
 dictionary it creates real response object using appropriate formatter.
 Formatter is picked by mimetype.</p>
-<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/1 -i -H <span class="s1">&#39;Accept: application/json&#39;</span>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/1 -i -H <span class="s1">&#39;Accept: application/json&#39;</span>
 <span class="go">HTTP/1.1 200 OK</span>
 <span class="go">Server: gunicorn/18.0</span>
 <span class="go">Date: Tue, 10 Dec 2013 07:52:31 GMT</span>
@@ -140,7 +140,7 @@ Formatter is picked by mimetype.</p>
 <p>Flask shows error pages by default with basic description in
 <strong>text/html</strong> format. It would be better if error representation depends
 on <strong>Accept</strong> header. <tt class="docutils literal">ResponsiveFlask</tt> class concerns about it.</p>
-<div class="highlight"><pre><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/666 -i
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/666 -i
 <span class="go">HTTP/1.1 404 NOT FOUND</span>
 <span class="go">Server: gunicorn/18.0</span>
 <span class="go">Date: Fri, 03 Jan 2014 05:16:03 GMT</span>
@@ -157,7 +157,7 @@ on <strong>Accept</strong> header. <tt class="docutils literal">ResponsiveFlask<
 <a class="reference external" href="https://github.com/marselester/flask-api-utils#error-handling">app.default_errorhandler</a> decorator. Note that it might override
 already defined error handlers, so you should declare it before them.</p>
 <p>It's convenient to add URL of detailed error description into response.</p>
-<div class="highlight"><pre><span class="go">{</span>
+<div class="highlight"><pre><span></span><span class="go">{</span>
 <span class="go">  &quot;code&quot;: 404,</span>
 <span class="go">  &quot;info_url&quot;: &quot;http://developer.example.com/errors.html#error-code-404&quot;,</span>
 <span class="go">  &quot;message&quot;: &quot;404: Not Found&quot;</span>
@@ -230,6 +230,7 @@ already defined error handlers, so you should declare it before them.</p>
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

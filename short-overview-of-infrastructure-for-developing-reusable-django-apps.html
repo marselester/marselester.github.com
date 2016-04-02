@@ -51,7 +51,7 @@
 <a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
     </header>
 
-<h6 class="subheader" title="2012-06-13T00:00:00">Wed 13 June 2012
+<h6 class="subheader" title="2012-06-13T00:00:00+07:00">Wed 13 June 2012
 </h6>
 
 
@@ -130,17 +130,17 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 версиями проекта. Поле <em>packages</em> описывает, где размещен Python код проекта
 <a class="footnote-reference" href="#ziade" id="id7">[2]</a>. Ниже приведен пример файла <tt class="docutils literal">setup.py</tt>, который также включает
 информацию о лицензии и описание проекта:</p>
-<div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
 <span class="kn">from</span> <span class="nn">distutils.core</span> <span class="kn">import</span> <span class="n">setup</span>
 
 <span class="n">setup</span><span class="p">(</span>
-    <span class="n">name</span><span class="o">=</span><span class="s">&#39;django-todo&#39;</span><span class="p">,</span>
-    <span class="n">version</span><span class="o">=</span><span class="s">&#39;0.1dev&#39;</span><span class="p">,</span>
-    <span class="n">long_description</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;README.rst&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
-    <span class="n">licence</span><span class="o">=</span><span class="s">&#39;MIT license&#39;</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;django-todo&#39;</span><span class="p">,</span>
+    <span class="n">version</span><span class="o">=</span><span class="s1">&#39;0.1dev&#39;</span><span class="p">,</span>
+    <span class="n">long_description</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;README.rst&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
+    <span class="n">licence</span><span class="o">=</span><span class="s1">&#39;MIT license&#39;</span><span class="p">,</span>
     <span class="n">packages</span><span class="o">=</span><span class="p">[</span>
-        <span class="s">&#39;todo&#39;</span><span class="p">,</span>
-        <span class="s">&#39;todo.templatetags&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;todo&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;todo.templatetags&#39;</span><span class="p">,</span>
     <span class="p">]</span>
 <span class="p">)</span>
 </pre></div>
@@ -181,11 +181,11 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 Автор применил данное решение для организации тестов в многоразовых Django
 приложениях <a class="footnote-reference" href="#app-skeleton" id="id14">[7]</a>. В корне репозитория располагается скрипт
 <tt class="docutils literal">runtests.py</tt>, который запускает тесты:</p>
-<div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 
-<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&#39;DJANGO_SETTINGS_MODULE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;tests.settings&#39;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DJANGO_SETTINGS_MODULE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;tests.settings&#39;</span>
 
 <span class="kn">from</span> <span class="nn">django.test.utils</span> <span class="kn">import</span> <span class="n">get_runner</span>
 <span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
@@ -198,28 +198,28 @@ Python Пакетов (PyPI). Он позволяет разработчикам
     <span class="n">failures</span> <span class="o">=</span> <span class="n">test_runner</span><span class="o">.</span><span class="n">run_tests</span><span class="p">([])</span>
     <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">failures</span><span class="p">)</span>
 
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
     <span class="n">runtests</span><span class="p">()</span>
 </pre></div>
 <p>Настройки для их запуска указаны в файле <tt class="docutils literal">tests/settings.py</tt>:</p>
-<div class="highlight"><pre><span class="kn">import</span> <span class="nn">os</span>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
 
 <span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s">&#39;django.db.backends.sqlite3&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s1">&#39;django.db.backends.sqlite3&#39;</span><span class="p">,</span>
     <span class="p">}</span>
 <span class="p">}</span>
 <span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="s">&#39;app_name&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;app_name&#39;</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">BASE_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
-<span class="n">TEST_DISCOVERY_ROOT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">BASE_PATH</span><span class="p">,</span> <span class="s">&#39;tests&#39;</span><span class="p">)</span>
+<span class="n">TEST_DISCOVERY_ROOT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">BASE_PATH</span><span class="p">,</span> <span class="s1">&#39;tests&#39;</span><span class="p">)</span>
 
-<span class="n">TEST_RUNNER</span> <span class="o">=</span> <span class="s">&#39;tests.runner.DiscoveryDjangoTestSuiteRunner&#39;</span>
+<span class="n">TEST_RUNNER</span> <span class="o">=</span> <span class="s1">&#39;tests.runner.DiscoveryDjangoTestSuiteRunner&#39;</span>
 
 <span class="n">FIXTURE_DIRS</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TEST_DISCOVERY_ROOT</span><span class="p">,</span> <span class="s">&#39;fixtures&#39;</span><span class="p">),</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TEST_DISCOVERY_ROOT</span><span class="p">,</span> <span class="s1">&#39;fixtures&#39;</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 <p>Обнаружение тестов осуществляется во всех файлах, которые находятся в каталоге
@@ -364,6 +364,7 @@ deps=
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

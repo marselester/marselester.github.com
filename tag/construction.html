@@ -49,7 +49,7 @@
 
             <article>
                 <a href="http://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
-<h6 class="subheader" title="2012-06-29T12:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T12:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -141,7 +141,7 @@
 кортежа из кортежей, заглавными буквами. Должны быть расположены в начале
 модели <a class="footnote-reference" href="#django" id="id8">[3]</a> и названы без использования &quot;магических чисел&quot;
 <a class="footnote-reference" href="#mcconnell" id="id9">[1]</a>. Например:</p>
-<div class="highlight"><pre><span class="k">class</span> <span class="nc">Task</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Task</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
 
     <span class="n">UNCERTAIN_STATUS</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">DONE_STATUS</span> <span class="o">=</span> <span class="mi">1</span>
@@ -149,8 +149,8 @@
     <span class="n">WAIT_STATUS</span> <span class="o">=</span> <span class="mi">3</span>
     <span class="n">WORK_STATUS</span> <span class="o">=</span> <span class="mi">4</span>
     <span class="n">STATUS_CHOICES</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="p">(</span><span class="n">DONE_STATUS</span><span class="p">,</span> <span class="s">&#39;done&#39;</span><span class="p">),</span>
-        <span class="p">(</span><span class="n">STOP_STATUS</span><span class="p">,</span> <span class="s">&#39;stop&#39;</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">DONE_STATUS</span><span class="p">,</span> <span class="s1">&#39;done&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">STOP_STATUS</span><span class="p">,</span> <span class="s1">&#39;stop&#39;</span><span class="p">)</span>
     <span class="p">)</span>
 
     <span class="n">status</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">STATUS_CHOICES</span><span class="p">,</span>
@@ -163,12 +163,12 @@
 наделять свои объекты дополнительной функциональностью на уровне строк. Методы
 модели подходят для инкапсуляции всей бизнес-логики в одном месте. Например,
 фрагмент модели <em>Цепочка</em>:</p>
-<div class="highlight"><pre><span class="k">class</span> <span class="nc">Chain</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Chain</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Цепочка задач.&quot;&quot;&quot;</span>
 
-    <span class="c"># Пропущены атрибуты модели для экономии места.</span>
+    <span class="c1"># Пропущены атрибуты модели для экономии места.</span>
 
-    <span class="c"># Default manager.</span>
+    <span class="c1"># Default manager.</span>
     <span class="n">objects</span> <span class="o">=</span> <span class="n">PassThroughManager</span><span class="o">.</span><span class="n">for_queryset_class</span><span class="p">(</span><span class="n">ChainQuerySet</span><span class="p">)()</span>
 
     <span class="k">def</span> <span class="nf">actual_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -236,7 +236,7 @@
 таких как <tt class="docutils literal">actual_tasks = <span class="pre">Task.objects.by_worker(user).actual()</span></tt>. Для обхода
 этого ограничения используется сторонняя библиотека <em>django-model-utils</em>,
 которая позволяет писать QuerySet вместо менеджера <a class="footnote-reference" href="#korobov" id="id13">[4]</a>. Например:</p>
-<div class="highlight"><pre><span class="c"># -*- coding: utf-8 -*-</span>
+<div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
 <span class="kn">from</span> <span class="nn">django.db.models.query</span> <span class="kn">import</span> <span class="n">QuerySet</span>
 
 
@@ -248,7 +248,7 @@
 
     <span class="k">def</span> <span class="nf">actual</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Возвращает актуальтуные цепочки задач.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">archive</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s">&#39;start_date&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">archive</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;start_date&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="section" id="id14">
@@ -302,7 +302,7 @@ todo_tags.py</tt>.</p>
 <em>HttpRequest</em> в качестве первого параметра и возвращает экземпляр класса
 <em>HttpResponse</em>. Ниже приведен код функции вместе с командами импорта из файла
 <tt class="docutils literal">views.py</tt>:</p>
-<div class="highlight"><pre><span class="c"># -*- coding: utf-8 -*-</span>
+<div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
 <span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span><span class="p">,</span> <span class="n">get_object_or_404</span>
 <span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
 
@@ -314,9 +314,9 @@ todo_tags.py</tt>.</p>
     <span class="sd">&quot;&quot;&quot;Отображает список актуальных задач для исполнителя.&quot;&quot;&quot;</span>
     <span class="n">user</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
     <span class="n">actual_tasks</span> <span class="o">=</span> <span class="n">Task</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">by_worker</span><span class="p">(</span><span class="n">user</span><span class="p">)</span><span class="o">.</span><span class="n">actual</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;todo/task_list.html&#39;</span><span class="p">,</span> <span class="p">{</span>
-        <span class="s">&#39;place&#39;</span><span class="p">:</span> <span class="s">&#39;tasks&#39;</span><span class="p">,</span>
-        <span class="s">&#39;actual_tasks&#39;</span><span class="p">:</span> <span class="n">actual_tasks</span><span class="p">,</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;todo/task_list.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;place&#39;</span><span class="p">:</span> <span class="s1">&#39;tasks&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;actual_tasks&#39;</span><span class="p">:</span> <span class="n">actual_tasks</span><span class="p">,</span>
     <span class="p">})</span>
 </pre></div>
 <p>Чтобы связать функцию представления с URL, в Django используется механизм
@@ -324,11 +324,11 @@ todo_tags.py</tt>.</p>
 URL. Она определяет соответствие между URL-адресами и обрабатывающим их кодом.</p>
 <p>Вот как подключается представление <em>actual_tasks</em> и <em>task_archive</em> в файле
 <tt class="docutils literal">urls.py</tt>:</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">django.conf.urls.defaults</span> <span class="kn">import</span> <span class="n">patterns</span><span class="p">,</span> <span class="n">url</span>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.conf.urls.defaults</span> <span class="kn">import</span> <span class="n">patterns</span><span class="p">,</span> <span class="n">url</span>
 
-<span class="n">urlpatterns</span> <span class="o">=</span> <span class="n">patterns</span><span class="p">(</span><span class="s">&#39;todo.views&#39;</span><span class="p">,</span>
-    <span class="n">url</span><span class="p">(</span><span class="s">r&#39;^$&#39;</span><span class="p">,</span> <span class="s">&#39;actual_tasks&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;todo_actual_tasks&#39;</span><span class="p">),</span>
-    <span class="n">url</span><span class="p">(</span><span class="s">r&#39;^task/archive/$&#39;</span><span class="p">,</span> <span class="s">&#39;task_archive&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;todo_task_archive&#39;</span><span class="p">),</span>
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="n">patterns</span><span class="p">(</span><span class="s1">&#39;todo.views&#39;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">(</span><span class="s1">r&#39;^$&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_tasks&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;todo_actual_tasks&#39;</span><span class="p">),</span>
+    <span class="n">url</span><span class="p">(</span><span class="s1">r&#39;^task/archive/$&#39;</span><span class="p">,</span> <span class="s1">&#39;task_archive&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;todo_task_archive&#39;</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 <p>Любой запрос к URL <tt class="docutils literal">/task/archive/</tt> должен обрабатываться функцией
@@ -419,6 +419,7 @@ URL. Она определяет соответствие между URL-адр�
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

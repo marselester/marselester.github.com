@@ -48,8 +48,218 @@
         
 
             <article>
+                <a href="http://marselester.com/drf-pagination.html"><h3 class="article-title">Django REST framework: pagination on PostgreSQL triggers</h3></a>
+<h6 class="subheader" title="2016-04-02T00:00:00+07:00">Sat 02 April 2016
+</h6>
+
+
+<p>Django and Django REST Framework use SQL COUNT in pagination.
+As your database grows SQL COUNT becomes too slow. Fortunately the frameworks
+are well designed and allow to customize a way items are count.
+Let me illustrate that on a typical &quot;books&quot; example.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;author&#39;</span>
+
+
+<span class="k">class</span> <span class="nc">Book</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Author</span><span class="p">,</span> <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;books&#39;</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;book&#39;</span>
+</pre></div>
+<p>It has been working fine for some time but authors are so productive and wrote thousands of books.
+As a result <tt class="docutils literal">alice.books.count()</tt> takes a few seconds to execute.
+One option is to store books count in <tt class="docutils literal">Author</tt> model which might be helpful in
+other SQL queries. Another one is to keep count somewhere else, e.g., Redis.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
+    <span class="n">books_count</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;author&#39;</span>
+</pre></div>
+<p>Note that <tt class="docutils literal">books_count</tt> is nullable due to existing data on production servers.
+Setting a default value <tt class="docutils literal">0</tt> on schema migration would take long to update
+every author record, also it's hard to tell whether an author record is
+already migrated (<tt class="docutils literal">books_count</tt> is calculated or not).</p>
+<p>Now we have <tt class="docutils literal">Author.books_count</tt> field which should keep track of new books.
+You can implement that based on Django signals or SQL triggers.</p>
+<p>Signals might fail, even with <tt class="docutils literal">send_robust</tt>. Updating a books count in
+a signal receiver slows down an application (two to three DB queries and
+acquiring a DB lock on author record):</p>
+<div class="highlight"><pre><span></span><span class="nd">@receiver</span><span class="p">(</span><span class="n">post_save</span><span class="p">,</span> <span class="n">sender</span><span class="o">=</span><span class="n">Book</span><span class="p">,</span> <span class="n">dispatch_uid</span><span class="o">=</span><span class="s1">&#39;update_author_books_count&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">update_author_books_count</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">created</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">created</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">book</span> <span class="o">=</span> <span class="n">instance</span>
+
+    <span class="k">with</span> <span class="n">atomic</span><span class="p">():</span>
+        <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">select_for_update</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">book</span><span class="o">.</span><span class="n">author_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="o">=</span> <span class="n">author</span><span class="o">.</span><span class="n">books</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">author</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+<p>Moving an update logic from a signal receiver to Celery task doesn't look
+promising -- <tt class="docutils literal">books_count</tt> would be inconsistent between a task trigger and
+its execution or simply Celery task might fail. Another issue is that
+a model signal is not &quot;attached&quot; to DB transaction. For example,
+a Celery task is run before a DB transaction is committed.
+That is usually quick fixed with <tt class="docutils literal">task_name.apply_async(countdown=1)</tt>
+to delay a task execution, but I would rather recommend something like
+<a class="reference external" href="https://django-transaction-hooks.readthedocs.org/en/latest/">django-transaction-hooks</a>.</p>
+<p>What about SQL trigger option? A bad thing is that a business logic leaks from an app to DB.
+But with a good documentation and tests it's maintainable: SQL code is stored in
+a data migration module.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> python manage.py makemigrations --empty yourappname
+</pre></div>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">migrations</span>
+
+<span class="n">CREATE_FUNCTION_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CREATE OR REPLACE FUNCTION update_books_count_on_author() RETURNS trigger AS $$</span>
+<span class="s2">    BEGIN</span>
+<span class="s2">        UPDATE author SET books_count =</span>
+<span class="s2">            CASE</span>
+<span class="s2">                WHEN books_count IS NULL THEN (</span>
+<span class="s2">                    SELECT count(*) FROM book WHERE author_id = author.id</span>
+<span class="s2">                )</span>
+<span class="s2">                ELSE books_count + 1</span>
+<span class="s2">            END</span>
+<span class="s2">        WHERE id = NEW.author_id;</span>
+
+<span class="s2">        RETURN NEW;</span>
+<span class="s2">    END;</span>
+<span class="s2">$$ LANGUAGE plpgsql;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">CREATE_TRIGGER_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CREATE TRIGGER books_count_update</span>
+<span class="s2">    AFTER INSERT ON book</span>
+<span class="s2">    FOR EACH ROW</span>
+<span class="s2">    EXECUTE PROCEDURE update_books_count_on_author();</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">Migration</span><span class="p">(</span><span class="n">migrations</span><span class="o">.</span><span class="n">Migration</span><span class="p">):</span>
+    <span class="n">dependencies</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">operations</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">migrations</span><span class="o">.</span><span class="n">RunSQL</span><span class="p">(</span><span class="n">CREATE_FUNCTION_SQL</span><span class="p">),</span>
+        <span class="n">migrations</span><span class="o">.</span><span class="n">RunSQL</span><span class="p">(</span><span class="n">CREATE_TRIGGER_SQL</span><span class="p">),</span>
+    <span class="p">]</span>
+</pre></div>
+<p>Here is a pitfall though. When a new book is created and author is updated on the
+same DB transaction, then <tt class="docutils literal">books_count</tt> value might be overwritten.</p>
+<div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">atomic</span><span class="p">():</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">select_for_update</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">author_id</span><span class="p">)</span>
+    <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="n">author</span><span class="p">)</span>
+    <span class="n">author</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Bob&#39;</span>
+    <span class="n">author</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+<p>You can either explicitly list fields to update <tt class="docutils literal"><span class="pre">author.save(update_fields=['name'])</span></tt>
+or use <a class="reference external" href="https://django-save-the-change.readthedocs.org/en/latest/">django-save-the-change</a>. Let's document that in the model docstring.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">save_the_change.mixins</span> <span class="kn">import</span> <span class="n">SaveTheChange</span>
+
+
+<span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">SaveTheChange</span><span class="p">,</span> <span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Author, e.g., Terry Pratchett.</span>
+
+<span class="sd">    :attribute books_count: How many books writer has. SQL COUNT is</span>
+<span class="sd">        expensive operation, so we store calculated value and update it</span>
+<span class="sd">        by SQL trigger (check a data migration module for details).</span>
+<span class="sd">        It&#39;s important to save only fields that were updated in the model.</span>
+<span class="sd">        Otherwise SQL trigger&#39;s results are overwritten by Django ORM.</span>
+<span class="sd">        For example:</span>
+
+<span class="sd">        1. author is requested with a lock (books_count = 1)</span>
+<span class="sd">        2. new book is created</span>
+<span class="sd">        3. SQL trigger updates author&#39;s books_count field (now it is 2)</span>
+<span class="sd">        4. author instance is saved with the old value of books_count = 1.</span>
+
+<span class="sd">        SaveTheChange mixin helps to prevent it.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+</pre></div>
+<p>To benefit from <tt class="docutils literal">books_count</tt> field in Django REST Framework we need
+a custom pagination class which implements <tt class="docutils literal">Paginator.count</tt> property.
+The idea is to extract author ID from paginator's SQL, query a books count
+from <tt class="docutils literal">Author</tt> model and return it, instead of default
+<tt class="docutils literal"><span class="pre">Book.objects.filter(author_id=author_id).count()</span></tt>.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.core.paginator</span> <span class="kn">import</span> <span class="n">Paginator</span>
+<span class="kn">from</span> <span class="nn">rest_framework</span> <span class="kn">import</span> <span class="n">pagination</span>
+<span class="kn">from</span> <span class="nn">rest_framework.viewsets</span> <span class="kn">import</span> <span class="n">ReadOnlyModelViewSet</span>
+
+
+<span class="k">class</span> <span class="nc">BookViewSet</span><span class="p">(</span><span class="n">ReadOnlyModelViewSet</span><span class="p">):</span>
+    <span class="n">pagination_class</span> <span class="o">=</span> <span class="n">BookPagination</span>
+
+
+<span class="k">class</span> <span class="nc">BookPagination</span><span class="p">(</span><span class="n">pagination</span><span class="o">.</span><span class="n">PageNumberPagination</span><span class="p">):</span>
+    <span class="n">django_paginator_class</span> <span class="o">=</span> <span class="n">CachedBookCountPaginator</span>
+
+
+<span class="k">class</span> <span class="nc">CachedBookCountPaginator</span><span class="p">(</span><span class="n">Paginator</span><span class="p">):</span>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the total number of books, across all pages.</span>
+
+<span class="sd">        It parses a SQL and learns what author ID was requested</span>
+<span class="sd">        based on ``self.object_list.query``. After that we can get</span>
+<span class="sd">        a cached books count from Author model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># There is query.where, but I could&#39;t find an author ID easily.</span>
+        <span class="c1"># Moreover query.where internals might be changed.</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object_list</span><span class="o">.</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">author_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_author_id_from_sql</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+
+        <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">author_id</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;books_count&#39;</span><span class="p">)</span>
+        <span class="c1"># In case we got unsynced author, we fallback to SQL COUNT.</span>
+        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_count</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span>
+
+    <span class="k">def</span> <span class="nf">query_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Request books count from DB.</span>
+
+<span class="sd">        We need this method to facilitate testing (mocks).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">CachedBookCountPaginator</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">count</span>
+
+<span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">_get_author_id_from_sql</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">sql</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+<p>I hope this helps. Cheers!</p>
+<p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="http://marselester.com/tag/python.html">python </a>
+    <a href="http://marselester.com/tag/django.html">django </a>
+    <a href="http://marselester.com/tag/postgresql.html">postgresql </a>
+    <a href="http://marselester.com/tag/django-rest-framework.html">django rest framework </a>
+    <a href="http://marselester.com/tag/pagination.html">pagination </a>
+</p>
+
+
+
+<p><a href="http://marselester.com/drf-pagination.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
-<h6 class="subheader" title="2013-11-28T00:00:00">Thu 28 November 2013
+<h6 class="subheader" title="2013-11-28T00:00:00+07:00">Thu 28 November 2013
 </h6>
 
 
@@ -58,172 +268,7 @@ but deployment was not considered in the <a class="reference external" href="htt
 <p>Server configuration is different from local, thus environments will be needed
 (at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
 environment by default.</p>
-<p>Environments are set in <tt class="docutils literal">minion.conf</tt> because masterless minion is used.
-When no environment is set, Salt assumes following configuration:</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">file_roots</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt</span>
-
-<span class="l-Scalar-Plain">pillar_roots</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/pillar</span>
-</pre></div>
-<p>Salt will look for states in <tt class="docutils literal">/srv/salt</tt> and pillars in <tt class="docutils literal">/srv/pillar</tt>.</p>
-<p>Let's introduce <strong>dev</strong> and <strong>prod</strong> environments.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">file_roots</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/base</span>
-
-  <span class="l-Scalar-Plain">dev</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/dev</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/base</span>
-
-  <span class="l-Scalar-Plain">prod</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/prod</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/salt/base</span>
-
-<span class="l-Scalar-Plain">pillar_roots</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">base</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
-
-  <span class="l-Scalar-Plain">dev</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/dev</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
-
-  <span class="l-Scalar-Plain">prod</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/prod</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
-</pre></div>
-<p>Each environment describes paths where to find files.
-File is searched in the first directory and if it is not found it is
-searched in the second one.</p>
-<p>States and pillars which were described in <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a> are splitted
-to environment folders. Most of files are located in <tt class="docutils literal">base</tt> folder,
-because they are the same to <strong>dev</strong> and <strong>prod</strong> environments.
-You can find <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy">complete example</a> on GitHub.</p>
-<div class="section" id="what-production-environment-introduces">
-<h2>What Production Environment Introduces</h2>
-<p>There is a difference between <strong>prod</strong> and <strong>dev</strong> project's source code
-delivering. Development environment assumes that code is shared by Vagrant.
-Production environment needs to get code from private git repository.
-In order to do it user <em>jon_snow</em> must have ssh keys. Here I don't use
-private repository, but keys are still needed to log in to production server
-by Fabric.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">jon_snow</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">user.present</span>
-
-<span class="l-Scalar-Plain">jon_snow public key</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">ssh_auth</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">present</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://user/id_rsa.pub</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-
-<span class="l-Scalar-Plain">jon_snow secret key</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">managed</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/.ssh/id_rsa</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">source</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">salt://user/id_rsa</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">group</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">mode</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">600</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ssh_auth</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow public key</span>
-</pre></div>
-<p><tt class="docutils literal">prod/source_code.sls</tt> fetches source code from GitHub.
-I have tried to use built in <tt class="docutils literal">git.latest</tt> Salt state but it requires
-to configure git name and email on server. I solved this issue by using
-git hard reset.</p>
-<div class="highlight"><pre><span class="l-Scalar-Plain">git</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">pkg.installed</span>
-
-<span class="l-Scalar-Plain">github.com</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">ssh_known_hosts</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">present</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">fingerprint</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48</span>
-
-<span class="l-Scalar-Plain">messaging repository clone</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">cmd</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">run</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">unless</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">test -d /home/jon_snow/messaging_repository</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">&gt;</span>
-              <span class="no">git clone https://github.com/marselester/abstract-internal-messaging.git /home/jon_snow/messaging_repository</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">pkg</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">git</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ssh_known_hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">github.com</span>
-
-<span class="l-Scalar-Plain">messaging latest source code</span><span class="p-Indicator">:</span>
-  <span class="l-Scalar-Plain">cmd</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">run</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">cwd</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/messaging_repository</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">&gt;</span>
-              <span class="no">git fetch origin &amp;&amp;</span>
-              <span class="no">git reset --hard origin/master</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">require</span><span class="p-Indicator">:</span>
-      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">cmd</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">messaging repository clone</span>
-
-  <span class="l-Scalar-Plain">file</span><span class="p-Indicator">:</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">symlink</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="p-Indicator">{{</span> <span class="nv">pillar</span><span class="p-Indicator">[</span><span class="s">&#39;website_src_dir&#39;</span><span class="p-Indicator">]</span> <span class="p-Indicator">}}</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">target</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/jon_snow/messaging_repository</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">force</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
-    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">user</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">jon_snow</span>
-</pre></div>
-</div>
-<div class="section" id="fabric-as-deployment-runner">
-<h2>Fabric as Deployment Runner</h2>
-<p>Last thing to do is to run deployment of particular Salt environment
-<strong>salt_env</strong> in particular host <strong>target</strong>. Fabric is good at it.</p>
-<p>I want Fabric to:</p>
-<ul>
-<li><p class="first">bootstrap Salt on given <strong>target</strong>;</p>
-</li>
-<li><p class="first">upload <tt class="docutils literal">minion.conf</tt> to given <strong>target</strong> to <tt class="docutils literal">/etc/salt/minion</tt>;</p>
-</li>
-<li><p class="first">upload Salt configs to given <strong>target</strong> how it is described
-in <tt class="docutils literal">minion.conf</tt> (to <tt class="docutils literal">/srv/salt_roots</tt>);</p>
-</li>
-<li><p class="first">invoke <tt class="docutils literal"><span class="pre">salt-call</span></tt> on given <strong>target</strong> with particular <strong>salt_env</strong>
-(here is <tt class="docutils literal">prod</tt>).</p>
-<div class="highlight"><pre><span class="gp">$</span> salt-call state.highstate <span class="nv">env</span><span class="o">=</span>prod
-</pre></div>
-</li>
-</ul>
-<p>Let's try to deploy <strong>prod</strong> environment to VM. I assume that you have
-<tt class="docutils literal">messaging</tt> directory (see <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">Developing Django project with SaltStack</a>).
-You need to clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy">Deploy Abstract Internal Messaging System</a> in it
-and start VM.</p>
-<div class="highlight"><pre><span class="gp">$</span> <span class="nb">cd </span>messaging
-<span class="gp">$</span> git clone https://github.com/marselester/abstract-internal-messaging-deploy.git
-<span class="gp">$</span> <span class="nb">cd </span>abstract-internal-messaging-deploy/vagrant
-<span class="gp">$</span> vagrant up
-</pre></div>
-<p>In order to interact with VM you should add <tt class="docutils literal">11.22.33.44 <span class="pre">messaging-part-2</span></tt>
-to <tt class="docutils literal">/etc/hosts</tt>.</p>
-<p>Install Fabric and set up Salt masterless minion in VM.</p>
-<div class="highlight"><pre><span class="gp">$</span> <span class="nb">cd </span>messaging/abstract-internal-messaging-deploy
-<span class="gp">$</span> pip install -r requirements.txt
-<span class="gp">$</span> fab target:local setup_masterless_minion
-</pre></div>
-<p>Finally deploy <strong>prod</strong> environment in VM.</p>
-<div class="highlight"><pre><span class="gp">$</span> fab target:local salt_env:prod deploy
-</pre></div>
-</div>
-<div class="section" id="conclusion">
-<h2>Conclusion</h2>
-<p>Besides convenient developing, we got ability to deploy arbitrary environments
-to arbitrary targets. It gives us opportunity to test deployment itself.
-You can improve this solution by adding ability to specify git branch
-which will be deployed.</p>
-<p>As in <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a> project should work:</p>
-<div class="highlight"><pre><span class="gp">$</span> curl -i messaging-part-2
-</pre></div>
-</div>
-<p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+<p>Environments are set in <tt class="docutils literal">minion ...</tt></p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="http://marselester.com/tag/python.html">python </a>
@@ -235,18 +280,16 @@ which will be deployed.</p>
 
 
 
-<p><a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 
 
             <article>
                 <a href="http://marselester.com/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
-<h6 class="subheader" title="2013-11-09T00:00:00">Sat 09 November 2013
+<h6 class="subheader" title="2013-11-09T00:00:00+07:00">Sat 09 November 2013
 </h6>
 
 
@@ -275,7 +318,7 @@ is only one) of project and clone <a class="reference external" href="https://gi
 
             <article>
                 <a href="http://marselester.com/python-developer-at-uploadcare.html"><h3 class="article-title">Python Developer at Uploadcare</h3></a>
-<h6 class="subheader" title="2013-07-31T00:00:00">Wed 31 July 2013
+<h6 class="subheader" title="2013-07-31T00:00:00+07:00">Wed 31 July 2013
 </h6>
 
 
@@ -305,7 +348,7 @@ appropriate development process, adherence to quality standards.</p>
 
             <article>
                 <a href="http://marselester.com/fangid-startup.html"><h3 class="article-title">Стартап fangid.com</h3></a>
-<h6 class="subheader" title="2012-10-13T00:00:00">Sat 13 October 2012
+<h6 class="subheader" title="2012-10-13T00:00:00+07:00">Sat 13 October 2012
 </h6>
 
 
@@ -335,7 +378,7 @@ appropriate development process, adherence to quality standards.</p>
 
             <article>
                 <a href="http://marselester.com/portfolio-2007-2011.html"><h3 class="article-title">Портфолио 2007–2011</h3></a>
-<h6 class="subheader" title="2012-10-12T00:00:00">Fri 12 October 2012
+<h6 class="subheader" title="2012-10-12T00:00:00+07:00">Fri 12 October 2012
 </h6>
 
 
@@ -368,7 +411,7 @@ appropriate development process, adherence to quality standards.</p>
 
             <article>
                 <a href="http://marselester.com/django-todo-testing-during-construction.html"><h3 class="article-title">Django TODO: тестирование во время конструирования</h3></a>
-<h6 class="subheader" title="2012-06-29T13:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T13:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -398,7 +441,7 @@ appropriate development process, adherence to quality standards.</p>
 
             <article>
                 <a href="http://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
-<h6 class="subheader" title="2012-06-29T12:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T12:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -427,7 +470,7 @@ appropriate development process, adherence to quality standards.</p>
 
             <article>
                 <a href="http://marselester.com/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
-<h6 class="subheader" title="2012-06-29T11:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -457,7 +500,7 @@ appropriate development process, adherence to quality standards.</p>
 
             <article>
                 <a href="http://marselester.com/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
-<h6 class="subheader" title="2012-06-29T11:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -486,7 +529,7 @@ appropriate development process, adherence to quality standards.</p>
 
             <article>
                 <a href="http://marselester.com/links-to-best-practices-of-python-django.html"><h3 class="article-title">Соглашения по разработке на Python/Django</h3></a>
-<h6 class="subheader" title="2012-06-29T00:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -517,7 +560,7 @@ expended_time = (self.finish_date() - self.start_date
 
             <article>
                 <a href="http://marselester.com/splitting-settings-in-django.html"><h3 class="article-title">Разделение настроек в Django</h3></a>
-<h6 class="subheader" title="2012-06-29T00:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -534,11 +577,11 @@ settings/
 </pre>
 <p><tt class="docutils literal">base.py</tt> содержит общие настройки для <tt class="docutils literal">development.py</tt> и
 <tt class="docutils literal">production.py</tt>, например:</p>
-<div class="highlight"><pre><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
+<div class="highlight"><pre><span></span><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
 <span class="n">MANAGERS</span> <span class="o">=</span> <span class="n">ADMINS</span>
 
-<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s">&#39;Asia/Yekaterinburg&#39;</span>
-<span class="c"># ...</span>
+<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s1">&#39;Asia/Yekaterinburg&#39;</span>
+<span class="c1"># ...</span>
 </pre></div>
 <p><tt class="docutils literal">production.py</tt> содержит настройки для ...</p><p class="subheader">Category: <a href="http://marselester.com/category/python.html">Python</a>
 
@@ -559,7 +602,7 @@ settings/
 
             <article>
                 <a href="http://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html"><h3 class="article-title">Краткий обзор инфраструктуры для разработки reusable Django приложений</h3></a>
-<h6 class="subheader" title="2012-06-13T00:00:00">Wed 13 June 2012
+<h6 class="subheader" title="2012-06-13T00:00:00+07:00">Wed 13 June 2012
 </h6>
 
 
@@ -612,6 +655,7 @@ settings/
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

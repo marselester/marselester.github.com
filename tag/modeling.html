@@ -49,7 +49,7 @@
 
             <article>
                 <a href="http://marselester.com/modeling-single-channel-queue-with-refusals.html"><h3 class="article-title">Моделирование одноканальной СМО с отказами</h3></a>
-<h6 class="subheader" title="2009-05-30T00:00:00">Sat 30 May 2009
+<h6 class="subheader" title="2009-05-30T00:00:00+07:00">Sat 30 May 2009
 </h6>
 
 
@@ -60,7 +60,7 @@
 распределения. Если к моменту прихода заявки канал занят, заявка покидает
 систему необслуженной.</p>
 <p>Изначально код был написан на php, вот <a class="reference external" href="https://github.com/marselester/single-channel-queuing">пример на python 3</a>:</p>
-<div class="highlight"><pre><span class="kn">import</span> <span class="nn">random</span>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">random</span>
 
 
 <span class="k">class</span> <span class="nc">RequestPoll</span><span class="p">:</span>
@@ -72,12 +72,12 @@
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span>
-            <span class="s">&#39;Total: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">())</span> <span class="o">+</span>
-            <span class="s">&#39;Processed: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qty_of_processed_requests</span><span class="p">)</span> <span class="o">+</span>
-            <span class="s">&#39;Refused: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qty_of_refused_requests</span><span class="p">)</span> <span class="o">+</span>
-            <span class="s">&#39;Proportion of processed requests: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proportion_of_processed_requests</span><span class="p">())</span> <span class="o">+</span>
-            <span class="s">&#39;Probability of refuse: {}</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">probability_of_refuse</span><span class="p">())</span> <span class="o">+</span>
-            <span class="s">&#39;Absolute bandwidth: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abs_bandwidth</span><span class="p">())</span>
+            <span class="s1">&#39;Total: </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">())</span> <span class="o">+</span>
+            <span class="s1">&#39;Processed: </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qty_of_processed_requests</span><span class="p">)</span> <span class="o">+</span>
+            <span class="s1">&#39;Refused: </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qty_of_refused_requests</span><span class="p">)</span> <span class="o">+</span>
+            <span class="s1">&#39;Proportion of processed requests: </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proportion_of_processed_requests</span><span class="p">())</span> <span class="o">+</span>
+            <span class="s1">&#39;Probability of refuse: </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">probability_of_refuse</span><span class="p">())</span> <span class="o">+</span>
+            <span class="s1">&#39;Absolute bandwidth: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abs_bandwidth</span><span class="p">())</span>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -101,11 +101,11 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">time_when_channel_will_be_free</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span> \
                 <span class="o">+</span> <span class="n">time_for_which_request_has_taken_channel</span>
 
-            <span class="k">return</span> <span class="s">&#39;request added to queue at {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s1">&#39;request added to queue at </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">qty_of_refused_requests</span> <span class="o">+=</span> <span class="mi">1</span>
 
-            <span class="k">return</span> <span class="s">&#39;requests refused at {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s1">&#39;requests refused at </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_can_system_process_request</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_uptime</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_when_channel_will_be_free</span>
@@ -175,6 +175,7 @@
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

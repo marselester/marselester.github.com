@@ -51,7 +51,7 @@
 <a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
     </header>
 
-<h6 class="subheader" title="2012-06-29T00:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -68,53 +68,53 @@ settings/
 </pre>
 <p><tt class="docutils literal">base.py</tt> содержит общие настройки для <tt class="docutils literal">development.py</tt> и
 <tt class="docutils literal">production.py</tt>, например:</p>
-<div class="highlight"><pre><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
+<div class="highlight"><pre><span></span><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
 <span class="n">MANAGERS</span> <span class="o">=</span> <span class="n">ADMINS</span>
 
-<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s">&#39;Asia/Yekaterinburg&#39;</span>
-<span class="c"># ...</span>
+<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s1">&#39;Asia/Yekaterinburg&#39;</span>
+<span class="c1"># ...</span>
 </pre></div>
 <p><tt class="docutils literal">production.py</tt> содержит настройки для эксплуатации. Как минимум, необходимо
 выключить режим отладки:</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="o">*</span>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="o">*</span>
 
 <span class="n">DEBUG</span> <span class="o">=</span> <span class="bp">False</span>
 <span class="n">TEMPLATE_DEBUG</span> <span class="o">=</span> <span class="n">DEBUG</span>
-<span class="c"># ...</span>
+<span class="c1"># ...</span>
 </pre></div>
 <p><tt class="docutils literal">development.py</tt> содержит настройки, необходимые для разработки. Настройки
 должны быть <strong>одинаковы</strong> и <strong>полезны для всех участников</strong> процесса
 разработки, например:</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="o">*</span>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="o">*</span>
 
 <span class="n">DEBUG</span> <span class="o">=</span> <span class="bp">True</span>
 <span class="n">TEMPLATE_DEBUG</span> <span class="o">=</span> <span class="n">DEBUG</span>
-<span class="c"># ...</span>
+<span class="c1"># ...</span>
 </pre></div>
 <p>Все индивидуальные настройки разработчика необходимо вынести в <tt class="docutils literal">local.py</tt>.
 Например, это могут быть настройки подключения к БД, любимые инструменты
 разработки и так далее:</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">.development</span> <span class="kn">import</span> <span class="o">*</span>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.development</span> <span class="kn">import</span> <span class="o">*</span>
 
 <span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s">&#39;django.db.backends.mysql&#39;</span><span class="p">,</span>
-        <span class="s">&#39;NAME&#39;</span><span class="p">:</span> <span class="s">&quot;developer&#39;s db name&quot;</span><span class="p">,</span>
-        <span class="s">&#39;USER&#39;</span><span class="p">:</span> <span class="s">&quot;developer&#39;s db user&quot;</span><span class="p">,</span>
-        <span class="s">&#39;PASSWORD&#39;</span><span class="p">:</span> <span class="s">&quot;developer&#39;s db password&quot;</span><span class="p">,</span>
-        <span class="s">&#39;HOST&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span>
-        <span class="s">&#39;PORT&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s1">&#39;django.db.backends.mysql&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;NAME&#39;</span><span class="p">:</span> <span class="s2">&quot;developer&#39;s db name&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;USER&#39;</span><span class="p">:</span> <span class="s2">&quot;developer&#39;s db user&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;PASSWORD&#39;</span><span class="p">:</span> <span class="s2">&quot;developer&#39;s db password&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;HOST&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span>
+        <span class="s1">&#39;PORT&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 <p>На production сервере <tt class="docutils literal">local.py</tt> обычно содержит настройки подключения к
 БД:</p>
-<div class="highlight"><pre><span class="kn">from</span> <span class="nn">.production</span> <span class="kn">import</span> <span class="o">*</span>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.production</span> <span class="kn">import</span> <span class="o">*</span>
 </pre></div>
 <p><tt class="docutils literal">local.py</tt> не должен отслеживаться VCS.</p>
 <p>Для Django 1.4 в файлах <tt class="docutils literal"><span class="pre">repo-name/project_name/wsgi.py</span></tt> и
 <tt class="docutils literal"><span class="pre">repo-name/manage.py</span></tt> нужно указать путь до <tt class="docutils literal">local.py</tt>:</p>
-<div class="highlight"><pre><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s">&quot;DJANGO_SETTINGS_MODULE&quot;</span><span class="p">,</span> <span class="s">&quot;project_name.settings.local&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;DJANGO_SETTINGS_MODULE&quot;</span><span class="p">,</span> <span class="s2">&quot;project_name.settings.local&quot;</span><span class="p">)</span>
 </pre></div>
 <p>У меня не получилось разместить <tt class="docutils literal">local.py</tt> на <a class="reference external" href="http://www.heroku.com/">heroku</a>, чтобы файл не находился под контролем git (плохо
 искал?). Самое простое решение -- избавиться от <tt class="docutils literal">local.py</tt>, в <tt class="docutils literal">manage.py</tt>
@@ -178,6 +178,7 @@ $ heroku config:add SECRET_KEY=my_unique_secret_key
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>

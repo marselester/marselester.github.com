@@ -49,7 +49,7 @@
 
             <article>
                 <a href="http://marselester.com/django-todo-testing-during-construction.html"><h3 class="article-title">Django TODO: тестирование во время конструирования</h3></a>
-<h6 class="subheader" title="2012-06-29T13:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T13:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -148,7 +148,7 @@ Django использует для импорта в БД), аргументир
 </ul>
 <p>Определив все возможные случаи наступления дедлайна можно спроектировать
 &quot;чистые тесты&quot; для метода <em>days_quantity_after_deadline</em>:</p>
-<div class="highlight"><pre><span class="k">class</span> <span class="nc">DeadlineDaysTest</span><span class="p">(</span><span class="n">TaskTest</span><span class="p">):</span>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DeadlineDaysTest</span><span class="p">(</span><span class="n">TaskTest</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Тестирует определение количества просроченных дней.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">task_wait_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -221,7 +221,7 @@ Django использует для импорта в БД), аргументир
 </ul>
 <p>Демонстрация фрагмента блочного тестирования для метода <em>start_date</em> приведена
 ниже:</p>
-<div class="highlight"><pre><span class="c"># -*- coding: utf-8 -*-</span>
+<div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
 <span class="kn">import</span> <span class="nn">datetime</span>
 
 <span class="kn">from</span> <span class="nn">django.test</span> <span class="kn">import</span> <span class="n">TestCase</span>
@@ -235,10 +235,10 @@ Django использует для импорта в БД), аргументир
 
     <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">factories</span><span class="o">.</span><span class="n">make_fixtures</span><span class="p">()</span>
-        <span class="c"># Сотрудники.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;alexander&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">designer</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;kazimir&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">programmer</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;ada&#39;</span><span class="p">)</span>
+        <span class="c1"># Сотрудники.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s1">&#39;alexander&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">designer</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s1">&#39;kazimir&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">programmer</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s1">&#39;ada&#39;</span><span class="p">)</span>
 
 
 <span class="k">class</span> <span class="nc">StartDateTest</span><span class="p">(</span><span class="n">TaskTest</span><span class="p">):</span>
@@ -252,10 +252,10 @@ Django использует для импорта в БД), аргументир
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">today</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
         <span class="n">chain_start_date</span> <span class="o">=</span> <span class="n">today</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">chain</span> <span class="o">=</span> <span class="n">Chain</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;Chain&#39;</span><span class="p">,</span> <span class="n">start_date</span><span class="o">=</span><span class="n">chain_start_date</span><span class="p">,</span>
+        <span class="n">chain</span> <span class="o">=</span> <span class="n">Chain</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Chain&#39;</span><span class="p">,</span> <span class="n">start_date</span><span class="o">=</span><span class="n">chain_start_date</span><span class="p">,</span>
                                      <span class="n">owner</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="p">)</span>
         <span class="n">deadline</span> <span class="o">=</span> <span class="n">chain_start_date</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
-        <span class="n">first_task</span> <span class="o">=</span> <span class="n">Task</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">worker</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">designer</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="s">&#39;Design&#39;</span><span class="p">,</span>
+        <span class="n">first_task</span> <span class="o">=</span> <span class="n">Task</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">worker</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">designer</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="s1">&#39;Design&#39;</span><span class="p">,</span>
                                          <span class="n">deadline</span><span class="o">=</span><span class="n">deadline</span><span class="p">,</span> <span class="n">chain</span><span class="o">=</span><span class="n">chain</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">first_task</span><span class="o">.</span><span class="n">start_date</span><span class="p">(),</span> <span class="n">chain</span><span class="o">.</span><span class="n">start_date</span><span class="p">)</span>
 </pre></div>
@@ -277,7 +277,7 @@ Django использует для импорта в БД), аргументир
 поддерживает юникод и давно не развивается (последний релиз был в 2007 году).</p>
 <p>В качестве примера приводится тестирование посещения пользователем страницы
 актуальных задач:</p>
-<div class="highlight"><pre><span class="c"># -*- coding: utf-8 -*-</span>
+<div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
 <span class="kn">from</span> <span class="nn">django_webtest</span> <span class="kn">import</span> <span class="n">WebTest</span>
 
 <span class="kn">from</span> <span class="nn">django.core.urlresolvers</span> <span class="kn">import</span> <span class="n">reverse</span>
@@ -291,12 +291,12 @@ Django использует для импорта в БД), аргументир
         <span class="n">factories</span><span class="o">.</span><span class="n">make_fixtures</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">test_user_not_logined</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s">&#39;todo_actual_tasks&#39;</span><span class="p">))</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s1">&#39;todo_actual_tasks&#39;</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_int</span><span class="p">,</span> <span class="mi">302</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">test_designer_logined</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s">&#39;todo_actual_tasks&#39;</span><span class="p">),</span> <span class="n">user</span><span class="o">=</span><span class="s">&#39;kazimir&#39;</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="s">&#39;Казимир Малевич&#39;</span> <span class="ow">in</span> <span class="n">response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s1">&#39;todo_actual_tasks&#39;</span><span class="p">),</span> <span class="n">user</span><span class="o">=</span><span class="s1">&#39;kazimir&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="s1">&#39;Казимир Малевич&#39;</span> <span class="ow">in</span> <span class="n">response</span>
 </pre></div>
 <p>В первом случае пользователь не авторизован (метод <em>test_user_not_logined</em>) и
 браузер должен вернуть статус <em>302</em> (перенаправление на страницу авторизации),
@@ -356,7 +356,7 @@ Django использует для импорта в БД), аргументир
 
             <article>
                 <a href="http://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
-<h6 class="subheader" title="2012-06-29T12:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T12:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -385,7 +385,7 @@ Django использует для импорта в БД), аргументир
 
             <article>
                 <a href="http://marselester.com/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
-<h6 class="subheader" title="2012-06-29T11:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -415,7 +415,7 @@ Django использует для импорта в БД), аргументир
 
             <article>
                 <a href="http://marselester.com/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
-<h6 class="subheader" title="2012-06-29T11:00:00">Fri 29 June 2012
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
 </h6>
 
 
@@ -468,6 +468,7 @@ Django использует для импорта в БД), аргументир
             <li><a href="https://github.com/marselester">GitHub</a></li>
             <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
             <li><a href="http://instagram.com/marselester">Instagram</a></li>
+            <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
             <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
             <li><a href="http://mmavletkulov.moikrug.ru/">Мой Круг</a></li>
