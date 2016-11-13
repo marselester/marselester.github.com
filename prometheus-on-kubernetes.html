@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - Infrastructure</title>
+    <title>Prometheus on Kubernetes</title>
 
     <link rel="stylesheet" href="http://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="http://marselester.com/theme/css/foundation.min.css" />
@@ -44,16 +44,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="http://marselester.com/prometheus-on-kubernetes.html" rel="bookmark"
+        title="Permalink to Prometheus on Kubernetes">Prometheus on Kubernetes</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="http://marselester.com/prometheus-on-kubernetes.html"><h3 class="article-title">Prometheus on Kubernetes</h3></a>
 <h6 class="subheader" title="2016-11-13T00:00:00+07:00">Sun 13 November 2016
 </h6>
 
 
-<p><a class="reference external" href="https://prometheus.io/">Prometheus</a> is a monitoring toolkit.
+    <p><a class="reference external" href="https://prometheus.io/">Prometheus</a> is a monitoring toolkit.
 Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
 from <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes">hello web application</a>
 which also runs in the same cluster.</p>
@@ -357,6 +359,7 @@ and collect metrics from a simple web app.
 However recently I have encountered CoreOS <a class="reference external" href="https://github.com/coreos/kube-prometheus">kube-prometheus</a>
 which makes it easier. Have a look at <a class="reference external" href="https://coreos.com/blog/the-prometheus-operator.html">The Prometheus Operator: Managed Prometheus setups for Kubernetes</a> for more details.</p>
 </div>
+
 <p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
@@ -369,100 +372,22 @@ which makes it easier. Have a look at <a class="reference external" href="https:
 
 
 
-<p><a href="http://marselester.com/prometheus-on-kubernetes.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "prometheus-on-kubernetes.html";
+        var disqus_url = "http://marselester.com/prometheus-on-kubernetes.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/saltstack-slides.html"><h3 class="article-title">Slides about SaltStack</h3></a>
-<h6 class="subheader" title="2013-12-03T00:00:00+07:00">Tue 03 December 2013
-</h6>
-
-
-<p><strong>Update</strong> I gave a talk with <a class="reference external" href="https://twitter.com/shr">Simon Robson</a> at <a class="reference external" href="https://twitter.com/barcampcm">Beercamp</a> in Chiang Mai,
-Thailand on 12 Dec 2013. We compared Salt and <a class="reference external" href="http://slid.es/simonrobson/ansible">Ansible</a>.
-Here are my slides.</p>
-<iframe src="http://slid.es/marselester/saltstack/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/salt.html">salt </a>
-    <a href="http://marselester.com/tag/saltstack.html">saltstack </a>
-    <a href="http://marselester.com/tag/slides.html">slides </a>
-    <a href="http://marselester.com/tag/talk.html">talk </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/saltstack-slides.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/saltstack-slides.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
-<h6 class="subheader" title="2013-11-28T00:00:00+07:00">Thu 28 November 2013
-</h6>
-
-
-<p>Eventually you will need to deploy project,
-but deployment was not considered in the <a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
-<p>Server configuration is different from local, thus environments will be needed
-(at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
-environment by default.</p>
-<p>Environments are set in <tt class="docutils literal">minion ...</tt></p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/python.html">python </a>
-    <a href="http://marselester.com/tag/django.html">django </a>
-    <a href="http://marselester.com/tag/vagrant.html">vagrant </a>
-    <a href="http://marselester.com/tag/salt.html">salt </a>
-    <a href="http://marselester.com/tag/saltstack.html">saltstack </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
-<h6 class="subheader" title="2013-11-09T00:00:00+07:00">Sat 09 November 2013
-</h6>
-
-
-<p>Let's use <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> as an example of Django project. I want it to
-run in VirtualBox which is managed by Vagrant. Infrastructure management
-is provided by SaltStack.</p>
-<p>I advise you to create separate folder for repositories (currently there
-is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there ...</p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/python.html">python </a>
-    <a href="http://marselester.com/tag/django.html">django </a>
-    <a href="http://marselester.com/tag/vagrant.html">vagrant </a>
-    <a href="http://marselester.com/tag/salt.html">salt </a>
-    <a href="http://marselester.com/tag/saltstack.html">saltstack </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/developing-django-project-with-saltstack.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

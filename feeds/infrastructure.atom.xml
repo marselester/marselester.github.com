@@ -1,8 +1,312 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/infrastructure.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2013-12-03T00:00:00+07:00</updated><entry><title>Slides about SaltStack</title><link href="http://marselester.com/saltstack-slides.html" rel="alternate"></link><updated>2013-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-03:saltstack-slides.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/infrastructure.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2016-11-13T00:00:00+07:00</updated><entry><title>Prometheus on Kubernetes</title><link href="http://marselester.com/prometheus-on-kubernetes.html" rel="alternate"></link><published>2016-11-13T00:00:00+07:00</published><updated>2016-11-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-11-13:prometheus-on-kubernetes.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; is a monitoring toolkit.
+Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
+from &lt;a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes"&gt;hello web application&lt;/a&gt;
+which also runs in the same cluster.&lt;/p&gt;
+&lt;p&gt;First of all, we need Kubernetes cluster running. It's easy to bootstrap one via &lt;a class="reference external" href="https://console.cloud.google.com"&gt;Google Container Engine&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; gcloud container clusters create my-k8
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The command above might complain that zone is not currently set.
+Choose the one you like and try to create a cluster again.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; gcloud compute zones list
+&lt;span class="gp"&gt;$&lt;/span&gt; gcloud config &lt;span class="nb"&gt;set&lt;/span&gt; compute/zone asia-east1-b
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You should now have a Kubernetes cluster.
+If there are any issues, check out &lt;a class="reference external" href="https://www.udacity.com/course/scalable-microservices-with-kubernetes--ud615"&gt;Udacity course&lt;/a&gt; which helped me run Kubernetes in GKE.&lt;/p&gt;
+&lt;div class="section" id="first-start"&gt;
+&lt;h2&gt;First Start&lt;/h2&gt;
+&lt;p&gt;Prometheus is available as Docker image and can be run locally quickly.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; docker run -p 9090:9090 prom/prometheus:v1.2.1
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;When a container is started, the Prometheus expression browser should be accessible on &lt;cite&gt;http://localhost:9090&lt;/cite&gt;.
+Now let's achieve the same results with Kubernetes.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl run prometheus-deployment --image&lt;span class="o"&gt;=&lt;/span&gt;prom/prometheus:v1.2.1 --port&lt;span class="o"&gt;=&lt;/span&gt;9090
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The command above created &lt;a class="reference external" href="http://kubernetes.io/docs/user-guide/deployments/"&gt;Kubernetes Deployment&lt;/a&gt;
+that runs &lt;cite&gt;prometheus&lt;/cite&gt; Docker image.&lt;/p&gt;
+&lt;p&gt;By default deployed applications are visible only inside the Kubernetes cluster.
+To see whether Prometheus started up, we can run a proxy between terminal and Kubernetes cluster.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl proxy
+&lt;span class="go"&gt;Starting to serve on 127.0.0.1:8001&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;In another cloud shell, we can call Kubernetes API.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl get pods
+&lt;span class="go"&gt;NAME                                     READY     STATUS    RESTARTS   AGE&lt;/span&gt;
+&lt;span class="go"&gt;prometheus-deployment-2234044252-of29y   1/1       Running   0          8m&lt;/span&gt;
+
+&lt;span class="gp"&gt;$&lt;/span&gt; curl http://127.0.0.1:8001/api/v1/proxy/namespaces/default/pods/prometheus-deployment-2234044252-of29y:9090/metrics
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Another option is to run a port forwarding:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward prometheus-deployment-2234044252-of29y 8080:9090
+&lt;span class="gp"&gt;$&lt;/span&gt; curl http://127.0.0.1:8080/metrics
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Check Prometheus container logs:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl logs -f po/prometheus-deployment-2234044252-of29y
+&lt;span class="go"&gt;time=&amp;quot;2016-10-29T05:02:38Z&amp;quot; level=info msg=&amp;quot;Starting prometheus (version=1.2.1, branch=master, revision=dd66f2e94b2b662804b9aa1b6a50587b990ba8b7)&amp;quot; source=&amp;quot;main.go:75&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;And finally we can run a shell inside the Pod's container and have a look at Prometheus config file.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl &lt;span class="nb"&gt;exec&lt;/span&gt; prometheus-deployment-2234044252-of29y -it /bin/sh
+&lt;span class="go"&gt;root$ cat /etc/prometheus/prometheus.yml&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Its advisable to describe Deployments in configuration files,
+so we can have a better visibility and version control over our cluster.
+The following Deployment manifest is similar to what we achieved with &lt;cite&gt;kubectl run&lt;/cite&gt; command.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;apiVersion&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;extensions/v1beta1&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;kind&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;Deployment&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;metadata&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;name&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;prometheus-deployment&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;spec&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;replicas&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;1&lt;/span&gt; &lt;span class="c1"&gt;# tells deployment to run 1 pod matching the template below&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;template&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="c1"&gt;# crete pods using pod definition in this template&lt;/span&gt;
+    &lt;span class="l l-Scalar l-Scalar-Plain"&gt;metadata&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="l l-Scalar l-Scalar-Plain"&gt;labels&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="c1"&gt;# these key value pairs will be attached to pods&lt;/span&gt;
+        &lt;span class="l l-Scalar l-Scalar-Plain"&gt;app&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;prometheus-server&lt;/span&gt;
+    &lt;span class="l l-Scalar l-Scalar-Plain"&gt;spec&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="l l-Scalar l-Scalar-Plain"&gt;containers&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+        &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;name&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;prometheus&lt;/span&gt;
+          &lt;span class="l l-Scalar l-Scalar-Plain"&gt;image&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;prom/prometheus:v1.2.1&lt;/span&gt;
+          &lt;span class="l l-Scalar l-Scalar-Plain"&gt;ports&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+            &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;containerPort&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;9090&lt;/span&gt; &lt;span class="c1"&gt;# port we open in the container&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's delete &lt;cite&gt;prometheus-deployment&lt;/cite&gt; we created via &lt;cite&gt;kubectl run&lt;/cite&gt; command&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl delete deployment prometheus-deployment
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;and re-create the Deployment from a file (it is available in git repository):&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; git clone https://github.com/marselester/prometheus-on-kubernetes.git
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;cd&lt;/span&gt; ./prometheus-on-kubernetes/
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create -f kube/prometheus/deployment-v1.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl get deployments
+&lt;span class="go"&gt;NAME                    DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE&lt;/span&gt;
+&lt;span class="go"&gt;prometheus-deployment   1         1         1            0           40s&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="prometheus-service"&gt;
+&lt;h2&gt;Prometheus Service&lt;/h2&gt;
+&lt;p&gt;We have a Prometheus Pod running.
+Now we need &lt;a class="reference external" href="http://kubernetes.io/docs/user-guide/services/"&gt;Kubernetes Service&lt;/a&gt; to let external clients access it.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl expose deployment prometheus-deployment --type&lt;span class="o"&gt;=&lt;/span&gt;NodePort --name&lt;span class="o"&gt;=&lt;/span&gt;prometheus-service
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The assigned port can be found in &lt;cite&gt;NodePort&lt;/cite&gt; output of Service description:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl describe service prometheus-service
+&lt;span class="gp"&gt;#&lt;/span&gt; ...
+&lt;span class="go"&gt;NodePort:               &amp;lt;unset&amp;gt; 32514/TCP&lt;/span&gt;
+&lt;span class="gp"&gt;#&lt;/span&gt; ...
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We have exposed the Service on an external port &lt;cite&gt;32514&lt;/cite&gt; on all nodes in our cluster.
+Now create a firewall rule to allow external traffic.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; gcloud compute firewall-rules create prometheus-nodeport --allow&lt;span class="o"&gt;=&lt;/span&gt;tcp:32514
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's use one of the external IPs from our Kubernetes cluster instances to see Prometheus expression browser.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; gcloud compute instances list
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You should be able to access Prometheus on &lt;cite&gt;http://&amp;lt;EXTERNAL_IP&amp;gt;:32514&lt;/cite&gt;.
+Let's delete the Service and create it via Service config file.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl delete service prometheus-service
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create -f kube/prometheus/service-v1.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Since the Prometheus Pod exposes &lt;cite&gt;9090&lt;/cite&gt; port and has &lt;cite&gt;app: prometheus-server&lt;/cite&gt; label,
+our config should be as following:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;apiVersion&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;v1&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;kind&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;Service&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;metadata&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;name&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;prometheus-service&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;spec&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;selector&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="c1"&gt;# exposes any pods with the following labels as a service&lt;/span&gt;
+    &lt;span class="l l-Scalar l-Scalar-Plain"&gt;app&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;prometheus-server&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;type&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;NodePort&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;ports&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;port&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;80&lt;/span&gt; &lt;span class="c1"&gt;# this Service&amp;#39;s port (cluster-internal IP clusterIP)&lt;/span&gt;
+      &lt;span class="l l-Scalar l-Scalar-Plain"&gt;targetPort&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;9090&lt;/span&gt; &lt;span class="c1"&gt;# pods expose this port&lt;/span&gt;
+      &lt;span class="c1"&gt;# Kubernetes master will allocate a port from a flag-configured range (default: 30000-32767),&lt;/span&gt;
+      &lt;span class="c1"&gt;# or we can set a specific port number (in our case).&lt;/span&gt;
+      &lt;span class="c1"&gt;# Each node will proxy 32514 port (the same port number on every node) into this service.&lt;/span&gt;
+      &lt;span class="c1"&gt;# Note that this Service will be visible as both NodeIP:nodePort and clusterIp:port&lt;/span&gt;
+      &lt;span class="l l-Scalar l-Scalar-Plain"&gt;nodePort&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;32514&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="prometheus-config"&gt;
+&lt;h2&gt;Prometheus Config&lt;/h2&gt;
+&lt;p&gt;So far we've been using the default Prometheus config which is part of a Docker image.
+For sure we will need to update it so Prometheus can collect metrics from our example app.
+Let's take the default config as a starting point and store it in
+&lt;a class="reference external" href="http://kubernetes.io/docs/user-guide/configmap/"&gt;Kubernetes ConfigMap&lt;/a&gt;.
+The config can be copied from the running container or from the git repository.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl &lt;span class="nb"&gt;exec&lt;/span&gt; prometheus-deployment-2234044252-of29y -it cat /etc/prometheus/prometheus.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Next we need to create a ConfigMap entry for the &lt;cite&gt;prometheus.yml&lt;/cite&gt; file:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap prometheus-server-conf --from-file&lt;span class="o"&gt;=&lt;/span&gt;kube/prometheus/config-v1.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now let's mount &lt;cite&gt;prometheus-server-conf&lt;/cite&gt; ConfigMap volume to our Prometheus Pod&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f kube/prometheus/deployment-v2.yaml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;and store metrics in emptyDir volume, so we don't lose them when a container in the Pod crashes.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f kube/prometheus/deployment-v3.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="sending-app-metrics"&gt;
+&lt;h2&gt;Sending App Metrics&lt;/h2&gt;
+&lt;p&gt;We have a Prometheus running in Kubernetes but we have no application to monitor.
+I wrote &lt;a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes/blob/master/hello-app/v1/main.go"&gt;hello-app/v1&lt;/a&gt; web app that exposes &lt;cite&gt;/hello&lt;/cite&gt; HTTP endpoint.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://youtu.be/HkEZ1LJ7kzQ?list=PLDWZ5uzn69eyh791ZTkEA9OaTxVpGY8_g"&gt;Björn Rabenstein in his talk&lt;/a&gt;
+explains how to instrument your code to expose metrics to Prometheus.
+Our application is not forced to use Prometheus client to expose metrics.
+We can create &lt;cite&gt;/metrics&lt;/cite&gt; HTTP endpoint manually in the following text format:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;# HELP http_requests_total Number of HTTP requests.
+# TYPE http_requests_total counter
+http_requests_total{code=&amp;quot;200&amp;quot;,method=&amp;quot;get&amp;quot;} 2384
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;But it's much easier to use a library
+(see &lt;a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes/blob/master/hello-app/v2/main.go"&gt;hello-app/v2&lt;/a&gt;).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;github.com/prometheus/client_golang/prometheus/promhttp&amp;quot;&lt;/span&gt;
+&lt;span class="c1"&gt;// ...&lt;/span&gt;
+&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Handle&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/metrics&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;promhttp&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Handler&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now the app has &lt;cite&gt;/metrics&lt;/cite&gt; endpoint with Go runtime metrics (number of goroutines, GC statistics).&lt;/p&gt;
+&lt;p&gt;Our app exposes an important endpoint &lt;cite&gt;/hello&lt;/cite&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;helloHandler&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;w&lt;/span&gt; &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ResponseWriter&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;r&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="nx"&gt;status&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;doSomeWork&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="nx"&gt;w&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;WriteHeader&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;status&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="nx"&gt;w&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Write&lt;/span&gt;&lt;span class="p"&gt;([]&lt;/span&gt;&lt;span class="nb"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Hello, World!\n&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's instrument &lt;cite&gt;helloHandler()&lt;/cite&gt; to count HTTP requests and their durations.
+First, we need to define metrics.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;github.com/prometheus/client_golang/prometheus&amp;quot;&lt;/span&gt;
+
+&lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;
+    &lt;span class="c1"&gt;// How often our /hello request durations fall into one of the defined buckets.&lt;/span&gt;
+    &lt;span class="c1"&gt;// We can use default buckets or set ones we are interested in.&lt;/span&gt;
+    &lt;span class="nx"&gt;duration&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;prometheus&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NewHistogram&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;prometheus&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;HistogramOpts&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;Name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;    &lt;span class="s"&gt;&amp;quot;hello_request_duration_seconds&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="nx"&gt;Help&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;    &lt;span class="s"&gt;&amp;quot;Histogram of the /hello request duration.&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="nx"&gt;Buckets&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;&lt;span class="kt"&gt;float64&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="mf"&gt;0.01&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.025&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.05&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.25&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;0.5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mf"&gt;2.5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;},&lt;/span&gt;
+    &lt;span class="p"&gt;})&lt;/span&gt;
+    &lt;span class="c1"&gt;// Counter vector to which we can attach labels. That creates many key-value&lt;/span&gt;
+    &lt;span class="c1"&gt;// label combinations. So in our case we count requests by status code separetly.&lt;/span&gt;
+    &lt;span class="nx"&gt;counter&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;prometheus&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NewCounterVec&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+        &lt;span class="nx"&gt;prometheus&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;CounterOpts&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="nx"&gt;Name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;hello_requests_total&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="nx"&gt;Help&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;Total number of /hello requests.&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="p"&gt;},&lt;/span&gt;
+        &lt;span class="p"&gt;[]&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;status&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;},&lt;/span&gt;
+    &lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="c1"&gt;// init registers Prometheus metrics.&lt;/span&gt;
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;init&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="nx"&gt;prometheus&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;MustRegister&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;duration&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="nx"&gt;prometheus&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;MustRegister&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;counter&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Second, measure a request duration in seconds and increase the counter in the &lt;cite&gt;helloHandler()&lt;/cite&gt; function.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;helloHandler&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;w&lt;/span&gt; &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ResponseWriter&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;r&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;status&lt;/span&gt; &lt;span class="kt"&gt;int&lt;/span&gt;
+
+    &lt;span class="k"&gt;defer&lt;/span&gt; &lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;begun&lt;/span&gt; &lt;span class="nx"&gt;time&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Time&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;duration&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Observe&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;time&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Since&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;begun&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="nx"&gt;Seconds&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+
+        &lt;span class="c1"&gt;// hello_requests_total{status=&amp;quot;200&amp;quot;} 2385&lt;/span&gt;
+        &lt;span class="nx"&gt;counter&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;With&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;prometheus&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Labels&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;quot;status&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;fmt&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Sprint&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;status&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+        &lt;span class="p"&gt;}).&lt;/span&gt;&lt;span class="nx"&gt;Inc&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="p"&gt;}(&lt;/span&gt;&lt;span class="nx"&gt;time&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Now&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+
+    &lt;span class="nx"&gt;status&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;doSomeWork&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="nx"&gt;w&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;WriteHeader&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;status&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="nx"&gt;w&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Write&lt;/span&gt;&lt;span class="p"&gt;([]&lt;/span&gt;&lt;span class="nb"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Hello, World!\n&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes/blob/master/hello-app/v3/main.go"&gt;hello-app/v3&lt;/a&gt;
+is used in further examples.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="hello-app-demo"&gt;
+&lt;h2&gt;Hello App Demo&lt;/h2&gt;
+&lt;p&gt;Next step is to run the web app in Kubernetes.
+A Docker image of the &lt;cite&gt;hello-app/v3&lt;/cite&gt; is available on Docker Hub.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f kube/hello/deployment-v1.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward hello-deployment-1471727270-eaknp 8000:8000
+&lt;span class="gp"&gt;$&lt;/span&gt; curl localhost:8000/hello
+&lt;span class="go"&gt;Hello, World!&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; curl localhost:8000/metrics
+&lt;span class="go"&gt;...&lt;/span&gt;
+&lt;span class="gp"&gt;#&lt;/span&gt; HELP hello_request_duration_seconds Histogram of the /hello request duration.
+&lt;span class="gp"&gt;#&lt;/span&gt; TYPE hello_request_duration_seconds histogram
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;0.01&amp;quot;} 0&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;0.025&amp;quot;} 0&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;0.05&amp;quot;} 0&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;0.1&amp;quot;} 1&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;0.25&amp;quot;} 1&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;0.5&amp;quot;} 1&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;1&amp;quot;} 1&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;2.5&amp;quot;} 1&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;5&amp;quot;} 1&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;10&amp;quot;} 1&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_bucket{le=&amp;quot;+Inf&amp;quot;} 1&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_sum 0.083953974&lt;/span&gt;
+&lt;span class="go"&gt;hello_request_duration_seconds_count 1&lt;/span&gt;
+&lt;span class="gp"&gt;#&lt;/span&gt; HELP hello_requests_total Total number of /hello requests.
+&lt;span class="gp"&gt;#&lt;/span&gt; TYPE hello_requests_total counter
+&lt;span class="go"&gt;hello_requests_total{status=&amp;quot;500&amp;quot;} 1&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The Service creation is similar to what we have already done before.
+We use &lt;cite&gt;32515&lt;/cite&gt; NodePort here.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f kube/hello/service-v1.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; gcloud compute firewall-rules create hello-nodeport --allow&lt;span class="o"&gt;=&lt;/span&gt;tcp:32515
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now it is possible to see the app's metrics from Internet.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl http://&amp;lt;EXTERNAL_IP&amp;gt;:32515/metrics
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="hello-prometheus"&gt;
+&lt;h2&gt;Hello Prometheus&lt;/h2&gt;
+&lt;p&gt;Since the web app is run on Kubernetes, we can configure Prometheus
+to scrape metrics from &lt;cite&gt;/metrics&lt;/cite&gt; HTTP endpoint of hello-app Pods.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;global&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;scrape_interval&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;5s&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;evaluation_interval&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;5s&lt;/span&gt;
+
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;scrape_configs&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;job_name&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;prometheus&amp;#39;&lt;/span&gt;
+    &lt;span class="l l-Scalar l-Scalar-Plain"&gt;static_configs&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;targets&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="p p-Indicator"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;localhost:9090&amp;#39;&lt;/span&gt;&lt;span class="p p-Indicator"&gt;]&lt;/span&gt;
+
+  &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;job_name&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;hello&amp;#39;&lt;/span&gt;
+    &lt;span class="c1"&gt;# The information to access the Kubernetes API to discover targets.&lt;/span&gt;
+    &lt;span class="l l-Scalar l-Scalar-Plain"&gt;kubernetes_sd_configs&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;api_servers&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+        &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;https://kubernetes.default.svc&amp;#39;&lt;/span&gt;
+        &lt;span class="c1"&gt;# Prometheus assumes it is being run inside a Kubernetes pod.&lt;/span&gt;
+        &lt;span class="l l-Scalar l-Scalar-Plain"&gt;in_cluster&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;true&lt;/span&gt;
+        &lt;span class="c1"&gt;# Only pods should be discovered.&lt;/span&gt;
+        &lt;span class="l l-Scalar l-Scalar-Plain"&gt;role&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;pod&lt;/span&gt;
+    &lt;span class="c1"&gt;# Prometheus collects metrics from pods with &amp;quot;app: hello-server&amp;quot; label.&lt;/span&gt;
+    &lt;span class="c1"&gt;# Prometheus gets &amp;#39;hello_requests_total{status=&amp;quot;500&amp;quot;} 1&amp;#39;&lt;/span&gt;
+    &lt;span class="c1"&gt;# from hello:8000/metrics and adds &amp;quot;job&amp;quot; and &amp;quot;instance&amp;quot; labels, so it becomes&lt;/span&gt;
+    &lt;span class="c1"&gt;# &amp;#39;hello_requests_total{instance=&amp;quot;10.16.0.10:8000&amp;quot;,job=&amp;quot;hello&amp;quot;,status=&amp;quot;500&amp;quot;} 1&amp;#39;.&lt;/span&gt;
+    &lt;span class="l l-Scalar l-Scalar-Plain"&gt;relabel_configs&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+      &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;source_labels&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="p p-Indicator"&gt;[&lt;/span&gt;&lt;span class="nv"&gt;__meta_kubernetes_pod_label_app&lt;/span&gt;&lt;span class="p p-Indicator"&gt;]&lt;/span&gt;
+        &lt;span class="l l-Scalar l-Scalar-Plain"&gt;regex&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;hello-server&lt;/span&gt;
+        &lt;span class="l l-Scalar l-Scalar-Plain"&gt;action&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;keep&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Update a ConfigMap of Prometheus config and re-create a Prometheus Pod so it picks up changes.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap prometheus-server-conf &lt;span class="se"&gt;\&lt;/span&gt;
+&lt;span class="go"&gt;    --from-file=kube/prometheus/config-v2.yaml \&lt;/span&gt;
+&lt;span class="go"&gt;    -o yaml \&lt;/span&gt;
+&lt;span class="go"&gt;    --dry-run | kubectl replace -f -&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Finally, the app's metrics should show up in Prometheus expression browser &lt;cite&gt;http://&amp;lt;EXTERNAL_IP&amp;gt;:32514&lt;/cite&gt;.&lt;/p&gt;
+&lt;p&gt;You can try to query &lt;cite&gt;hello_requests_total&lt;/cite&gt; which shows how many requests we've served since the beginning.
+Let's see how many requests we've served in last 5 minutes normalised per second (QPS)
+with &lt;cite&gt;rate(hello_requests_total[5m])&lt;/cite&gt; query.&lt;/p&gt;
+&lt;p&gt;Here I gave an example of how to run Prometheus in Kubernetes cluster
+and collect metrics from a simple web app.
+However recently I have encountered CoreOS &lt;a class="reference external" href="https://github.com/coreos/kube-prometheus"&gt;kube-prometheus&lt;/a&gt;
+which makes it easier. Have a look at &lt;a class="reference external" href="https://coreos.com/blog/the-prometheus-operator.html"&gt;The Prometheus Operator: Managed Prometheus setups for Kubernetes&lt;/a&gt; for more details.&lt;/p&gt;
+&lt;/div&gt;
+</summary><category term="prometheus"></category><category term="kubernetes"></category><category term="monitoring"></category><category term="golang"></category><category term="Google Container Engine"></category></entry><entry><title>Slides about SaltStack</title><link href="http://marselester.com/saltstack-slides.html" rel="alternate"></link><published>2013-12-03T00:00:00+07:00</published><updated>2013-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-03:saltstack-slides.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
 Thailand on 12 Dec 2013. We compared Salt and &lt;a class="reference external" href="http://slid.es/simonrobson/ansible"&gt;Ansible&lt;/a&gt;.
 Here are my slides.&lt;/p&gt;
-&lt;iframe src="http://slid.es/marselester/saltstack/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;</summary><category term="salt"></category><category term="saltstack"></category><category term="slides"></category><category term="talk"></category></entry><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-28:developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
+&lt;iframe src="http://slid.es/marselester/saltstack/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;</summary><category term="salt"></category><category term="saltstack"></category><category term="slides"></category><category term="talk"></category></entry><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-28T00:00:00+07:00</published><updated>2013-11-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-28:developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
 but deployment was not considered in the &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
 &lt;p&gt;Server configuration is different from local, thus environments will be needed
 (at least production &lt;strong&gt;prod&lt;/strong&gt; and development &lt;strong&gt;dev&lt;/strong&gt;). Salt uses &lt;strong&gt;base&lt;/strong&gt;
@@ -172,7 +476,7 @@ which will be deployed.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl -i messaging-part-2
 &lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.com/developing-django-project-with-saltstack.html" rel="alternate"></link><updated>2013-11-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-09:developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
+</summary><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.com/developing-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-09T00:00:00+07:00</published><updated>2013-11-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-09:developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
 run in VirtualBox which is managed by Vagrant. Infrastructure management
 is provided by SaltStack.&lt;/p&gt;
 &lt;p&gt;I advise you to create separate folder for repositories (currently there
