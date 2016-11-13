@@ -22,10 +22,9 @@ SOCIAL = (
     ('Medium', 'https://medium.com/@marselester/'),
     ('Twitter', 'http://twitter.com/marselester'),
     ('Facebook', 'http://www.facebook.com/marselester'),
-    (u'Мой Круг', 'http://mmavletkulov.moikrug.ru/'),
 )
 
-THEME = 'tuxlite_zf'
+THEME = '../../pelican-themes/tuxlite_zf'
 RELATIVE_URLS = False
 
 PLUGIN_PATHS = ['../../pelican-plugins']
