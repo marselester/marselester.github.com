@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - aws</title>
+    <title>Minukube & Amazon EC2 Container Registry</title>
 
     <link rel="stylesheet" href="http://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="http://marselester.com/theme/css/foundation.min.css" />
@@ -44,16 +44,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="http://marselester.com/minukube-aws-ecr.html" rel="bookmark"
+        title="Permalink to Minukube & Amazon EC2 Container Registry">Minukube &amp; Amazon EC2 Container Registry</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="http://marselester.com/minukube-aws-ecr.html"><h3 class="article-title">Minukube &amp; Amazon EC2 Container Registry</h3></a>
 <h6 class="subheader" title="2016-12-05T00:00:00+07:00">Mon 05 December 2016
 </h6>
 
 
-<p><a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minukube</a> is an easy way to run Kubernetes locally.
+    <p><a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minukube</a> is an easy way to run Kubernetes locally.
 When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
 we can configure our Docker client to communicate with the Minikube Docker daemon.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
@@ -125,6 +127,7 @@ Note that we've added <strong>imagePullSecrets</strong> which references our pri
 <span class="go">&#39;</span>
 </pre></div>
 <p>Kubernetes should be able to pull the image from Amazon Container Registry.</p>
+
 <p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
@@ -135,44 +138,22 @@ Note that we've added <strong>imagePullSecrets</strong> which references our pri
 
 
 
-<p><a href="http://marselester.com/minukube-aws-ecr.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "minukube-aws-ecr.html";
+        var disqus_url = "http://marselester.com/minukube-aws-ecr.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/python-developer-at-uploadcare.html"><h3 class="article-title">Python Developer at Uploadcare</h3></a>
-<h6 class="subheader" title="2013-07-31T00:00:00+07:00">Wed 31 July 2013
-</h6>
-
-
-<p>I started to look for a full-time remote job as a Python Developer after
-<a class="reference external" href="http://fangid.com/">FanGid</a> contract has been ended. And I found what
-I was looking for -- <a class="reference external" href="https://uploadcare.com">Uploadcare</a>, a cloud-based
-file upload SaaS -- <a class="reference external" href="https://github.com/uploadcare?tab=members">great team</a>,
-appropriate development process, adherence to quality standards.</p>
-<p>I started to work at Uploadcare from tasks ...</p><p class="subheader">Category: <a href="http://marselester.com/category/portfolio.html">Portfolio</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/python.html">python </a>
-    <a href="http://marselester.com/tag/django.html">django </a>
-    <a href="http://marselester.com/tag/tornado.html">tornado </a>
-    <a href="http://marselester.com/tag/flask.html">flask </a>
-    <a href="http://marselester.com/tag/aws.html">aws </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/python-developer-at-uploadcare.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/python-developer-at-uploadcare.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

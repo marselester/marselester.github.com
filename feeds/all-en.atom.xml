@@ -1,5 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/all-en.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2016-11-13T00:00:00+07:00</updated><entry><title>Prometheus on Kubernetes</title><link href="http://marselester.com/prometheus-on-kubernetes.html" rel="alternate"></link><published>2016-11-13T00:00:00+07:00</published><updated>2016-11-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-11-13:prometheus-on-kubernetes.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; is a monitoring toolkit.
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/all-en.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2016-12-05T00:00:00+07:00</updated><entry><title>Minukube &amp; Amazon EC2 Container Registry</title><link href="http://marselester.com/minukube-aws-ecr.html" rel="alternate"></link><published>2016-12-05T00:00:00+07:00</published><updated>2016-12-05T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-12-05:minukube-aws-ecr.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/"&gt;Minukube&lt;/a&gt; is an easy way to run Kubernetes locally.
+When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
+we can configure our Docker client to communicate with the Minikube Docker daemon.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; minikube start
+&lt;span class="go"&gt;Starting local Kubernetes cluster...&lt;/span&gt;
+&lt;span class="go"&gt;Kubectl is now configured to use the cluster.&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;eval&lt;/span&gt; &lt;span class="k"&gt;$(&lt;/span&gt;minikube docker-env&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; docker build -t fizz/bazz:latest .
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;What if we need to create a Kubernetes Deployment which pulls a Docker image from AWS ECR?&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create -f - &lt;span class="o"&gt;&amp;lt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;apiVersion: extensions/v1beta1&lt;/span&gt;
+&lt;span class="go"&gt;kind: Deployment&lt;/span&gt;
+&lt;span class="go"&gt;metadata:&lt;/span&gt;
+&lt;span class="go"&gt;  name: my-deployment&lt;/span&gt;
+&lt;span class="go"&gt;spec:&lt;/span&gt;
+&lt;span class="go"&gt;  replicas: 1&lt;/span&gt;
+&lt;span class="go"&gt;  template:&lt;/span&gt;
+&lt;span class="go"&gt;    metadata:&lt;/span&gt;
+&lt;span class="go"&gt;      labels:&lt;/span&gt;
+&lt;span class="go"&gt;        app: my-app-name&lt;/span&gt;
+&lt;span class="go"&gt;    spec:&lt;/span&gt;
+&lt;span class="go"&gt;      containers:&lt;/span&gt;
+&lt;span class="go"&gt;        - name: my-container-name&lt;/span&gt;
+&lt;span class="go"&gt;          image: 4338991606.dkr.ecr.eu-west-1.amazonaws.com/fizz/bazz:latest&lt;/span&gt;
+&lt;span class="go"&gt;&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Kubernetes will fail to get the image due to authentication error (no credentials).
+One of the solutions is to use &lt;a class="reference external" href="http://kubernetes.io/docs/user-guide/images/#specifying-imagepullsecrets-on-a-pod"&gt;imagePullSecrets&lt;/a&gt;.
+The following command creates a secret for use with a Docker registry.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create secret docker-registry my-docker-credentials &lt;span class="se"&gt;\&lt;/span&gt;
+&lt;span class="go"&gt;    --docker-server=DOCKER_REGISTRY_SERVER \&lt;/span&gt;
+&lt;span class="go"&gt;    --docker-username=DOCKER_USER \&lt;/span&gt;
+&lt;span class="go"&gt;    --docker-password=DOCKER_PASSWORD \&lt;/span&gt;
+&lt;span class="go"&gt;    --docker-email=DOCKER_EMAIL&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Firstly, let's obtain &lt;strong&gt;DOCKER_USER&lt;/strong&gt; and &lt;strong&gt;DOCKER_PASSWORD&lt;/strong&gt;.
+For that, we'll need &lt;strong&gt;awscli&lt;/strong&gt; Python library and environment variables
+&lt;strong&gt;AWS_ACCESS_KEY_ID&lt;/strong&gt; and &lt;strong&gt;AWS_SECRET_ACCESS_KEY&lt;/strong&gt; set up.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; pip install awscli
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;export&lt;/span&gt; &lt;span class="nv"&gt;AWS_ACCESS_KEY_ID&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;AKIAI44QH8DHBEXAMPLE&amp;#39;&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;export&lt;/span&gt; &lt;span class="nv"&gt;AWS_SECRET_ACCESS_KEY&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Log in to Amazon ECR registry.
+This aws command will display &lt;strong&gt;$ docker login&lt;/strong&gt; command. From its output we conclude that
+&lt;strong&gt;DOCKER_USER&lt;/strong&gt; is &lt;strong&gt;AWS&lt;/strong&gt;, &lt;strong&gt;DOCKER_PASSWORD&lt;/strong&gt; is &lt;strong&gt;SomeVeryLongToken&lt;/strong&gt; and &lt;strong&gt;DOCKER_REGISTRY_SERVER&lt;/strong&gt;
+is &lt;strong&gt;https://4338991606.dkr.ecr.eu-west-1.amazonaws.com&lt;/strong&gt; respectively.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; aws ecr get-login --region eu-west-1
+&lt;span class="go"&gt;docker login -u AWS -p SomeVeryLongToken -e none https://4338991606.dkr.ecr.eu-west-1.amazonaws.com&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now it is time to create a docker-registry secret and update the Deployment manifest.
+Note that we've added &lt;strong&gt;imagePullSecrets&lt;/strong&gt; which references our private registry.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f - &lt;span class="o"&gt;&amp;lt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;apiVersion: extensions/v1beta1&lt;/span&gt;
+&lt;span class="go"&gt;kind: Deployment&lt;/span&gt;
+&lt;span class="go"&gt;metadata:&lt;/span&gt;
+&lt;span class="go"&gt;  name: my-deployment&lt;/span&gt;
+&lt;span class="go"&gt;spec:&lt;/span&gt;
+&lt;span class="go"&gt;  replicas: 1&lt;/span&gt;
+&lt;span class="go"&gt;  template:&lt;/span&gt;
+&lt;span class="go"&gt;    metadata:&lt;/span&gt;
+&lt;span class="go"&gt;      labels:&lt;/span&gt;
+&lt;span class="go"&gt;        app: my-app-name&lt;/span&gt;
+&lt;span class="go"&gt;    spec:&lt;/span&gt;
+&lt;span class="go"&gt;      containers:&lt;/span&gt;
+&lt;span class="go"&gt;        - name: my-container-name&lt;/span&gt;
+&lt;span class="go"&gt;          image: 4338991606.dkr.ecr.eu-west-1.amazonaws.com/fizz/bazz:latest&lt;/span&gt;
+&lt;span class="go"&gt;      imagePullSecrets:&lt;/span&gt;
+&lt;span class="go"&gt;        - name: my-docker-credentials&lt;/span&gt;
+&lt;span class="go"&gt;&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Kubernetes should be able to pull the image from Amazon Container Registry.&lt;/p&gt;
+</summary><category term="kubernetes"></category><category term="aws"></category><category term="minukube"></category></entry><entry><title>Prometheus on Kubernetes</title><link href="http://marselester.com/prometheus-on-kubernetes.html" rel="alternate"></link><published>2016-11-13T00:00:00+07:00</published><updated>2016-11-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-11-13:prometheus-on-kubernetes.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; is a monitoring toolkit.
 Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
 from &lt;a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes"&gt;hello web application&lt;/a&gt;
 which also runs in the same cluster.&lt;/p&gt;
