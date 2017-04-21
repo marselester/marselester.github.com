@@ -17,11 +17,9 @@ MENUITEMS = (
 
 SOCIAL = (
     ('GitHub', 'https://github.com/marselester'),
-    ('LinkedIn', 'http://www.linkedin.com/in/marselester'),
-    ('Instagram', 'http://instagram.com/marselester'),
     ('Medium', 'https://medium.com/@marselester/'),
     ('Twitter', 'http://twitter.com/marselester'),
-    ('Facebook', 'http://www.facebook.com/marselester'),
+    ('Instagram', 'http://instagram.com/marselester'),
 )
 
 THEME = '../../pelican-themes/tuxlite_zf'
