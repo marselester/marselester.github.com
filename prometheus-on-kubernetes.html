@@ -31,7 +31,6 @@
     <ul class="button-group navigation">
     <li><a href="http://marselester.com/cv/" class="button secondary small">CV</a></li>
 
-            <li><a href="http://marselester.com/pages/about.html" class="button secondary small">About</a></li>
     </ul>
 </div>
 </div>
@@ -72,11 +71,11 @@ If there are any issues, check out <a class="reference external" href="https://w
 <div class="section" id="first-start">
 <h2>First Start</h2>
 <p>Prometheus is available as Docker image and can be run locally quickly.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker run -p 9090:9090 prom/prometheus:v1.2.1
+<div class="highlight"><pre><span></span><span class="gp">$</span> docker run -p <span class="m">9090</span>:9090 prom/prometheus:v1.2.1
 </pre></div>
 <p>When a container is started, the Prometheus expression browser should be accessible on <cite>http://localhost:9090</cite>.
 Now let's achieve the same results with Kubernetes.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl run prometheus-deployment --image<span class="o">=</span>prom/prometheus:v1.2.1 --port<span class="o">=</span>9090
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl run prometheus-deployment --image<span class="o">=</span>prom/prometheus:v1.2.1 --port<span class="o">=</span><span class="m">9090</span>
 </pre></div>
 <p>The command above created <a class="reference external" href="http://kubernetes.io/docs/user-guide/deployments/">Kubernetes Deployment</a>
 that runs <cite>prometheus</cite> Docker image.</p>
@@ -93,7 +92,7 @@ To see whether Prometheus started up, we can run a proxy between terminal and Ku
 <span class="gp">$</span> curl http://127.0.0.1:8001/api/v1/proxy/namespaces/default/pods/prometheus-deployment-2234044252-of29y:9090/metrics
 </pre></div>
 <p>Another option is to run a port forwarding:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl port-forward prometheus-deployment-2234044252-of29y 8080:9090
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl port-forward prometheus-deployment-2234044252-of29y <span class="m">8080</span>:9090
 <span class="gp">$</span> curl http://127.0.0.1:8080/metrics
 </pre></div>
 <p>Check Prometheus container logs:</p>
@@ -280,7 +279,7 @@ is used in further examples.</p>
 <p>Next step is to run the web app in Kubernetes.
 A Docker image of the <cite>hello-app/v3</cite> is available on Docker Hub.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f kube/hello/deployment-v1.yml
-<span class="gp">$</span> kubectl port-forward hello-deployment-1471727270-eaknp 8000:8000
+<span class="gp">$</span> kubectl port-forward hello-deployment-1471727270-eaknp <span class="m">8000</span>:8000
 <span class="gp">$</span> curl localhost:8000/hello
 <span class="go">Hello, World!</span>
 <span class="gp">$</span> curl localhost:8000/metrics
@@ -346,9 +345,9 @@ to scrape metrics from <cite>/metrics</cite> HTTP endpoint of hello-app Pods.</p
 </pre></div>
 <p>Update a ConfigMap of Prometheus config and re-create a Prometheus Pod so it picks up changes.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf <span class="se">\</span>
-<span class="go">    --from-file=kube/prometheus/config-v2.yaml \</span>
-<span class="go">    -o yaml \</span>
-<span class="go">    --dry-run | kubectl replace -f -</span>
+    --from-file<span class="o">=</span>kube/prometheus/config-v2.yaml <span class="se">\</span>
+    -o yaml <span class="se">\</span>
+    --dry-run <span class="p">|</span> kubectl replace -f -
 </pre></div>
 <p>Finally, the app's metrics should show up in Prometheus expression browser <cite>http://&lt;EXTERNAL_IP&gt;:32514</cite>.</p>
 <p>You can try to query <cite>hello_requests_total</cite> which shows how many requests we've served since the beginning.
@@ -413,11 +412,9 @@ which makes it easier. Have a look at <a class="reference external" href="https:
         <h5 class="sidebar-title">Social</h5>
         <ul class="side-nav">
             <li><a href="https://github.com/marselester">GitHub</a></li>
-            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
-            <li><a href="http://instagram.com/marselester">Instagram</a></li>
             <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
-            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+            <li><a href="http://instagram.com/marselester">Instagram</a></li>
         </ul>
 
     </aside> <!-- End Sidebar -->

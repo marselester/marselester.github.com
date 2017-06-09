@@ -1,5 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/all-en.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2016-12-05T00:00:00+07:00</updated><entry><title>Minukube &amp; Amazon EC2 Container Registry</title><link href="http://marselester.com/minukube-aws-ecr.html" rel="alternate"></link><published>2016-12-05T00:00:00+07:00</published><updated>2016-12-05T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-12-05:minukube-aws-ecr.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/"&gt;Minukube&lt;/a&gt; is an easy way to run Kubernetes locally.
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/all-en.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2017-06-09T00:00:00+07:00</updated><entry><title>Instrumenting Django with Prometheus and StatsD</title><link href="http://marselester.com/django-prometheus-via-statsd.html" rel="alternate"></link><published>2017-06-09T00:00:00+07:00</published><updated>2017-06-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2017-06-09:/django-prometheus-via-statsd.html</id><summary type="html">&lt;p&gt;If you ever wondered how to monitor your Django application with Prometheus this article is for you.
+Quick search on the topic will lead you to &lt;a class="reference external" href="https://github.com/korfuri/django-prometheus/"&gt;django-prometheus&lt;/a&gt;.
+For those who don't want to use it, there is another way to export application metrics
+via &lt;a class="reference external" href="https://www.datadoghq.com/blog/statsd/"&gt;StatsD&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The idea is to send …&lt;/p&gt;</summary><content type="html">&lt;p&gt;If you ever wondered how to monitor your Django application with Prometheus this article is for you.
+Quick search on the topic will lead you to &lt;a class="reference external" href="https://github.com/korfuri/django-prometheus/"&gt;django-prometheus&lt;/a&gt;.
+For those who don't want to use it, there is another way to export application metrics
+via &lt;a class="reference external" href="https://www.datadoghq.com/blog/statsd/"&gt;StatsD&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The idea is to send metrics from Django by StatsD Python library to StatsD server over UDP.
+Here is an example of incrementing &amp;quot;hello.requests.total&amp;quot; metric every time &amp;quot;say_hello&amp;quot; view is run.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;statsd.defaults.django&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;statsd&lt;/span&gt;
+
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.http&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;HttpResponse&lt;/span&gt;
+
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;say_hello&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;request&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;statsd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;incr&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;hello.requests.total&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;HttpResponse&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;Hello, World!&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;StatsD server aggregates measurements over time and flushes them into monitoring backend.
+Here &lt;a class="reference external" href="https://github.com/prometheus/statsd_exporter"&gt;statsd_exporter&lt;/a&gt; comes into play.
+It uses the same UDP protocol as StatsD server and exports StatsD-style metrics as Prometheus metrics,
+so &amp;quot;hello.requests.total&amp;quot; becomes &amp;quot;hello_requests_total_counter&amp;quot;.&lt;/p&gt;
+&lt;p&gt;All we need is to configure Django to send metrics to statsd_exporter daemon.
+Let's set up &amp;quot;Olympus&amp;quot; Django project to demonstrate StatsD integration or
+you can get it from &lt;a class="reference external" href="https://github.com/marselester/django-prometheus-via-statsd"&gt;github.com/marselester/django-prometheus-via-statsd&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; virtualenv venv
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;source&lt;/span&gt; ./venv/bin/activate
+&lt;span class="gp"&gt;$&lt;/span&gt; pip install &lt;span class="nv"&gt;Django&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;.11.1 &lt;span class="nv"&gt;statsd&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="m"&gt;3&lt;/span&gt;.2.1
+&lt;span class="gp"&gt;$&lt;/span&gt; django-admin.py startproject olympus .
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;These two lines of Django settings &lt;cite&gt;./olympus/settings.py&lt;/cite&gt; configure a default StatsD client
+that is used in the &amp;quot;say_hello&amp;quot; Django view.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# statsd_exporter daemon listens to UDP at localhost:8125&lt;/span&gt;
+&lt;span class="n"&gt;STATSD_HOST&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;localhost&amp;#39;&lt;/span&gt;
+&lt;span class="n"&gt;STATSD_PORT&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;8125&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Assuming &amp;quot;say_hello&amp;quot; is available at &amp;quot;/hello&amp;quot; URL path, we can start a web server.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; python manage.py runserver
+&lt;span class="gp"&gt;$&lt;/span&gt; curl http://localhost:8000/hello
+&lt;span class="go"&gt;Hello, World!&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The Olympus application is ready to emit metrics. To make sure this is the case,
+we can use tcpdump to capture UDP packets on loopback interface on port 8125
+and print each packet in ASCII.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; tcpdump -i lo0 udp port &lt;span class="m"&gt;8125&lt;/span&gt; -A
+&lt;span class="go"&gt;tcpdump: verbose output suppressed, use -v or -vv for full protocol decode&lt;/span&gt;
+&lt;span class="go"&gt;listening on lo0, link-type NULL (BSD loopback), capture size 262144 bytes&lt;/span&gt;
+&lt;span class="go"&gt;11:19:05.460810 IP localhost.57776 &amp;gt; localhost.8125: UDP, length 24&lt;/span&gt;
+&lt;span class="go"&gt;E..4....@................ .3hello.requests.total:1|c&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;As we can see, &amp;quot;hello.requests.total:1|c&amp;quot; is sent every time we hit &lt;cite&gt;http://localhost:8000/hello&lt;/cite&gt;.&lt;/p&gt;
+&lt;div class="section" id="id1"&gt;
+&lt;h2&gt;StatsD Exporter&lt;/h2&gt;
+&lt;p&gt;Since we have StatsD metrics being sent, we can expose them for Prometheus via statsd_exporter.
+Let's download the latest version and install it (the binary will be in &amp;quot;$GOPATH/bin/&amp;quot;).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; go get -u github.com/prometheus/statsd_exporter
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Run statsd_exporter so it gets StatsD metrics from our Django application.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; statsd_exporter -statsd.listen-address&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;localhost:8125&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;By default it exposes generated Prometheus metrics at &lt;a class="reference external" href="http://localhost:9102/metrics"&gt;http://localhost:9102/metrics&lt;/a&gt;.
+Check out the output, among many metrics there will be our counter from &amp;quot;say_hello&amp;quot; view.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;# HELP hello_requests_total_counter Metric autogenerated by statsd_exporter.
+# TYPE hello_requests_total_counter counter
+hello_requests_total_counter 2
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="run-everything-on-kubernetes"&gt;
+&lt;h2&gt;Run Everything on Kubernetes&lt;/h2&gt;
+&lt;p&gt;Of course we will deploy everything on Kubernetes.
+Minikube will help us here.
+Minukube is an easy way to run Kubernetes locally.
+When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
+we can configure our Docker client to communicate with the Minikube Docker daemon.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; minikube start
+&lt;span class="go"&gt;Starting local Kubernetes cluster...&lt;/span&gt;
+&lt;span class="go"&gt;Kubectl is now configured to use the cluster.&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;eval&lt;/span&gt; &lt;span class="k"&gt;$(&lt;/span&gt;minikube docker-env&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;div class="section" id="django-application"&gt;
+&lt;h3&gt;Django application&lt;/h3&gt;
+&lt;p&gt;First, we shall deploy our Django application with statsd_exporter running in the same Kubernetes Pod.
+It exposes 8000 (uWSGI) and 9102 (statsd_exporter's generated Prometheus metrics) container ports.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; docker build -t marselester/olympus:v1.0.0 ./olympus-app/
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f ./kube/olympus-app/deployment.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f ./kube/olympus-app/service.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Though we don't need Nginx in the demo, it's ubiquitous on production servers.
+Nginx proxies HTTP requests using uWSGI protocol to &amp;quot;olympus-service&amp;quot; Kubernetes Service
+we created above.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap olympus-nginx-conf --from-file&lt;span class="o"&gt;=&lt;/span&gt;./kube/nginx/olympus.conf
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f ./kube/nginx/deployment.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="prometheus"&gt;
+&lt;h3&gt;Prometheus&lt;/h3&gt;
+&lt;p&gt;Next is Prometheus server's turn to be deployed. It is configured to scrape
+own metrics from 9102 port and metrics from Pods that have &amp;quot;app: olympus&amp;quot; label.&lt;/p&gt;
+&lt;p&gt;Prometheus server listens on port 9090. On production servers you'll likely run
+it behind Nginx with basic authentication and make it accessible via VPN only.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap prometheus-server-conf --from-file&lt;span class="o"&gt;=&lt;/span&gt;./kube/prometheus/prometheus.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f ./kube/prometheus/deployment.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;But in our case we'll use Kubernetes port forwarding to test whether Django
+metrics show up in Prometheus dashboard.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward nginx-deployment-3580857522-tn332 &lt;span class="m"&gt;8080&lt;/span&gt;:80
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward prometheus-deployment-2456821496-8zdg8 &lt;span class="m"&gt;9090&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; curl http://localhost:8080/hello
+&lt;span class="go"&gt;Hello, World!&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&amp;quot;hello_requests_total_counter&amp;quot; should be searchable at the expression browser
+&lt;a class="reference external" href="http://localhost:9090/graph"&gt;http://localhost:9090/graph&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="prometheus-helm-chart"&gt;
+&lt;h3&gt;Prometheus Helm Chart&lt;/h3&gt;
+&lt;p&gt;There are other ways to install Prometheus on Kubernetes:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://github.com/kubernetes/charts/tree/master/stable/prometheus"&gt;Helm&lt;/a&gt; (recommended Kubernetes &amp;gt;= 1.4.1)&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://github.com/coreos/prometheus-operator"&gt;Prometheus Operator&lt;/a&gt; (requires Kubernetes &amp;gt;= 1.5.0)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Prometheus Operator and Helm look awesome, though I have not played with Operator yet.
+Here is how you can set up Prometheus via Helm (package manager for Kubernetes).
+You will need the Helm client&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; brew install kubernetes-helm
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;and Helm server (Tiller). The following command installs it into the Kubernetes cluster.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; helm init
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now you can install Prometheus Helm package (chart).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; helm repo update
+&lt;span class="gp"&gt;$&lt;/span&gt; helm install --name team-ops stable/prometheus
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Nice, we have full-blown Prometheus &amp;quot;team-ops&amp;quot; chart release running
+with alert manager and node exporter.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; helm list
+&lt;span class="go"&gt;NAME        REVISION    UPDATED                     STATUS      CHART               NAMESPACE&lt;/span&gt;
+&lt;span class="go"&gt;team-ops    1           Thu Jun  8 21:40:29 2017    DEPLOYED    prometheus-3.0.2    default&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's add one more Prometheus to the cluster (call it &amp;quot;team-dev&amp;quot;),
+but this time we want only Prometheus server with a custom prometheus.yml config.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; helm install --name team-dev &lt;span class="se"&gt;\&lt;/span&gt;
+    --set alertmanager.enabled&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;false&lt;/span&gt; &lt;span class="se"&gt;\&lt;/span&gt;
+    --set kubeStateMetrics.enabled&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;false&lt;/span&gt; &lt;span class="se"&gt;\&lt;/span&gt;
+    --set nodeExporter.enabled&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;false&lt;/span&gt; &lt;span class="se"&gt;\&lt;/span&gt;
+    stable/prometheus
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The config is stored in &amp;quot;team-dev-prometheus-server&amp;quot; ConfigMap.
+Let's overwrite it with our prometheus.yml.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap team-dev-prometheus-server &lt;span class="se"&gt;\&lt;/span&gt;
+    --from-file&lt;span class="o"&gt;=&lt;/span&gt;./kube/prometheus/prometheus.yml &lt;span class="se"&gt;\&lt;/span&gt;
+    -o yaml &lt;span class="se"&gt;\&lt;/span&gt;
+    --dry-run &lt;span class="p"&gt;|&lt;/span&gt; kubectl replace -f -
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To see whether &amp;quot;team-dev&amp;quot; Prometheus started, we can run a port forwarding:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward team-dev-prometheus-server-4131857549-c98j0 &lt;span class="m"&gt;9091&lt;/span&gt;:9090
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Prometheus &amp;quot;team-dev&amp;quot; release is accessible at &lt;a class="reference external" href="http://localhost:9091/graph"&gt;http://localhost:9091/graph&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I hope this helps. Cheers!&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</content><category term="django"></category><category term="prometheus"></category><category term="kubernetes"></category><category term="monitoring"></category><category term="statsd"></category><category term="helm"></category></entry><entry><title>Minukube &amp; Amazon EC2 Container Registry</title><link href="http://marselester.com/minukube-aws-ecr.html" rel="alternate"></link><published>2016-12-05T00:00:00+07:00</published><updated>2016-12-05T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-12-05:/minukube-aws-ecr.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/"&gt;Minukube&lt;/a&gt; is an easy way to run Kubernetes locally.
+When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
+we can configure our Docker client to communicate with the Minikube Docker daemon.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; minikube start
+&lt;span class="go"&gt;Starting local Kubernetes cluster...&lt;/span&gt;
+&lt;span class="go"&gt;Kubectl is now configured to …&lt;/span&gt;&lt;/pre&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;&lt;a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/"&gt;Minukube&lt;/a&gt; is an easy way to run Kubernetes locally.
 When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
 we can configure our Docker client to communicate with the Minikube Docker daemon.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; minikube start
@@ -30,10 +196,10 @@ we can configure our Docker client to communicate with the Minikube Docker daemo
 One of the solutions is to use &lt;a class="reference external" href="http://kubernetes.io/docs/user-guide/images/#specifying-imagepullsecrets-on-a-pod"&gt;imagePullSecrets&lt;/a&gt;.
 The following command creates a secret for use with a Docker registry.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create secret docker-registry my-docker-credentials &lt;span class="se"&gt;\&lt;/span&gt;
-&lt;span class="go"&gt;    --docker-server=DOCKER_REGISTRY_SERVER \&lt;/span&gt;
-&lt;span class="go"&gt;    --docker-username=DOCKER_USER \&lt;/span&gt;
-&lt;span class="go"&gt;    --docker-password=DOCKER_PASSWORD \&lt;/span&gt;
-&lt;span class="go"&gt;    --docker-email=DOCKER_EMAIL&lt;/span&gt;
+    --docker-server&lt;span class="o"&gt;=&lt;/span&gt;DOCKER_REGISTRY_SERVER &lt;span class="se"&gt;\&lt;/span&gt;
+    --docker-username&lt;span class="o"&gt;=&lt;/span&gt;DOCKER_USER &lt;span class="se"&gt;\&lt;/span&gt;
+    --docker-password&lt;span class="o"&gt;=&lt;/span&gt;DOCKER_PASSWORD &lt;span class="se"&gt;\&lt;/span&gt;
+    --docker-email&lt;span class="o"&gt;=&lt;/span&gt;DOCKER_EMAIL
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Firstly, let's obtain &lt;strong&gt;DOCKER_USER&lt;/strong&gt; and &lt;strong&gt;DOCKER_PASSWORD&lt;/strong&gt;.
 For that, we'll need &lt;strong&gt;awscli&lt;/strong&gt; Python library and environment variables
@@ -71,7 +237,12 @@ Note that we've added &lt;strong&gt;imagePullSecrets&lt;/strong&gt; which refere
 &lt;span class="go"&gt;&amp;#39;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Kubernetes should be able to pull the image from Amazon Container Registry.&lt;/p&gt;
-</summary><category term="kubernetes"></category><category term="aws"></category><category term="minukube"></category></entry><entry><title>Prometheus on Kubernetes</title><link href="http://marselester.com/prometheus-on-kubernetes.html" rel="alternate"></link><published>2016-11-13T00:00:00+07:00</published><updated>2016-11-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-11-13:prometheus-on-kubernetes.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; is a monitoring toolkit.
+</content><category term="kubernetes"></category><category term="aws"></category><category term="minukube"></category></entry><entry><title>Prometheus on Kubernetes</title><link href="http://marselester.com/prometheus-on-kubernetes.html" rel="alternate"></link><published>2016-11-13T00:00:00+07:00</published><updated>2016-11-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-11-13:/prometheus-on-kubernetes.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; is a monitoring toolkit.
+Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
+from &lt;a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes"&gt;hello web application&lt;/a&gt;
+which also runs in the same cluster.&lt;/p&gt;
+&lt;p&gt;First of all, we need Kubernetes cluster running. It's easy to bootstrap one via &lt;a class="reference external" href="https://console.cloud.google.com"&gt;Google Container Engine&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; gcloud …&lt;/pre&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;&lt;a class="reference external" href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; is a monitoring toolkit.
 Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
 from &lt;a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes"&gt;hello web application&lt;/a&gt;
 which also runs in the same cluster.&lt;/p&gt;
@@ -88,11 +259,11 @@ If there are any issues, check out &lt;a class="reference external" href="https:
 &lt;div class="section" id="first-start"&gt;
 &lt;h2&gt;First Start&lt;/h2&gt;
 &lt;p&gt;Prometheus is available as Docker image and can be run locally quickly.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; docker run -p 9090:9090 prom/prometheus:v1.2.1
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; docker run -p &lt;span class="m"&gt;9090&lt;/span&gt;:9090 prom/prometheus:v1.2.1
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;When a container is started, the Prometheus expression browser should be accessible on &lt;cite&gt;http://localhost:9090&lt;/cite&gt;.
 Now let's achieve the same results with Kubernetes.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl run prometheus-deployment --image&lt;span class="o"&gt;=&lt;/span&gt;prom/prometheus:v1.2.1 --port&lt;span class="o"&gt;=&lt;/span&gt;9090
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl run prometheus-deployment --image&lt;span class="o"&gt;=&lt;/span&gt;prom/prometheus:v1.2.1 --port&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;9090&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;The command above created &lt;a class="reference external" href="http://kubernetes.io/docs/user-guide/deployments/"&gt;Kubernetes Deployment&lt;/a&gt;
 that runs &lt;cite&gt;prometheus&lt;/cite&gt; Docker image.&lt;/p&gt;
@@ -109,7 +280,7 @@ To see whether Prometheus started up, we can run a proxy between terminal and Ku
 &lt;span class="gp"&gt;$&lt;/span&gt; curl http://127.0.0.1:8001/api/v1/proxy/namespaces/default/pods/prometheus-deployment-2234044252-of29y:9090/metrics
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Another option is to run a port forwarding:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward prometheus-deployment-2234044252-of29y 8080:9090
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward prometheus-deployment-2234044252-of29y &lt;span class="m"&gt;8080&lt;/span&gt;:9090
 &lt;span class="gp"&gt;$&lt;/span&gt; curl http://127.0.0.1:8080/metrics
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Check Prometheus container logs:&lt;/p&gt;
@@ -296,7 +467,7 @@ is used in further examples.&lt;/p&gt;
 &lt;p&gt;Next step is to run the web app in Kubernetes.
 A Docker image of the &lt;cite&gt;hello-app/v3&lt;/cite&gt; is available on Docker Hub.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f kube/hello/deployment-v1.yml
-&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward hello-deployment-1471727270-eaknp 8000:8000
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward hello-deployment-1471727270-eaknp &lt;span class="m"&gt;8000&lt;/span&gt;:8000
 &lt;span class="gp"&gt;$&lt;/span&gt; curl localhost:8000/hello
 &lt;span class="go"&gt;Hello, World!&lt;/span&gt;
 &lt;span class="gp"&gt;$&lt;/span&gt; curl localhost:8000/metrics
@@ -362,9 +533,9 @@ to scrape metrics from &lt;cite&gt;/metrics&lt;/cite&gt; HTTP endpoint of hello-
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Update a ConfigMap of Prometheus config and re-create a Prometheus Pod so it picks up changes.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap prometheus-server-conf &lt;span class="se"&gt;\&lt;/span&gt;
-&lt;span class="go"&gt;    --from-file=kube/prometheus/config-v2.yaml \&lt;/span&gt;
-&lt;span class="go"&gt;    -o yaml \&lt;/span&gt;
-&lt;span class="go"&gt;    --dry-run | kubectl replace -f -&lt;/span&gt;
+    --from-file&lt;span class="o"&gt;=&lt;/span&gt;kube/prometheus/config-v2.yaml &lt;span class="se"&gt;\&lt;/span&gt;
+    -o yaml &lt;span class="se"&gt;\&lt;/span&gt;
+    --dry-run &lt;span class="p"&gt;|&lt;/span&gt; kubectl replace -f -
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Finally, the app's metrics should show up in Prometheus expression browser &lt;cite&gt;http://&amp;lt;EXTERNAL_IP&amp;gt;:32514&lt;/cite&gt;.&lt;/p&gt;
 &lt;p&gt;You can try to query &lt;cite&gt;hello_requests_total&lt;/cite&gt; which shows how many requests we've served since the beginning.
@@ -375,7 +546,12 @@ and collect metrics from a simple web app.
 However recently I have encountered CoreOS &lt;a class="reference external" href="https://github.com/coreos/kube-prometheus"&gt;kube-prometheus&lt;/a&gt;
 which makes it easier. Have a look at &lt;a class="reference external" href="https://coreos.com/blog/the-prometheus-operator.html"&gt;The Prometheus Operator: Managed Prometheus setups for Kubernetes&lt;/a&gt; for more details.&lt;/p&gt;
 &lt;/div&gt;
-</summary><category term="prometheus"></category><category term="kubernetes"></category><category term="monitoring"></category><category term="golang"></category><category term="Google Container Engine"></category></entry><entry><title>Django REST framework: pagination on PostgreSQL triggers</title><link href="http://marselester.com/drf-pagination.html" rel="alternate"></link><published>2016-04-02T00:00:00+07:00</published><updated>2016-04-02T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-04-02:drf-pagination.html</id><summary type="html">&lt;p&gt;Django and Django REST Framework use SQL COUNT in pagination.
+</content><category term="prometheus"></category><category term="kubernetes"></category><category term="monitoring"></category><category term="golang"></category><category term="Google Container Engine"></category></entry><entry><title>Django REST framework: pagination on PostgreSQL triggers</title><link href="http://marselester.com/drf-pagination.html" rel="alternate"></link><published>2016-04-02T00:00:00+07:00</published><updated>2016-04-02T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-04-02:/drf-pagination.html</id><summary type="html">&lt;p&gt;Django and Django REST Framework use SQL COUNT in pagination.
+As your database grows SQL COUNT becomes too slow. Fortunately the frameworks
+are well designed and allow to customize a way items are count.
+Let me illustrate that on a typical &amp;quot;books&amp;quot; example.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Author&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Model&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;name&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;CharField …&lt;/span&gt;&lt;/pre&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;Django and Django REST Framework use SQL COUNT in pagination.
 As your database grows SQL COUNT becomes too slow. Fortunately the frameworks
 are well designed and allow to customize a way items are count.
 Let me illustrate that on a typical &amp;quot;books&amp;quot; example.&lt;/p&gt;
@@ -554,11 +730,17 @@ from &lt;tt class="docutils literal"&gt;Author&lt;/tt&gt; model and return it, i
         &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nb"&gt;super&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;CachedBookCountPaginator&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;count&lt;/span&gt;
 
 &lt;span class="nd"&gt;@classmethod&lt;/span&gt;
-&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;_get_author_id_from_sql&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;cls&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;sql&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;_get_author_id_from_sql&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;cls&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;sql&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
     &lt;span class="k"&gt;pass&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;I hope this helps. Cheers!&lt;/p&gt;
-</summary><category term="python"></category><category term="django"></category><category term="postgresql"></category><category term="django rest framework"></category><category term="pagination"></category></entry><entry><title>API based on Flask</title><link href="http://marselester.com/api-based-on-flask.html" rel="alternate"></link><published>2013-12-09T00:00:00+07:00</published><updated>2013-12-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-09:api-based-on-flask.html</id><summary type="html">&lt;p&gt;Here I want to consider implementation of API best practices which
+</content><category term="python"></category><category term="django"></category><category term="postgresql"></category><category term="django rest framework"></category><category term="pagination"></category></entry><entry><title>API based on Flask</title><link href="http://marselester.com/api-based-on-flask.html" rel="alternate"></link><published>2013-12-09T00:00:00+07:00</published><updated>2013-12-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-09:/api-based-on-flask.html</id><summary type="html">&lt;p&gt;Here I want to consider implementation of API best practices which
+usually don't follow Fielding's REST strictly. &lt;a class="reference external" href="https://github.com/marselester/api-example-based-on-flask"&gt;Example Flask project&lt;/a&gt;
+is on GitHub.&lt;/p&gt;
+&lt;div class="section" id="api-versioning"&gt;
+&lt;h2&gt;API Versioning&lt;/h2&gt;
+&lt;p&gt;Interfaces are changed hence versioning is mandatory in order to not annoy
+your users. You might need to add new resource or field to particular …&lt;/p&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;Here I want to consider implementation of API best practices which
 usually don't follow Fielding's REST strictly. &lt;a class="reference external" href="https://github.com/marselester/api-example-based-on-flask"&gt;Example Flask project&lt;/a&gt;
 is on GitHub.&lt;/p&gt;
 &lt;div class="section" id="api-versioning"&gt;
@@ -679,10 +861,18 @@ already defined error handlers, so you should declare it before them.&lt;/p&gt;
 &lt;li&gt;partial response by &lt;tt class="docutils literal"&gt;fields=id,lastname&lt;/tt&gt; QS argument.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="flask"></category><category term="api"></category></entry><entry><title>Slides about SaltStack</title><link href="http://marselester.com/saltstack-slides.html" rel="alternate"></link><published>2013-12-03T00:00:00+07:00</published><updated>2013-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-03:saltstack-slides.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
+</content><category term="python"></category><category term="flask"></category><category term="api"></category></entry><entry><title>Slides about SaltStack</title><link href="http://marselester.com/saltstack-slides.html" rel="alternate"></link><published>2013-12-03T00:00:00+07:00</published><updated>2013-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-03:/saltstack-slides.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
 Thailand on 12 Dec 2013. We compared Salt and &lt;a class="reference external" href="http://slid.es/simonrobson/ansible"&gt;Ansible&lt;/a&gt;.
 Here are my slides.&lt;/p&gt;
-&lt;iframe src="http://slid.es/marselester/saltstack/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;</summary><category term="salt"></category><category term="saltstack"></category><category term="slides"></category><category term="talk"></category></entry><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-28T00:00:00+07:00</published><updated>2013-11-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-28:developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
+&lt;iframe src="http://slid.es/marselester/saltstack/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;</summary><content type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
+Thailand on 12 Dec 2013. We compared Salt and &lt;a class="reference external" href="http://slid.es/simonrobson/ansible"&gt;Ansible&lt;/a&gt;.
+Here are my slides.&lt;/p&gt;
+&lt;iframe src="http://slid.es/marselester/saltstack/embed" width="576" height="420" scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;</content><category term="salt"></category><category term="saltstack"></category><category term="slides"></category><category term="talk"></category></entry><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-28T00:00:00+07:00</published><updated>2013-11-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-28:/developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
+but deployment was not considered in the &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
+&lt;p&gt;Server configuration is different from local, thus environments will be needed
+(at least production &lt;strong&gt;prod&lt;/strong&gt; and development &lt;strong&gt;dev&lt;/strong&gt;). Salt uses &lt;strong&gt;base&lt;/strong&gt;
+environment by default.&lt;/p&gt;
+&lt;p&gt;Environments are set in &lt;tt class="docutils literal"&gt;minion.conf …&lt;/tt&gt;&lt;/p&gt;</summary><content type="html">&lt;p&gt;Eventually you will need to deploy project,
 but deployment was not considered in the &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
 &lt;p&gt;Server configuration is different from local, thus environments will be needed
 (at least production &lt;strong&gt;prod&lt;/strong&gt; and development &lt;strong&gt;dev&lt;/strong&gt;). Salt uses &lt;strong&gt;base&lt;/strong&gt;
@@ -852,7 +1042,12 @@ which will be deployed.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl -i messaging-part-2
 &lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.com/developing-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-09T00:00:00+07:00</published><updated>2013-11-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-09:developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
+</content><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.com/developing-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-09T00:00:00+07:00</published><updated>2013-11-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-09:/developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
+run in VirtualBox which is managed by Vagrant. Infrastructure management
+is provided by SaltStack.&lt;/p&gt;
+&lt;p&gt;I advise you to create separate folder for repositories (currently there
+is only one) of project and clone &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; there.
+Also …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
 run in VirtualBox which is managed by Vagrant. Infrastructure management
 is provided by SaltStack.&lt;/p&gt;
 &lt;p&gt;I advise you to create separate folder for repositories (currently there
@@ -1307,7 +1502,12 @@ It's time to test configuration.&lt;/p&gt;
 &lt;span class="gp"&gt;(venv)$&lt;/span&gt; ./manage.py &lt;span class="nb"&gt;test&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Python Developer at Uploadcare</title><link href="http://marselester.com/python-developer-at-uploadcare.html" rel="alternate"></link><published>2013-07-31T00:00:00+07:00</published><updated>2013-07-31T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-07-31:python-developer-at-uploadcare.html</id><summary type="html">&lt;p&gt;I started to look for a full-time remote job as a Python Developer after
+</content><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Python Developer at Uploadcare</title><link href="http://marselester.com/python-developer-at-uploadcare.html" rel="alternate"></link><published>2013-07-31T00:00:00+07:00</published><updated>2013-07-31T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-07-31:/python-developer-at-uploadcare.html</id><summary type="html">&lt;p&gt;I started to look for a full-time remote job as a Python Developer after
+&lt;a class="reference external" href="http://fangid.com/"&gt;FanGid&lt;/a&gt; contract has been ended. And I found what
+I was looking for -- &lt;a class="reference external" href="https://uploadcare.com"&gt;Uploadcare&lt;/a&gt;, a cloud-based
+file upload SaaS -- &lt;a class="reference external" href="https://github.com/uploadcare?tab=members"&gt;great team&lt;/a&gt;,
+appropriate development process, adherence to quality standards.&lt;/p&gt;
+&lt;p&gt;I started to work at Uploadcare from tasks …&lt;/p&gt;</summary><content type="html">&lt;p&gt;I started to look for a full-time remote job as a Python Developer after
 &lt;a class="reference external" href="http://fangid.com/"&gt;FanGid&lt;/a&gt; contract has been ended. And I found what
 I was looking for -- &lt;a class="reference external" href="https://uploadcare.com"&gt;Uploadcare&lt;/a&gt;, a cloud-based
 file upload SaaS -- &lt;a class="reference external" href="https://github.com/uploadcare?tab=members"&gt;great team&lt;/a&gt;,
@@ -1320,7 +1520,14 @@ engaging mostly with Django (receiving payments through
 &lt;a class="reference external" href="https://pyuploadcare.readthedocs.org"&gt;documentation&lt;/a&gt;, python 3 support,
 first major release).&lt;/p&gt;
 &lt;p&gt;I worked in &lt;a class="reference external" href="http://instagram.com/marselester"&gt;Thailand and Vietnam&lt;/a&gt; meanwhile.&lt;/p&gt;
-</summary><category term="python"></category><category term="django"></category><category term="tornado"></category><category term="flask"></category><category term="aws"></category></entry><entry><title>Preparation to Python Interview</title><link href="http://marselester.com/preparation-to-python-interview.html" rel="alternate"></link><published>2012-11-02T00:00:00+07:00</published><updated>2012-11-02T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-11-02:preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
+</content><category term="python"></category><category term="django"></category><category term="tornado"></category><category term="flask"></category><category term="aws"></category></entry><entry><title>Preparation to Python Interview</title><link href="http://marselester.com/preparation-to-python-interview.html" rel="alternate"></link><published>2012-11-02T00:00:00+07:00</published><updated>2012-11-02T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-11-02:/preparation-to-python-interview.html</id><summary type="html">&lt;p&gt;I decided to collect a little more information and experience during
+preparation to Python developer interview. These are some information and
+links which seemed important to me. Maybe it will be helpful.&lt;/p&gt;
+&lt;div class="section" id="how-does-it-usually-go"&gt;
+&lt;h2&gt;How does it usually go?&lt;/h2&gt;
+&lt;div class="section" id="what-kind-of-projects-did-you-participate-in"&gt;
+&lt;h3&gt;What kind of projects did you participate in?&lt;/h3&gt;
+&lt;p&gt;What did you do at …&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;I decided to collect a little more information and experience during
 preparation to Python developer interview. These are some information and
 links which seemed important to me. Maybe it will be helpful.&lt;/p&gt;
 &lt;div class="section" id="how-does-it-usually-go"&gt;
@@ -1438,7 +1645,13 @@ Therefore O(n) is worse than O(1) for dictionary lookup.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="interview"></category></entry><entry><title>Стартап fangid.com</title><link href="http://marselester.com/fangid-startup.html" rel="alternate"></link><published>2012-10-13T00:00:00+07:00</published><updated>2012-10-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-10-13:fangid-startup.html</id><summary type="html">&lt;p&gt;В середине июля 2012 г. команда &lt;a class="reference external" href="http://fangid.com/"&gt;стартапа fangid.com&lt;/a&gt;
+</content><category term="python"></category><category term="interview"></category></entry><entry><title>Стартап fangid.com</title><link href="http://marselester.com/fangid-startup.html" rel="alternate"></link><published>2012-10-13T00:00:00+07:00</published><updated>2012-10-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-10-13:/fangid-startup.html</id><summary type="html">&lt;p&gt;В середине июля 2012 г. команда &lt;a class="reference external" href="http://fangid.com/"&gt;стартапа fangid.com&lt;/a&gt;
+приступила к воплощению идеи социальной концертной платформы на севере
+Таиланда. Я занимался подготовительными работами (соглашениями по разработке,
+первоначальной подготовкой репозитория, например, продумыванием структуры,
+организацией тестов, разделением настроек), принимал участие в выработке
+требований к системе и проектировании архитектуры. При конструировании системы
+моими …&lt;/p&gt;</summary><content type="html">&lt;p&gt;В середине июля 2012 г. команда &lt;a class="reference external" href="http://fangid.com/"&gt;стартапа fangid.com&lt;/a&gt;
 приступила к воплощению идеи социальной концертной платформы на севере
 Таиланда. Я занимался подготовительными работами (соглашениями по разработке,
 первоначальной подготовкой репозитория, например, продумыванием структуры,
@@ -1458,7 +1671,15 @@ Therefore O(n) is worse than O(1) for dictionary lookup.&lt;/li&gt;
 модульного и функционального тестирования (unittest, WebTest, factory_boy).&lt;/p&gt;
 &lt;p&gt;Вопреки сжатым срокам мы, как разработчики, старались улучшить процесс
 разработки, используя для мониторинга Sentry и Zabbix, для деплоя -- Fabric.&lt;/p&gt;
-</summary><category term="python"></category><category term="django"></category><category term="startup"></category><category term="thailand"></category></entry><entry><title>Портфолио 2007–2011</title><link href="http://marselester.com/portfolio-2007-2011.html" rel="alternate"></link><published>2012-10-12T00:00:00+07:00</published><updated>2012-10-12T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-10-12:portfolio-2007-2011.html</id><summary type="html">&lt;p&gt;Не стал перечислять те сайты, которые за давностью лет были переделаны либо
+</content><category term="python"></category><category term="django"></category><category term="startup"></category><category term="thailand"></category></entry><entry><title>Портфолио 2007–2011</title><link href="http://marselester.com/portfolio-2007-2011.html" rel="alternate"></link><published>2012-10-12T00:00:00+07:00</published><updated>2012-10-12T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-10-12:/portfolio-2007-2011.html</id><summary type="html">&lt;p&gt;Не стал перечислять те сайты, которые за давностью лет были переделаны либо
+перестали существовать. В основном backend основан на cms myscon, которая была
+переписана мною несколько раз.&lt;/p&gt;
+&lt;div class="section" id="id2"&gt;
+&lt;h2&gt;2011&lt;/h2&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;электронный архив ежемесячного литературно-публицистического журнала
+«&lt;a class="reference external" href="http://agidel-magazine.ru/"&gt;Агидель&lt;/a&gt;» на Django. Предполагается, что ресурс будет содержать архив
+журналов с 1923 года. Для удобной навигации сделал …&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;Не стал перечислять те сайты, которые за давностью лет были переделаны либо
 перестали существовать. В основном backend основан на cms myscon, которая была
 переписана мною несколько раз.&lt;/p&gt;
 &lt;div class="section" id="id2"&gt;
@@ -1576,7 +1797,13 @@ myscon.&lt;/li&gt;
 &lt;li&gt;поиск.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/div&gt;
-</summary><category term="php"></category><category term="codeigniter"></category><category term="cms myscon"></category><category term="python"></category><category term="django"></category></entry><entry><title>Django TODO: тестирование во время конструирования</title><link href="http://marselester.com/django-todo-testing-during-construction.html" rel="alternate"></link><published>2012-06-29T13:00:00+07:00</published><updated>2012-06-29T13:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:django-todo-testing-during-construction.html</id><summary type="html">&lt;p&gt;Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
+</content><category term="php"></category><category term="codeigniter"></category><category term="cms myscon"></category><category term="python"></category><category term="django"></category></entry><entry><title>Django TODO: тестирование во время конструирования</title><link href="http://marselester.com/django-todo-testing-during-construction.html" rel="alternate"></link><published>2012-06-29T13:00:00+07:00</published><updated>2012-06-29T13:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:/django-todo-testing-during-construction.html</id><summary type="html">&lt;p&gt;Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
+стратегии тестирования.&lt;/p&gt;
+&lt;p&gt;Тестирование может указать только на отдельные дефектные области программы --
+оно не сделает программу удобнее в использовании, более быстрой, компактной,
+удобочитаемой или расширяемой.&lt;/p&gt;
+&lt;p&gt;Цель тестирования противоположна целям других этапов разработки. Его целью
+является нахождение ошибок. Успешным считается тест, нарушающий работу ПО …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
 стратегии тестирования.&lt;/p&gt;
 &lt;p&gt;Тестирование может указать только на отдельные дефектные области программы --
 оно не сделает программу удобнее в использовании, более быстрой, компактной,
@@ -1857,7 +2084,12 @@ Django использует для импорта в БД), аргументир
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="testing"></category></entry><entry><title>Django TODO: конструирование системы</title><link href="http://marselester.com/django-todo-system-construction.html" rel="alternate"></link><published>2012-06-29T12:00:00+07:00</published><updated>2012-06-29T12:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:django-todo-system-construction.html</id><summary type="html">&lt;p&gt;При работе над проектом конструирование включает другие процессы, в том числе
+</content><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="testing"></category></entry><entry><title>Django TODO: конструирование системы</title><link href="http://marselester.com/django-todo-system-construction.html" rel="alternate"></link><published>2012-06-29T12:00:00+07:00</published><updated>2012-06-29T12:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:/django-todo-system-construction.html</id><summary type="html">&lt;p&gt;При работе над проектом конструирование включает другие процессы, в том числе
+проектирование. Формальная архитектура дает ответы только на вопросы
+системного уровня, при этом значительная часть проектирования может быть
+намеренно оставлена на этап конструирования. Проектирование -- это
+&amp;quot;постепенный&amp;quot; процесс. Проекты приложений не возникают в умах разработчиков
+сразу в готовом виде. Они развиваются …&lt;/p&gt;</summary><content type="html">&lt;p&gt;При работе над проектом конструирование включает другие процессы, в том числе
 проектирование. Формальная архитектура дает ответы только на вопросы
 системного уровня, при этом значительная часть проектирования может быть
 намеренно оставлена на этап конструирования. Проектирование -- это
@@ -2131,8 +2363,8 @@ URL. Она определяет соответствие между URL-адр�
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.conf.urls.defaults&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;patterns&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;url&lt;/span&gt;
 
 &lt;span class="n"&gt;urlpatterns&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;patterns&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;todo.views&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-    &lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;r&amp;#39;^$&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;todo_actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
-    &lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;r&amp;#39;^task/archive/$&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;task_archive&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;todo_task_archive&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+    &lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;r&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;^$&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;todo_actual_tasks&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+    &lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;r&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;^task/archive/$&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;task_archive&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;todo_task_archive&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
 &lt;span class="p"&gt;)&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Любой запрос к URL &lt;tt class="docutils literal"&gt;/task/archive/&lt;/tt&gt; должен обрабатываться функцией
@@ -2178,7 +2410,13 @@ URL. Она определяет соответствие между URL-адр�
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="construction"></category></entry><entry><title>Django TODO: проектирование архитектуры системы</title><link href="http://marselester.com/django-todo-design-architecture.html" rel="alternate"></link><published>2012-06-29T11:00:00+07:00</published><updated>2012-06-29T11:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:django-todo-design-architecture.html</id><summary type="html">&lt;p&gt;Следующим этапом разработки системы является проектирование архитектуры.&lt;/p&gt;
+</content><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="construction"></category></entry><entry><title>Django TODO: проектирование архитектуры системы</title><link href="http://marselester.com/django-todo-design-architecture.html" rel="alternate"></link><published>2012-06-29T11:00:00+07:00</published><updated>2012-06-29T11:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:/django-todo-design-architecture.html</id><summary type="html">&lt;p&gt;Следующим этапом разработки системы является проектирование архитектуры.&lt;/p&gt;
+&lt;p&gt;Архитектура должна быть продуманным концептуальным целым. Главный тезис самой
+популярной книги по разработке ПО &amp;quot;Мифический человеко-месяц&amp;quot; гласит, что
+основной проблемой, характерной для крупных систем, является поддержание их
+концептуальной целостности. Хорошая архитектура должна соответствовать
+проблеме &lt;a class="footnote-reference" href="#mcconnell" id="id1"&gt;[1]&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Разделение системы на подсистемы на уровне архитектуры, позволяет …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Следующим этапом разработки системы является проектирование архитектуры.&lt;/p&gt;
 &lt;p&gt;Архитектура должна быть продуманным концептуальным целым. Главный тезис самой
 популярной книги по разработке ПО &amp;quot;Мифический человеко-месяц&amp;quot; гласит, что
 основной проблемой, характерной для крупных систем, является поддержание их
@@ -2294,7 +2532,12 @@ URL. Она определяет соответствие между URL-адр�
 &lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="architecture"></category></entry><entry><title>Django TODO: выработка требований к системе</title><link href="http://marselester.com/django-todo-development-of-system-requirements.html" rel="alternate"></link><published>2012-06-29T11:00:00+07:00</published><updated>2012-06-29T11:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:django-todo-development-of-system-requirements.html</id><summary type="html">&lt;p&gt;После прочтения Макконелла захотелось спроецировать его советы на Django.
+</content><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="architecture"></category></entry><entry><title>Django TODO: выработка требований к системе</title><link href="http://marselester.com/django-todo-development-of-system-requirements.html" rel="alternate"></link><published>2012-06-29T11:00:00+07:00</published><updated>2012-06-29T11:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:/django-todo-development-of-system-requirements.html</id><summary type="html">&lt;p&gt;После прочтения Макконелла захотелось спроецировать его советы на Django.
+Для этого я взял за основу разработку системы &lt;a class="reference external" href="https://github.com/marselester/django-todo"&gt;Django TODO&lt;/a&gt;. Итак, первый этап -- выработка требований к
+системе.&lt;/p&gt;
+&lt;p&gt;Требования подробно описывают, что должна делать система. Внимание к
+требованиям помогает свести к минимуму изменения системы после начала
+разработки. Явные требования помогают гарантировать, что …&lt;/p&gt;</summary><content type="html">&lt;p&gt;После прочтения Макконелла захотелось спроецировать его советы на Django.
 Для этого я взял за основу разработку системы &lt;a class="reference external" href="https://github.com/marselester/django-todo"&gt;Django TODO&lt;/a&gt;. Итак, первый этап -- выработка требований к
 системе.&lt;/p&gt;
 &lt;p&gt;Требования подробно описывают, что должна делать система. Внимание к
@@ -2341,7 +2584,15 @@ URL. Она определяет соответствие между URL-адр�
 Пер. с англ. – М. : Издательство &amp;quot;Русская редакция&amp;quot;, 2012. – 896 стр. : ил.&lt;/td&gt;&lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-</summary><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="requirements"></category></entry><entry><title>Соглашения по разработке на Python/Django</title><link href="http://marselester.com/links-to-best-practices-of-python-django.html" rel="alternate"></link><published>2012-06-29T00:00:00+07:00</published><updated>2012-06-29T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:links-to-best-practices-of-python-django.html</id><summary type="html">&lt;p&gt;Во время разработки я часто сверяюсь с известными мне соглашениями,
+</content><category term="python"></category><category term="django"></category><category term="django-todo"></category><category term="requirements"></category></entry><entry><title>Соглашения по разработке на Python/Django</title><link href="http://marselester.com/links-to-best-practices-of-python-django.html" rel="alternate"></link><published>2012-06-29T00:00:00+07:00</published><updated>2012-06-29T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:/links-to-best-practices-of-python-django.html</id><summary type="html">&lt;p&gt;Во время разработки я часто сверяюсь с известными мне соглашениями,
+стараюсь следовать рекомендациям. Цитировать их не имеет смысла -- лучше
+приведу ссылки.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://www.python.org/dev/peps/pep-0008/"&gt;PEP 8 -- Style Guide for Python Code&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;a class="reference external" href="http://python.net/~goodger/projects/pycon/2007/idiomatic/handout.html#long-lines-continuations"&gt;Code Like a Pythonista: Idiomatic Python&lt;/a&gt;.
+В нем я нашел ответы на вопросы форматирования длинных строк:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+expended_time = (self.finish_date() - self.start_date
+                 + datetime …&lt;/pre&gt;</summary><content type="html">&lt;p&gt;Во время разработки я часто сверяюсь с известными мне соглашениями,
 стараюсь следовать рекомендациям. Цитировать их не имеет смысла -- лучше
 приведу ссылки.&lt;/p&gt;
 &lt;p&gt;&lt;a class="reference external" href="http://www.python.org/dev/peps/pep-0008/"&gt;PEP 8 -- Style Guide for Python Code&lt;/a&gt;.&lt;/p&gt;
@@ -2425,7 +2676,26 @@ monthly_revenue.calc()
 &lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="best practices"></category></entry><entry><title>Разделение настроек в Django</title><link href="http://marselester.com/splitting-settings-in-django.html" rel="alternate"></link><published>2012-06-29T00:00:00+07:00</published><updated>2012-06-29T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:splitting-settings-in-django.html</id><summary type="html">&lt;p&gt;В &lt;a class="reference external" href="https://code.djangoproject.com/wiki/SplitSettings"&gt;Django wiki&lt;/a&gt; собраны
+</content><category term="python"></category><category term="django"></category><category term="best practices"></category></entry><entry><title>Разделение настроек в Django</title><link href="http://marselester.com/splitting-settings-in-django.html" rel="alternate"></link><published>2012-06-29T00:00:00+07:00</published><updated>2012-06-29T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-29:/splitting-settings-in-django.html</id><summary type="html">&lt;p&gt;В &lt;a class="reference external" href="https://code.djangoproject.com/wiki/SplitSettings"&gt;Django wiki&lt;/a&gt; собраны
+различные способы разделения настроек. Мне нравится &lt;a class="reference external" href="http://senko.net/en/django-quickstart-skeleton-project/"&gt;вариант&lt;/a&gt;, описанный в блоге
+Senko Rašić:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+settings/
+├── __init__.py
+├── base.py
+├── development.py
+├── local.py
+└── production.py
+&lt;/pre&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;base.py&lt;/tt&gt; содержит общие настройки для &lt;tt class="docutils literal"&gt;development.py&lt;/tt&gt; и
+&lt;tt class="docutils literal"&gt;production.py&lt;/tt&gt;, например:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;ADMINS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="n"&gt;MANAGERS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;ADMINS&lt;/span&gt;
+
+&lt;span class="n"&gt;TIME_ZONE&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;Asia/Yekaterinburg&amp;#39;&lt;/span&gt;
+&lt;span class="c1"&gt;# ...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;tt class="docutils literal"&gt;production.py&lt;/tt&gt; содержит настройки для …&lt;/p&gt;</summary><content type="html">&lt;p&gt;В &lt;a class="reference external" href="https://code.djangoproject.com/wiki/SplitSettings"&gt;Django wiki&lt;/a&gt; собраны
 различные способы разделения настроек. Мне нравится &lt;a class="reference external" href="http://senko.net/en/django-quickstart-skeleton-project/"&gt;вариант&lt;/a&gt;, описанный в блоге
 Senko Rašić:&lt;/p&gt;
 &lt;pre class="literal-block"&gt;
@@ -2494,7 +2764,13 @@ settings/
 &lt;pre class="literal-block"&gt;
 $ heroku config:add SECRET_KEY=my_unique_secret_key
 &lt;/pre&gt;
-</summary><category term="python"></category><category term="django"></category><category term="settings"></category></entry><entry><title>Краткий обзор инфраструктуры для разработки reusable Django приложений</title><link href="http://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html" rel="alternate"></link><published>2012-06-13T00:00:00+07:00</published><updated>2012-06-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-13:short-overview-of-infrastructure-for-developing-reusable-django-apps.html</id><summary type="html">&lt;p&gt;Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
+</content><category term="python"></category><category term="django"></category><category term="settings"></category></entry><entry><title>Краткий обзор инфраструктуры для разработки reusable Django приложений</title><link href="http://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html" rel="alternate"></link><published>2012-06-13T00:00:00+07:00</published><updated>2012-06-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2012-06-13:/short-overview-of-infrastructure-for-developing-reusable-django-apps.html</id><summary type="html">&lt;p&gt;Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
+зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
+веб-приложений на Django к этим проблемам необходимо отнести организацию
+файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
+организации автоматизированного тестирования. В данной статье приведены пути
+решения этих проблем.&lt;/p&gt;
+&lt;p&gt;Важно знать различия между двумя …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
 зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
 веб-приложений на Django к этим проблемам необходимо отнести организацию
 файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
@@ -2637,7 +2913,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
     &lt;span class="n"&gt;failures&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;test_runner&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;run_tests&lt;/span&gt;&lt;span class="p"&gt;([])&lt;/span&gt;
     &lt;span class="n"&gt;sys&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;exit&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;failures&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;__main__&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="vm"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;__main__&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
     &lt;span class="n"&gt;runtests&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Настройки для их запуска указаны в файле &lt;tt class="docutils literal"&gt;tests/settings.py&lt;/tt&gt;:&lt;/p&gt;
@@ -2652,7 +2928,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
     &lt;span class="s1"&gt;&amp;#39;app_name&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
 &lt;span class="p"&gt;)&lt;/span&gt;
 
-&lt;span class="n"&gt;BASE_PATH&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dirname&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dirname&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;__file__&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="n"&gt;BASE_PATH&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dirname&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dirname&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="vm"&gt;__file__&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;span class="n"&gt;TEST_DISCOVERY_ROOT&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;os&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;BASE_PATH&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;tests&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
 &lt;span class="n"&gt;TEST_RUNNER&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;tests.runner.DiscoveryDjangoTestSuiteRunner&amp;#39;&lt;/span&gt;
@@ -2749,7 +3025,16 @@ deps=
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;/div&gt;
-</summary><category term="python"></category><category term="django"></category><category term="infrastructure"></category></entry><entry><title>Вычислительные методы одномерной оптимизации</title><link href="http://marselester.com/computing-methods-of-one-dimensional-optimization.html" rel="alternate"></link><published>2010-10-06T00:00:00+07:00</published><updated>2010-10-06T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2010-10-06:computing-methods-of-one-dimensional-optimization.html</id><summary type="html">&lt;p&gt;На третьем курсе по предмету методы оптимизации делали лабораторную работу на
+</content><category term="python"></category><category term="django"></category><category term="infrastructure"></category></entry><entry><title>Вычислительные методы одномерной оптимизации</title><link href="http://marselester.com/computing-methods-of-one-dimensional-optimization.html" rel="alternate"></link><published>2010-10-06T00:00:00+07:00</published><updated>2010-10-06T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2010-10-06:/computing-methods-of-one-dimensional-optimization.html</id><summary type="html">&lt;p&gt;На третьем курсе по предмету методы оптимизации делали лабораторную работу на
+тему «Вычислительные методы одномерной оптимизации».
+Задача заключалась в поиске безусловного минимума функции
+&lt;tt class="docutils literal"&gt;f(x) = pow(x, 3) – x + pow(e, &lt;span class="pre"&gt;-x)&lt;/span&gt;&lt;/tt&gt; на начальном интервале &lt;tt class="docutils literal"&gt;[0, 1]&lt;/tt&gt;
+с точностью &lt;tt class="docutils literal"&gt;0.00001&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Вычисления производились через:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;пассивный метод;&lt;/li&gt;
+&lt;li&gt;равномерные блочные методы;&lt;/li&gt;
+&lt;li&gt;метод …&lt;/li&gt;&lt;/ul&gt;</summary><content type="html">&lt;p&gt;На третьем курсе по предмету методы оптимизации делали лабораторную работу на
 тему «Вычислительные методы одномерной оптимизации».
 Задача заключалась в поиске безусловного минимума функции
 &lt;tt class="docutils literal"&gt;f(x) = pow(x, 3) – x + pow(e, &lt;span class="pre"&gt;-x)&lt;/span&gt;&lt;/tt&gt; на начальном интервале &lt;tt class="docutils literal"&gt;[0, 1]&lt;/tt&gt;
@@ -2768,7 +3053,15 @@ deps=
 для данной функции блочный метод работает лучше с блоками размерами 3 и 8, для
 нечетного и четного соответственно.&lt;/p&gt;
 &lt;p&gt;Если кому-нибудь пригодилось – &lt;a class="reference external" href="https://dl.dropbox.com/u/15875449/fx.zip"&gt;архив с исходниками&lt;/a&gt; на php.&lt;/p&gt;
-</summary><category term="php"></category><category term="mathematical optimization"></category></entry><entry><title>Определение нажатия комбинации клавиш средствами BIOS на ассемблере</title><link href="http://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html" rel="alternate"></link><published>2009-12-03T00:00:00+07:00</published><updated>2009-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2009-12-03:definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html</id><summary type="html">&lt;p&gt;По учебе понадобилось написать программу на ассемблере, которая должна
+</content><category term="php"></category><category term="mathematical optimization"></category></entry><entry><title>Определение нажатия комбинации клавиш средствами BIOS на ассемблере</title><link href="http://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html" rel="alternate"></link><published>2009-12-03T00:00:00+07:00</published><updated>2009-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2009-12-03:/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html</id><summary type="html">&lt;p&gt;По учебе понадобилось написать программу на ассемблере, которая должна
+распознать нажатие «горячей» комбинации клавиш &lt;tt class="docutils literal"&gt;LeftCtrl+RightShift+F3&lt;/tt&gt; и
+реагировать на него звуковым сигналом. Информации/примеров по этой теме
+маловато, по этому решил опубликовать свою программку.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nf"&gt;masm&lt;/span&gt;
+&lt;span class="nf"&gt;.model&lt;/span&gt; &lt;span class="nv"&gt;small&lt;/span&gt;
+&lt;span class="nf"&gt;.stack&lt;/span&gt; &lt;span class="mi"&gt;256&lt;/span&gt;
+&lt;span class="nf"&gt;.data&lt;/span&gt;
+    &lt;span class="nf"&gt;Msg_about&lt;/span&gt; &lt;span class="nv"&gt;db&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;Распознать нажатие «горячей» комбинации клавиш&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Ah&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0Dh …&lt;/span&gt;&lt;/pre&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;По учебе понадобилось написать программу на ассемблере, которая должна
 распознать нажатие «горячей» комбинации клавиш &lt;tt class="docutils literal"&gt;LeftCtrl+RightShift+F3&lt;/tt&gt; и
 реагировать на него звуковым сигналом. Информации/примеров по этой теме
 маловато, по этому решил опубликовать свою программку.&lt;/p&gt;
@@ -2864,7 +3157,13 @@ deps=
 &lt;/ul&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-</summary><category term="assembler"></category></entry><entry><title>Моделирование одноканальной СМО с отказами</title><link href="http://marselester.com/modeling-single-channel-queue-with-refusals.html" rel="alternate"></link><published>2009-05-30T00:00:00+07:00</published><updated>2009-05-30T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2009-05-30:modeling-single-channel-queue-with-refusals.html</id><summary type="html">&lt;p&gt;Дана одноканальная система массового обслуживания с отказами. В нее поступают
+</content><category term="assembler"></category></entry><entry><title>Моделирование одноканальной СМО с отказами</title><link href="http://marselester.com/modeling-single-channel-queue-with-refusals.html" rel="alternate"></link><published>2009-05-30T00:00:00+07:00</published><updated>2009-05-30T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2009-05-30:/modeling-single-channel-queue-with-refusals.html</id><summary type="html">&lt;p&gt;Дана одноканальная система массового обслуживания с отказами. В нее поступают
+заявки через промежуток времени &lt;tt class="docutils literal"&gt;n&lt;/tt&gt;, где &lt;tt class="docutils literal"&gt;n&lt;/tt&gt; – случайная величина,
+подчиненная равномерному закону распределения. Время обслуживания заявки
+системой &lt;tt class="docutils literal"&gt;m&lt;/tt&gt; также является случайной величиной с показательным законом
+распределения. Если к моменту прихода заявки канал занят, заявка покидает
+систему необслуженной.&lt;/p&gt;
+&lt;p&gt;Изначально код был …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Дана одноканальная система массового обслуживания с отказами. В нее поступают
 заявки через промежуток времени &lt;tt class="docutils literal"&gt;n&lt;/tt&gt;, где &lt;tt class="docutils literal"&gt;n&lt;/tt&gt; – случайная величина,
 подчиненная равномерному закону распределения. Время обслуживания заявки
 системой &lt;tt class="docutils literal"&gt;m&lt;/tt&gt; также является случайной величиной с показательным законом
@@ -2942,4 +3241,4 @@ deps=
 
 &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;request_poll&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
-</summary><category term="python"></category><category term="modeling"></category><category term="single-channel queue"></category></entry></feed>
+</content><category term="python"></category><category term="modeling"></category><category term="single-channel queue"></category></entry></feed>

@@ -31,7 +31,6 @@
     <ul class="button-group navigation">
     <li><a href="http://marselester.com/cv/" class="button secondary small">CV</a></li>
 
-            <li><a href="http://marselester.com/pages/about.html" class="button secondary small">About</a></li>
     </ul>
 </div>
 </div>
@@ -84,10 +83,10 @@ we can configure our Docker client to communicate with the Minikube Docker daemo
 One of the solutions is to use <a class="reference external" href="http://kubernetes.io/docs/user-guide/images/#specifying-imagepullsecrets-on-a-pod">imagePullSecrets</a>.
 The following command creates a secret for use with a Docker registry.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create secret docker-registry my-docker-credentials <span class="se">\</span>
-<span class="go">    --docker-server=DOCKER_REGISTRY_SERVER \</span>
-<span class="go">    --docker-username=DOCKER_USER \</span>
-<span class="go">    --docker-password=DOCKER_PASSWORD \</span>
-<span class="go">    --docker-email=DOCKER_EMAIL</span>
+    --docker-server<span class="o">=</span>DOCKER_REGISTRY_SERVER <span class="se">\</span>
+    --docker-username<span class="o">=</span>DOCKER_USER <span class="se">\</span>
+    --docker-password<span class="o">=</span>DOCKER_PASSWORD <span class="se">\</span>
+    --docker-email<span class="o">=</span>DOCKER_EMAIL
 </pre></div>
 <p>Firstly, let's obtain <strong>DOCKER_USER</strong> and <strong>DOCKER_PASSWORD</strong>.
 For that, we'll need <strong>awscli</strong> Python library and environment variables
@@ -167,11 +166,9 @@ Note that we've added <strong>imagePullSecrets</strong> which references our pri
         <h5 class="sidebar-title">Social</h5>
         <ul class="side-nav">
             <li><a href="https://github.com/marselester">GitHub</a></li>
-            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
-            <li><a href="http://instagram.com/marselester">Instagram</a></li>
             <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
-            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+            <li><a href="http://instagram.com/marselester">Instagram</a></li>
         </ul>
 
     </aside> <!-- End Sidebar -->

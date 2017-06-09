@@ -31,7 +31,6 @@
     <ul class="button-group navigation">
     <li><a href="http://marselester.com/cv/" class="button secondary small">CV</a></li>
 
-            <li><a href="http://marselester.com/pages/about.html" class="button secondary small">About</a></li>
     </ul>
 </div>
 </div>
@@ -196,7 +195,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
     <span class="n">failures</span> <span class="o">=</span> <span class="n">test_runner</span><span class="o">.</span><span class="n">run_tests</span><span class="p">([])</span>
     <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">failures</span><span class="p">)</span>
 
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
     <span class="n">runtests</span><span class="p">()</span>
 </pre></div>
 <p>Настройки для их запуска указаны в файле <tt class="docutils literal">tests/settings.py</tt>:</p>
@@ -211,7 +210,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
     <span class="s1">&#39;app_name&#39;</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="n">BASE_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+<span class="n">BASE_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
 <span class="n">TEST_DISCOVERY_ROOT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">BASE_PATH</span><span class="p">,</span> <span class="s1">&#39;tests&#39;</span><span class="p">)</span>
 
 <span class="n">TEST_RUNNER</span> <span class="o">=</span> <span class="s1">&#39;tests.runner.DiscoveryDjangoTestSuiteRunner&#39;</span>
@@ -350,11 +349,9 @@ deps=
         <h5 class="sidebar-title">Social</h5>
         <ul class="side-nav">
             <li><a href="https://github.com/marselester">GitHub</a></li>
-            <li><a href="http://www.linkedin.com/in/marselester">LinkedIn</a></li>
-            <li><a href="http://instagram.com/marselester">Instagram</a></li>
             <li><a href="https://medium.com/@marselester/">Medium</a></li>
             <li><a href="http://twitter.com/marselester">Twitter</a></li>
-            <li><a href="http://www.facebook.com/marselester">Facebook</a></li>
+            <li><a href="http://instagram.com/marselester">Instagram</a></li>
         </ul>
 
     </aside> <!-- End Sidebar -->
