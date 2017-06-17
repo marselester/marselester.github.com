@@ -11,6 +11,10 @@
     <link rel="stylesheet" href="http://marselester.com/theme/css/style.css" />
     <link rel="stylesheet" href="http://marselester.com/theme/css/pygments.css" />	
     <script src="http://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
 </head>
 
 <body>
@@ -31,6 +35,7 @@
     <ul class="button-group navigation">
     <li><a href="http://marselester.com/cv/" class="button secondary small">CV</a></li>
 
+            <li><a href="http://marselester.com/pages/about.html" class="button secondary small">About</a></li>
     </ul>
 </div>
 </div>
@@ -79,7 +84,7 @@ Here are my slides.</p>
 
         (function() {
             var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
             (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
         })();
     </script>
@@ -94,6 +99,9 @@ Here are my slides.</p>
         <ul class="side-nav">
             <li><a href="http://marselester.com/archives.html">Archives</a>
             <li><a href="http://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="http://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
         </ul>
 
 		

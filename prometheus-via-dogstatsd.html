@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - prometheus</title>
+    <title>Forward DogStatsD Metrics to Prometheus</title>
 
     <link rel="stylesheet" href="http://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="http://marselester.com/theme/css/foundation.min.css" />
@@ -48,16 +48,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="http://marselester.com/prometheus-via-dogstatsd.html" rel="bookmark"
+        title="Permalink to Forward DogStatsD Metrics to Prometheus">Forward DogStatsD Metrics to Prometheus</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="http://marselester.com/prometheus-via-dogstatsd.html"><h3 class="article-title">Forward DogStatsD Metrics to Prometheus</h3></a>
 <h6 class="subheader" title="2017-06-17T00:00:00+07:00">Sat 17 June 2017
 </h6>
 
 
-<p><strong>tl;dr:</strong> StatsD doesn't have metric labels, DogStatsD does.</p>
+    <p><strong>tl;dr:</strong> StatsD doesn't have metric labels, DogStatsD does.</p>
 <p>This is a follow up post after
 <a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html">Instrumenting Django with Prometheus and StatsD</a>.</p>
 <hr class="docutils" />
@@ -132,6 +134,7 @@ weatherapi_responses_total{code=&quot;200&quot;} 1
 </pre></div>
 <p>I hope this helps. Cheers!</p>
 </div>
+
 <p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
@@ -144,74 +147,22 @@ weatherapi_responses_total{code=&quot;200&quot;} 1
 
 
 
-<p><a href="http://marselester.com/prometheus-via-dogstatsd.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "prometheus-via-dogstatsd.html";
+        var disqus_url = "http://marselester.com/prometheus-via-dogstatsd.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/django-prometheus-via-statsd.html"><h3 class="article-title">Instrumenting Django with Prometheus and StatsD</h3></a>
-<h6 class="subheader" title="2017-06-09T00:00:00+07:00">Fri 09 June 2017
-</h6>
-
-
-<p>If you ever wondered how to monitor your Django application with Prometheus this article is for you.
-Quick search on the topic will lead you to <a class="reference external" href="https://github.com/korfuri/django-prometheus/">django-prometheus</a>.
-For those who don't want to use it, there is another way to export application metrics
-via <a class="reference external" href="https://www.datadoghq.com/blog/statsd/">StatsD</a>.</p>
-<p>The idea is to send …</p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/django.html">django </a>
-    <a href="http://marselester.com/tag/prometheus.html">prometheus </a>
-    <a href="http://marselester.com/tag/kubernetes.html">kubernetes </a>
-    <a href="http://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="http://marselester.com/tag/statsd.html">statsd </a>
-    <a href="http://marselester.com/tag/helm.html">helm </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/django-prometheus-via-statsd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/django-prometheus-via-statsd.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/prometheus-on-kubernetes.html"><h3 class="article-title">Prometheus on Kubernetes</h3></a>
-<h6 class="subheader" title="2016-11-13T00:00:00+07:00">Sun 13 November 2016
-</h6>
-
-
-<p><a class="reference external" href="https://prometheus.io/">Prometheus</a> is a monitoring toolkit.
-Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
-from <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes">hello web application</a>
-which also runs in the same cluster.</p>
-<p>First of all, we need Kubernetes cluster running. It's easy to bootstrap one via <a class="reference external" href="https://console.cloud.google.com">Google Container Engine</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud …</pre></div><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/prometheus.html">prometheus </a>
-    <a href="http://marselester.com/tag/kubernetes.html">kubernetes </a>
-    <a href="http://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="http://marselester.com/tag/golang.html">golang </a>
-    <a href="http://marselester.com/tag/google-container-engine.html">Google Container Engine </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/prometheus-on-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/prometheus-on-kubernetes.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

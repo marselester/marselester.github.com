@@ -11,6 +11,10 @@
     <link rel="stylesheet" href="http://marselester.com/theme/css/style.css" />
     <link rel="stylesheet" href="http://marselester.com/theme/css/pygments.css" />	
     <script src="http://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
 </head>
 
 <body>
@@ -31,6 +35,7 @@
     <ul class="button-group navigation">
     <li><a href="http://marselester.com/cv/" class="button secondary small">CV</a></li>
 
+            <li><a href="http://marselester.com/pages/about.html" class="button secondary small">About</a></li>
     </ul>
 </div>
 </div>
@@ -47,6 +52,108 @@
         
 
             <article>
+                <a href="http://marselester.com/prometheus-via-dogstatsd.html"><h3 class="article-title">Forward DogStatsD Metrics to Prometheus</h3></a>
+<h6 class="subheader" title="2017-06-17T00:00:00+07:00">Sat 17 June 2017
+</h6>
+
+
+<p><strong>tl;dr:</strong> StatsD doesn't have metric labels, DogStatsD does.</p>
+<p>This is a follow up post after
+<a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html">Instrumenting Django with Prometheus and StatsD</a>.</p>
+<hr class="docutils" />
+<p>You got Prometheus up and running and eager to start instrumenting your Django application.
+Don't be hasty and read <a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/">Prometheus Best Practices</a>.</p>
+<p>Let's say our application has to use a Python library to request weather forecast.
+Sometimes Weather API server doesn't work as expected and we find HTTP 500 status codes in our application logs.
+Out of curiosity we want to know how often that happens.
+What if we already have to look for another forecast provider?</p>
+<p>First idea could be using a counter &quot;weatherapi_responses_500_total&quot;.
+From the Prometheus docs:</p>
+<blockquote>
+When reporting failures, you should generally have some other metric
+representing the total number of attempts.
+This makes the failure ratio easy to calculate.</blockquote>
+<p>Alright, then we need to count &quot;HTTP 200 OK&quot; API responses as well &quot;weatherapi_responses_200_total&quot;.
+But what about other HTTP status codes? Shall we create metrics for each of them?</p>
+<blockquote>
+When you have multiple metrics that you want to add/average/sum,
+they should usually be one metric with labels rather than multiple metrics.</blockquote>
+<p>As this is exactly our case, we should use Prometheus labels. Therefore our
+metric name should be &quot;weatherapi_responses_total&quot; with a &quot;code&quot; label for the HTTP response code.</p>
+<p>Depending on a scenario, we might have multiple API clients in our application.
+For example, we may generalize metric to &quot;api_responses_total&quot; with
+the following labels &quot;code=200&quot;, &quot;service=weather&quot;.</p>
+<p>Although we should keep it sane and not overuse labels.</p>
+<div class="section" id="statsd-by-datadog">
+<h2>StatsD by Datadog</h2>
+<p>In <a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html">the previous post</a>
+we used StatsD with statsd_exporter to forward metrics to Prometheus server.
+StatsD protocol doesn't have a notion of labels,
+but <a class="reference external" href="https://docs.datadoghq.com/guides/dogstatsd/#tags">Datadog's fork</a> has introduced tags.
+Moreover statsd_exporter can convert them into Prometheus labels.</p>
+<p>Let's take it step by step.
+Firstly, we need <a class="reference external" href="https://github.com/DataDog/datadogpy">Datadog Python client</a>.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> pip install <span class="nv">datadog</span><span class="o">==</span><span class="m">0</span>.16.0
+</pre></div>
+<p>Secondly, we should increment &quot;weatherapi.responses.total&quot; counter.
+For example:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">weather</span>
+<span class="kn">from</span> <span class="nn">datadog</span> <span class="kn">import</span> <span class="n">statsd</span>
+
+
+<span class="k">def</span> <span class="nf">request_weather_forecast</span><span class="p">(</span><span class="n">location</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">forecast</span> <span class="o">=</span> <span class="n">weather</span><span class="o">.</span><span class="n">Forecast</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">weather</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s1">&#39;weatherapi.responses.total&#39;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span>
+            <span class="s1">&#39;code:{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">http_status_code</span><span class="p">),</span>
+        <span class="p">])</span>
+        <span class="k">raise</span>
+
+    <span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s1">&#39;weatherapi.responses.total&#39;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;code:200&#39;</span><span class="p">,</span>
+    <span class="p">])</span>
+    <span class="k">return</span> <span class="n">forecast</span>
+</pre></div>
+<p>Well, since I made up the weather library, we can just run a Python script:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">datadog</span> <span class="kn">import</span> <span class="n">statsd</span>
+<span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s1">&#39;weatherapi.responses.total&#39;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;code:200&#39;</span><span class="p">])</span>
+</pre></div>
+<p>And finally, we should run statsd_exporter with disabled &quot;-statsd.add-suffix&quot; flag
+which adds the metric type (counter/gauge/timer) as suffix to the generated Prometheus metric.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> statsd_exporter <span class="se">\</span>
+    -statsd.listen-address<span class="o">=</span>:8125 <span class="se">\</span>
+    -statsd.add-suffix<span class="o">=</span><span class="nb">false</span>
+</pre></div>
+<p>The statsd_exporter should expose our metric at <a class="reference external" href="http://localhost:9102/metrics">http://localhost:9102/metrics</a>.</p>
+<div class="highlight"><pre><span></span># HELP weatherapi_responses_total Metric autogenerated by statsd_exporter.
+# TYPE weatherapi_responses_total counter
+weatherapi_responses_total{code=&quot;200&quot;} 1
+</pre></div>
+<p>I hope this helps. Cheers!</p>
+</div>
+<p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="http://marselester.com/tag/prometheus.html">prometheus </a>
+    <a href="http://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="http://marselester.com/tag/statsd.html">statsd </a>
+    <a href="http://marselester.com/tag/dogstatsd.html">dogstatsd </a>
+    <a href="http://marselester.com/tag/datadog.html">datadog </a>
+</p>
+
+
+
+<p><a href="http://marselester.com/prometheus-via-dogstatsd.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="http://marselester.com/django-prometheus-via-statsd.html"><h3 class="article-title">Instrumenting Django with Prometheus and StatsD</h3></a>
 <h6 class="subheader" title="2017-06-09T00:00:00+07:00">Fri 09 June 2017
 </h6>
@@ -56,160 +163,7 @@
 Quick search on the topic will lead you to <a class="reference external" href="https://github.com/korfuri/django-prometheus/">django-prometheus</a>.
 For those who don't want to use it, there is another way to export application metrics
 via <a class="reference external" href="https://www.datadoghq.com/blog/statsd/">StatsD</a>.</p>
-<p>The idea is to send metrics from Django by StatsD Python library to StatsD server over UDP.
-Here is an example of incrementing &quot;hello.requests.total&quot; metric every time &quot;say_hello&quot; view is run.</p>
-<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">statsd.defaults.django</span> <span class="kn">import</span> <span class="n">statsd</span>
-
-<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpResponse</span>
-
-
-<span class="k">def</span> <span class="nf">say_hello</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-    <span class="n">statsd</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s1">&#39;hello.requests.total&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s1">&#39;Hello, World!&#39;</span><span class="p">)</span>
-</pre></div>
-<p>StatsD server aggregates measurements over time and flushes them into monitoring backend.
-Here <a class="reference external" href="https://github.com/prometheus/statsd_exporter">statsd_exporter</a> comes into play.
-It uses the same UDP protocol as StatsD server and exports StatsD-style metrics as Prometheus metrics,
-so &quot;hello.requests.total&quot; becomes &quot;hello_requests_total_counter&quot;.</p>
-<p>All we need is to configure Django to send metrics to statsd_exporter daemon.
-Let's set up &quot;Olympus&quot; Django project to demonstrate StatsD integration or
-you can get it from <a class="reference external" href="https://github.com/marselester/django-prometheus-via-statsd">github.com/marselester/django-prometheus-via-statsd</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> virtualenv venv
-<span class="gp">$</span> <span class="nb">source</span> ./venv/bin/activate
-<span class="gp">$</span> pip install <span class="nv">Django</span><span class="o">==</span><span class="m">1</span>.11.1 <span class="nv">statsd</span><span class="o">==</span><span class="m">3</span>.2.1
-<span class="gp">$</span> django-admin.py startproject olympus .
-</pre></div>
-<p>These two lines of Django settings <cite>./olympus/settings.py</cite> configure a default StatsD client
-that is used in the &quot;say_hello&quot; Django view.</p>
-<div class="highlight"><pre><span></span><span class="c1"># statsd_exporter daemon listens to UDP at localhost:8125</span>
-<span class="n">STATSD_HOST</span> <span class="o">=</span> <span class="s1">&#39;localhost&#39;</span>
-<span class="n">STATSD_PORT</span> <span class="o">=</span> <span class="mi">8125</span>
-</pre></div>
-<p>Assuming &quot;say_hello&quot; is available at &quot;/hello&quot; URL path, we can start a web server.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> python manage.py runserver
-<span class="gp">$</span> curl http://localhost:8000/hello
-<span class="go">Hello, World!</span>
-</pre></div>
-<p>The Olympus application is ready to emit metrics. To make sure this is the case,
-we can use tcpdump to capture UDP packets on loopback interface on port 8125
-and print each packet in ASCII.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> tcpdump -i lo0 udp port <span class="m">8125</span> -A
-<span class="go">tcpdump: verbose output suppressed, use -v or -vv for full protocol decode</span>
-<span class="go">listening on lo0, link-type NULL (BSD loopback), capture size 262144 bytes</span>
-<span class="go">11:19:05.460810 IP localhost.57776 &gt; localhost.8125: UDP, length 24</span>
-<span class="go">E..4....@................ .3hello.requests.total:1|c</span>
-</pre></div>
-<p>As we can see, &quot;hello.requests.total:1|c&quot; is sent every time we hit <cite>http://localhost:8000/hello</cite>.</p>
-<div class="section" id="id1">
-<h2>StatsD Exporter</h2>
-<p>Since we have StatsD metrics being sent, we can expose them for Prometheus via statsd_exporter.
-Let's download the latest version and install it (the binary will be in &quot;$GOPATH/bin/&quot;).</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> go get -u github.com/prometheus/statsd_exporter
-</pre></div>
-<p>Run statsd_exporter so it gets StatsD metrics from our Django application.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> statsd_exporter -statsd.listen-address<span class="o">=</span><span class="s2">&quot;localhost:8125&quot;</span>
-</pre></div>
-<p>By default it exposes generated Prometheus metrics at <a class="reference external" href="http://localhost:9102/metrics">http://localhost:9102/metrics</a>.
-Check out the output, among many metrics there will be our counter from &quot;say_hello&quot; view.</p>
-<div class="highlight"><pre><span></span># HELP hello_requests_total_counter Metric autogenerated by statsd_exporter.
-# TYPE hello_requests_total_counter counter
-hello_requests_total_counter 2
-</pre></div>
-</div>
-<div class="section" id="run-everything-on-kubernetes">
-<h2>Run Everything on Kubernetes</h2>
-<p>Of course we will deploy everything on Kubernetes.
-Minikube will help us here.
-Minukube is an easy way to run Kubernetes locally.
-When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
-we can configure our Docker client to communicate with the Minikube Docker daemon.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
-<span class="go">Starting local Kubernetes cluster...</span>
-<span class="go">Kubectl is now configured to use the cluster.</span>
-<span class="gp">$</span> <span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
-</pre></div>
-<div class="section" id="django-application">
-<h3>Django application</h3>
-<p>First, we shall deploy our Django application with statsd_exporter running in the same Kubernetes Pod.
-It exposes 8000 (uWSGI) and 9102 (statsd_exporter's generated Prometheus metrics) container ports.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build -t marselester/olympus:v1.0.0 ./olympus-app/
-<span class="gp">$</span> kubectl apply -f ./kube/olympus-app/deployment.yml
-<span class="gp">$</span> kubectl apply -f ./kube/olympus-app/service.yml
-</pre></div>
-<p>Though we don't need Nginx in the demo, it's ubiquitous on production servers.
-Nginx proxies HTTP requests using uWSGI protocol to &quot;olympus-service&quot; Kubernetes Service
-we created above.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap olympus-nginx-conf --from-file<span class="o">=</span>./kube/nginx/olympus.conf
-<span class="gp">$</span> kubectl apply -f ./kube/nginx/deployment.yml
-</pre></div>
-</div>
-<div class="section" id="prometheus">
-<h3>Prometheus</h3>
-<p>Next is Prometheus server's turn to be deployed. It is configured to scrape
-own metrics from 9102 port and metrics from Pods that have &quot;app: olympus&quot; label.</p>
-<p>Prometheus server listens on port 9090. On production servers you'll likely run
-it behind Nginx with basic authentication and make it accessible via VPN only.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf --from-file<span class="o">=</span>./kube/prometheus/prometheus.yml
-<span class="gp">$</span> kubectl apply -f ./kube/prometheus/deployment.yml
-</pre></div>
-<p>But in our case we'll use Kubernetes port forwarding to test whether Django
-metrics show up in Prometheus dashboard.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl port-forward nginx-deployment-3580857522-tn332 <span class="m">8080</span>:80
-<span class="gp">$</span> kubectl port-forward prometheus-deployment-2456821496-8zdg8 <span class="m">9090</span>
-<span class="gp">$</span> curl http://localhost:8080/hello
-<span class="go">Hello, World!</span>
-</pre></div>
-<p>&quot;hello_requests_total_counter&quot; should be searchable at the expression browser
-<a class="reference external" href="http://localhost:9090/graph">http://localhost:9090/graph</a>.</p>
-</div>
-<div class="section" id="prometheus-helm-chart">
-<h3>Prometheus Helm Chart</h3>
-<p>There are other ways to install Prometheus on Kubernetes:</p>
-<ul class="simple">
-<li><a class="reference external" href="https://github.com/kubernetes/charts/tree/master/stable/prometheus">Helm</a> (recommended Kubernetes &gt;= 1.4.1)</li>
-<li><a class="reference external" href="https://github.com/coreos/prometheus-operator">Prometheus Operator</a> (requires Kubernetes &gt;= 1.5.0)</li>
-</ul>
-<p>Prometheus Operator and Helm look awesome, though I have not played with Operator yet.
-Here is how you can set up Prometheus via Helm (package manager for Kubernetes).
-You will need the Helm client</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> brew install kubernetes-helm
-</pre></div>
-<p>and Helm server (Tiller). The following command installs it into the Kubernetes cluster.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> helm init
-</pre></div>
-<p>Now you can install Prometheus Helm package (chart).</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> helm repo update
-<span class="gp">$</span> helm install --name team-ops stable/prometheus
-</pre></div>
-<p>Nice, we have full-blown Prometheus &quot;team-ops&quot; chart release running
-with alert manager and node exporter.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> helm list
-<span class="go">NAME        REVISION    UPDATED                     STATUS      CHART               NAMESPACE</span>
-<span class="go">team-ops    1           Thu Jun  8 21:40:29 2017    DEPLOYED    prometheus-3.0.2    default</span>
-</pre></div>
-<p>Let's add one more Prometheus to the cluster (call it &quot;team-dev&quot;),
-but this time we want only Prometheus server with a custom prometheus.yml config.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> helm install --name team-dev <span class="se">\</span>
-    --set alertmanager.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
-    --set kubeStateMetrics.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
-    --set nodeExporter.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
-    stable/prometheus
-</pre></div>
-<p>The config is stored in &quot;team-dev-prometheus-server&quot; ConfigMap.
-Let's overwrite it with our prometheus.yml.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap team-dev-prometheus-server <span class="se">\</span>
-    --from-file<span class="o">=</span>./kube/prometheus/prometheus.yml <span class="se">\</span>
-    -o yaml <span class="se">\</span>
-    --dry-run <span class="p">|</span> kubectl replace -f -
-</pre></div>
-<p>To see whether &quot;team-dev&quot; Prometheus started, we can run a port forwarding:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl port-forward team-dev-prometheus-server-4131857549-c98j0 <span class="m">9091</span>:9090
-</pre></div>
-<p>Prometheus &quot;team-dev&quot; release is accessible at <a class="reference external" href="http://localhost:9091/graph">http://localhost:9091/graph</a>.</p>
-<p>I hope this helps. Cheers!</p>
-</div>
-</div>
-<p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+<p>The idea is to send …</p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="http://marselester.com/tag/django.html">django </a>
@@ -222,11 +176,9 @@ Let's overwrite it with our prometheus.yml.</p>
 
 
 
-<p><a href="http://marselester.com/django-prometheus-via-statsd.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="http://marselester.com/django-prometheus-via-statsd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/django-prometheus-via-statsd.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 
@@ -384,6 +336,9 @@ Also …</p><p class="subheader">Category: <a href="http://marselester.com/categ
         <ul class="side-nav">
             <li><a href="http://marselester.com/archives.html">Archives</a>
             <li><a href="http://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="http://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
         </ul>
 
 		

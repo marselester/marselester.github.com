@@ -1,5 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Infrastructure</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/infrastructure.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2017-06-09T00:00:00+07:00</updated><entry><title>Instrumenting Django with Prometheus and StatsD</title><link href="http://marselester.com/django-prometheus-via-statsd.html" rel="alternate"></link><published>2017-06-09T00:00:00+07:00</published><updated>2017-06-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2017-06-09:/django-prometheus-via-statsd.html</id><summary type="html">&lt;p&gt;If you ever wondered how to monitor your Django application with Prometheus this article is for you.
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Infrastructure</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/infrastructure.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2017-06-17T00:00:00+07:00</updated><entry><title>Forward DogStatsD Metrics to Prometheus</title><link href="http://marselester.com/prometheus-via-dogstatsd.html" rel="alternate"></link><published>2017-06-17T00:00:00+07:00</published><updated>2017-06-17T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2017-06-17:/prometheus-via-dogstatsd.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;tl;dr:&lt;/strong&gt; StatsD doesn't have metric labels, DogStatsD does.&lt;/p&gt;
+&lt;p&gt;This is a follow up post after
+&lt;a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html"&gt;Instrumenting Django with Prometheus and StatsD&lt;/a&gt;.&lt;/p&gt;
+&lt;hr class="docutils" /&gt;
+&lt;p&gt;You got Prometheus up and running and eager to start instrumenting your Django application.
+Don't be hasty and read &lt;a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/"&gt;Prometheus Best Practices&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Let's say our application has to …&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;strong&gt;tl;dr:&lt;/strong&gt; StatsD doesn't have metric labels, DogStatsD does.&lt;/p&gt;
+&lt;p&gt;This is a follow up post after
+&lt;a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html"&gt;Instrumenting Django with Prometheus and StatsD&lt;/a&gt;.&lt;/p&gt;
+&lt;hr class="docutils" /&gt;
+&lt;p&gt;You got Prometheus up and running and eager to start instrumenting your Django application.
+Don't be hasty and read &lt;a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/"&gt;Prometheus Best Practices&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Let's say our application has to use a Python library to request weather forecast.
+Sometimes Weather API server doesn't work as expected and we find HTTP 500 status codes in our application logs.
+Out of curiosity we want to know how often that happens.
+What if we already have to look for another forecast provider?&lt;/p&gt;
+&lt;p&gt;First idea could be using a counter &amp;quot;weatherapi_responses_500_total&amp;quot;.
+From the Prometheus docs:&lt;/p&gt;
+&lt;blockquote&gt;
+When reporting failures, you should generally have some other metric
+representing the total number of attempts.
+This makes the failure ratio easy to calculate.&lt;/blockquote&gt;
+&lt;p&gt;Alright, then we need to count &amp;quot;HTTP 200 OK&amp;quot; API responses as well &amp;quot;weatherapi_responses_200_total&amp;quot;.
+But what about other HTTP status codes? Shall we create metrics for each of them?&lt;/p&gt;
+&lt;blockquote&gt;
+When you have multiple metrics that you want to add/average/sum,
+they should usually be one metric with labels rather than multiple metrics.&lt;/blockquote&gt;
+&lt;p&gt;As this is exactly our case, we should use Prometheus labels. Therefore our
+metric name should be &amp;quot;weatherapi_responses_total&amp;quot; with a &amp;quot;code&amp;quot; label for the HTTP response code.&lt;/p&gt;
+&lt;p&gt;Depending on a scenario, we might have multiple API clients in our application.
+For example, we may generalize metric to &amp;quot;api_responses_total&amp;quot; with
+the following labels &amp;quot;code=200&amp;quot;, &amp;quot;service=weather&amp;quot;.&lt;/p&gt;
+&lt;p&gt;Although we should keep it sane and not overuse labels.&lt;/p&gt;
+&lt;div class="section" id="statsd-by-datadog"&gt;
+&lt;h2&gt;StatsD by Datadog&lt;/h2&gt;
+&lt;p&gt;In &lt;a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html"&gt;the previous post&lt;/a&gt;
+we used StatsD with statsd_exporter to forward metrics to Prometheus server.
+StatsD protocol doesn't have a notion of labels,
+but &lt;a class="reference external" href="https://docs.datadoghq.com/guides/dogstatsd/#tags"&gt;Datadog's fork&lt;/a&gt; has introduced tags.
+Moreover statsd_exporter can convert them into Prometheus labels.&lt;/p&gt;
+&lt;p&gt;Let's take it step by step.
+Firstly, we need &lt;a class="reference external" href="https://github.com/DataDog/datadogpy"&gt;Datadog Python client&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; pip install &lt;span class="nv"&gt;datadog&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.16.0
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Secondly, we should increment &amp;quot;weatherapi.responses.total&amp;quot; counter.
+For example:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;weather&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;datadog&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;statsd&lt;/span&gt;
+
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;request_weather_forecast&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="k"&gt;try&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="n"&gt;forecast&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;weather&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Forecast&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;retrieve&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;except&lt;/span&gt; &lt;span class="n"&gt;weather&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;APIError&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;exc&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="n"&gt;statsd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;increment&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;weatherapi.responses.total&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;tags&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;
+            &lt;span class="s1"&gt;&amp;#39;code:{}&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;exc&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;http_status_code&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+        &lt;span class="p"&gt;])&lt;/span&gt;
+        &lt;span class="k"&gt;raise&lt;/span&gt;
+
+    &lt;span class="n"&gt;statsd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;increment&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;weatherapi.responses.total&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;tags&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;
+        &lt;span class="s1"&gt;&amp;#39;code:200&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="p"&gt;])&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;forecast&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Well, since I made up the weather library, we can just run a Python script:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;datadog&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;statsd&lt;/span&gt;
+&lt;span class="n"&gt;statsd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;increment&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;weatherapi.responses.total&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;tags&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;code:200&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;And finally, we should run statsd_exporter with disabled &amp;quot;-statsd.add-suffix&amp;quot; flag
+which adds the metric type (counter/gauge/timer) as suffix to the generated Prometheus metric.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; statsd_exporter &lt;span class="se"&gt;\&lt;/span&gt;
+    -statsd.listen-address&lt;span class="o"&gt;=&lt;/span&gt;:8125 &lt;span class="se"&gt;\&lt;/span&gt;
+    -statsd.add-suffix&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;false&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The statsd_exporter should expose our metric at &lt;a class="reference external" href="http://localhost:9102/metrics"&gt;http://localhost:9102/metrics&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;# HELP weatherapi_responses_total Metric autogenerated by statsd_exporter.
+# TYPE weatherapi_responses_total counter
+weatherapi_responses_total{code=&amp;quot;200&amp;quot;} 1
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;I hope this helps. Cheers!&lt;/p&gt;
+&lt;/div&gt;
+</content><category term="prometheus"></category><category term="monitoring"></category><category term="statsd"></category><category term="dogstatsd"></category><category term="datadog"></category></entry><entry><title>Instrumenting Django with Prometheus and StatsD</title><link href="http://marselester.com/django-prometheus-via-statsd.html" rel="alternate"></link><published>2017-06-09T00:00:00+07:00</published><updated>2017-06-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2017-06-09:/django-prometheus-via-statsd.html</id><summary type="html">&lt;p&gt;If you ever wondered how to monitor your Django application with Prometheus this article is for you.
 Quick search on the topic will lead you to &lt;a class="reference external" href="https://github.com/korfuri/django-prometheus/"&gt;django-prometheus&lt;/a&gt;.
 For those who don't want to use it, there is another way to export application metrics
 via &lt;a class="reference external" href="https://www.datadoghq.com/blog/statsd/"&gt;StatsD&lt;/a&gt;.&lt;/p&gt;

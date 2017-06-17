@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"><channel><title>marselester's blog - Marsel Mavletkulov</title><link>http://marselester.com/</link><description></description><lastBuildDate>Fri, 09 Jun 2017 00:00:00 +0700</lastBuildDate><item><title>Instrumenting Django with Prometheus and StatsD</title><link>http://marselester.com/django-prometheus-via-statsd.html</link><description>&lt;p&gt;If you ever wondered how to monitor your Django application with Prometheus this article is for you.
+<rss version="2.0"><channel><title>marselester's blog - Marsel Mavletkulov</title><link>http://marselester.com/</link><description></description><lastBuildDate>Sat, 17 Jun 2017 00:00:00 +0700</lastBuildDate><item><title>Forward DogStatsD Metrics to Prometheus</title><link>http://marselester.com/prometheus-via-dogstatsd.html</link><description>&lt;p&gt;&lt;strong&gt;tl;dr:&lt;/strong&gt; StatsD doesn't have metric labels, DogStatsD does.&lt;/p&gt;
+&lt;p&gt;This is a follow up post after
+&lt;a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html"&gt;Instrumenting Django with Prometheus and StatsD&lt;/a&gt;.&lt;/p&gt;
+&lt;hr class="docutils" /&gt;
+&lt;p&gt;You got Prometheus up and running and eager to start instrumenting your Django application.
+Don't be hasty and read &lt;a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/"&gt;Prometheus Best Practices&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Let's say our application has to …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Sat, 17 Jun 2017 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2017-06-17:/prometheus-via-dogstatsd.html</guid><category>prometheus</category><category>monitoring</category><category>statsd</category><category>dogstatsd</category><category>datadog</category></item><item><title>Instrumenting Django with Prometheus and StatsD</title><link>http://marselester.com/django-prometheus-via-statsd.html</link><description>&lt;p&gt;If you ever wondered how to monitor your Django application with Prometheus this article is for you.
 Quick search on the topic will lead you to &lt;a class="reference external" href="https://github.com/korfuri/django-prometheus/"&gt;django-prometheus&lt;/a&gt;.
 For those who don't want to use it, there is another way to export application metrics
 via &lt;a class="reference external" href="https://www.datadoghq.com/blog/statsd/"&gt;StatsD&lt;/a&gt;.&lt;/p&gt;
