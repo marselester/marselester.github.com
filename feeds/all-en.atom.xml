@@ -458,7 +458,7 @@ The config can be copied from the running container or from the git repository.&
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl &lt;span class="nb"&gt;exec&lt;/span&gt; prometheus-deployment-2234044252-of29y -it cat /etc/prometheus/prometheus.yml
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Next we need to create a ConfigMap entry for the &lt;cite&gt;prometheus.yml&lt;/cite&gt; file:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap prometheus-server-conf --from-file&lt;span class="o"&gt;=&lt;/span&gt;kube/prometheus/config-v1.yml
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap prometheus-server-conf --from-file&lt;span class="o"&gt;=&lt;/span&gt;prometheus.yml&lt;span class="o"&gt;=&lt;/span&gt;kube/prometheus/config-v1.yml
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Now let's mount &lt;cite&gt;prometheus-server-conf&lt;/cite&gt; ConfigMap volume to our Prometheus Pod&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f kube/prometheus/deployment-v2.yaml
@@ -614,7 +614,7 @@ to scrape metrics from &lt;cite&gt;/metrics&lt;/cite&gt; HTTP endpoint of hello-
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Update a ConfigMap of Prometheus config and re-create a Prometheus Pod so it picks up changes.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap prometheus-server-conf &lt;span class="se"&gt;\&lt;/span&gt;
-    --from-file&lt;span class="o"&gt;=&lt;/span&gt;kube/prometheus/config-v2.yaml &lt;span class="se"&gt;\&lt;/span&gt;
+    --from-file&lt;span class="o"&gt;=&lt;/span&gt;prometheus.yml&lt;span class="o"&gt;=&lt;/span&gt;kube/prometheus/config-v2.yaml &lt;span class="se"&gt;\&lt;/span&gt;
     -o yaml &lt;span class="se"&gt;\&lt;/span&gt;
     --dry-run &lt;span class="p"&gt;|&lt;/span&gt; kubectl replace -f -
 &lt;/pre&gt;&lt;/div&gt;

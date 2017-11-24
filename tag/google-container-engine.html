@@ -192,7 +192,7 @@ The config can be copied from the running container or from the git repository.<
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl <span class="nb">exec</span> prometheus-deployment-2234044252-of29y -it cat /etc/prometheus/prometheus.yml
 </pre></div>
 <p>Next we need to create a ConfigMap entry for the <cite>prometheus.yml</cite> file:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf --from-file<span class="o">=</span>kube/prometheus/config-v1.yml
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf --from-file<span class="o">=</span>prometheus.yml<span class="o">=</span>kube/prometheus/config-v1.yml
 </pre></div>
 <p>Now let's mount <cite>prometheus-server-conf</cite> ConfigMap volume to our Prometheus Pod</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f kube/prometheus/deployment-v2.yaml
@@ -348,7 +348,7 @@ to scrape metrics from <cite>/metrics</cite> HTTP endpoint of hello-app Pods.</p
 </pre></div>
 <p>Update a ConfigMap of Prometheus config and re-create a Prometheus Pod so it picks up changes.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf <span class="se">\</span>
-    --from-file<span class="o">=</span>kube/prometheus/config-v2.yaml <span class="se">\</span>
+    --from-file<span class="o">=</span>prometheus.yml<span class="o">=</span>kube/prometheus/config-v2.yaml <span class="se">\</span>
     -o yaml <span class="se">\</span>
     --dry-run <span class="p">|</span> kubectl replace -f -
 </pre></div>

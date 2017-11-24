@@ -187,7 +187,7 @@ our config should be as following:
           # or we can set a specific port number (in our case).
           # Each node will proxy 32514 port (the same port number on every node) into this service.
           # Note that this Service will be visible as both NodeIP:nodePort and clusterIp:port
-          nodePort: 32514   
+          nodePort: 32514
 
 Prometheus Config
 -----------------
@@ -206,7 +206,7 @@ Next we need to create a ConfigMap entry for the `prometheus.yml` file:
 
 .. code-block:: console
 
-    $ kubectl create configmap prometheus-server-conf --from-file=kube/prometheus/config-v1.yml
+    $ kubectl create configmap prometheus-server-conf --from-file=prometheus.yml=kube/prometheus/config-v1.yml
 
 Now let's mount `prometheus-server-conf` ConfigMap volume to our Prometheus Pod
 
@@ -401,7 +401,7 @@ Update a ConfigMap of Prometheus config and re-create a Prometheus Pod so it pic
 .. code-block:: console
 
     $ kubectl create configmap prometheus-server-conf \
-        --from-file=kube/prometheus/config-v2.yaml \
+        --from-file=prometheus.yml=kube/prometheus/config-v2.yaml \
         -o yaml \
         --dry-run | kubectl replace -f -
 
