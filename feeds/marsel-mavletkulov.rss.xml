@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"><channel><title>marselester's blog - Marsel Mavletkulov</title><link>http://marselester.com/</link><description></description><lastBuildDate>Sat, 17 Jun 2017 00:00:00 +0700</lastBuildDate><item><title>Forward DogStatsD Metrics to Prometheus</title><link>http://marselester.com/prometheus-via-dogstatsd.html</link><description>&lt;p&gt;&lt;strong&gt;tl;dr:&lt;/strong&gt; StatsD doesn't have metric labels, DogStatsD does.&lt;/p&gt;
+<rss version="2.0"><channel><title>marselester's blog - Marsel Mavletkulov</title><link>http://marselester.com/</link><description></description><lastBuildDate>Fri, 28 Sep 2018 00:00:00 +0700</lastBuildDate><item><title>How to Structure Go Projects</title><link>http://marselester.com/how-to-structure-go-projects.html</link><description>&lt;p&gt;I came to Go from Django where the framework defines project layout, thus I wanted to know
+how to structure my Go applications. After reading documentation and building a few Django projects,
+you get a clear mental picture, as most of the questions are already answered.
+That helps to keep …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Fri, 28 Sep 2018 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2018-09-28:/how-to-structure-go-projects.html</guid><category>golang</category><category>project structure</category><category>Domain-Driven Design</category></item><item><title>Forward DogStatsD Metrics to Prometheus</title><link>http://marselester.com/prometheus-via-dogstatsd.html</link><description>&lt;p&gt;&lt;strong&gt;tl;dr:&lt;/strong&gt; StatsD doesn't have metric labels, DogStatsD does.&lt;/p&gt;
 &lt;p&gt;This is a follow up post after
 &lt;a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html"&gt;Instrumenting Django with Prometheus and StatsD&lt;/a&gt;.&lt;/p&gt;
 &lt;hr class="docutils" /&gt;
@@ -43,33 +46,14 @@ run in VirtualBox which is managed by Vagrant. Infrastructure management
 is provided by SaltStack.&lt;/p&gt;
 &lt;p&gt;I advise you to create separate folder for repositories (currently there
 is only one) of project and clone &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; there.
-Also …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Sat, 09 Nov 2013 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2013-11-09:/developing-django-project-with-saltstack.html</guid><category>python</category><category>django</category><category>vagrant</category><category>salt</category><category>saltstack</category></item><item><title>Python Developer at Uploadcare</title><link>http://marselester.com/python-developer-at-uploadcare.html</link><description>&lt;p&gt;I started to look for a full-time remote job as a Python Developer after
-&lt;a class="reference external" href="http://fangid.com/"&gt;FanGid&lt;/a&gt; contract has been ended. And I found what
-I was looking for -- &lt;a class="reference external" href="https://uploadcare.com"&gt;Uploadcare&lt;/a&gt;, a cloud-based
-file upload SaaS -- &lt;a class="reference external" href="https://github.com/uploadcare?tab=members"&gt;great team&lt;/a&gt;,
-appropriate development process, adherence to quality standards.&lt;/p&gt;
-&lt;p&gt;I started to work at Uploadcare from tasks …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Wed, 31 Jul 2013 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2013-07-31:/python-developer-at-uploadcare.html</guid><category>python</category><category>django</category><category>tornado</category><category>flask</category><category>aws</category></item><item><title>Preparation to Python Interview</title><link>http://marselester.com/preparation-to-python-interview.html</link><description>&lt;p&gt;I decided to collect a little more information and experience during
+Also …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Sat, 09 Nov 2013 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2013-11-09:/developing-django-project-with-saltstack.html</guid><category>python</category><category>django</category><category>vagrant</category><category>salt</category><category>saltstack</category></item><item><title>Preparation to Python Interview</title><link>http://marselester.com/preparation-to-python-interview.html</link><description>&lt;p&gt;I decided to collect a little more information and experience during
 preparation to Python developer interview. These are some information and
 links which seemed important to me. Maybe it will be helpful.&lt;/p&gt;
 &lt;div class="section" id="how-does-it-usually-go"&gt;
 &lt;h2&gt;How does it usually go?&lt;/h2&gt;
 &lt;div class="section" id="what-kind-of-projects-did-you-participate-in"&gt;
 &lt;h3&gt;What kind of projects did you participate in?&lt;/h3&gt;
-&lt;p&gt;What did you do at …&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Fri, 02 Nov 2012 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2012-11-02:/preparation-to-python-interview.html</guid><category>python</category><category>interview</category></item><item><title>Стартап fangid.com</title><link>http://marselester.com/fangid-startup.html</link><description>&lt;p&gt;В середине июля 2012 г. команда &lt;a class="reference external" href="http://fangid.com/"&gt;стартапа fangid.com&lt;/a&gt;
-приступила к воплощению идеи социальной концертной платформы на севере
-Таиланда. Я занимался подготовительными работами (соглашениями по разработке,
-первоначальной подготовкой репозитория, например, продумыванием структуры,
-организацией тестов, разделением настроек), принимал участие в выработке
-требований к системе и проектировании архитектуры. При конструировании системы
-моими …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Sat, 13 Oct 2012 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2012-10-13:/fangid-startup.html</guid><category>python</category><category>django</category><category>startup</category><category>thailand</category></item><item><title>Портфолио 2007–2011</title><link>http://marselester.com/portfolio-2007-2011.html</link><description>&lt;p&gt;Не стал перечислять те сайты, которые за давностью лет были переделаны либо
-перестали существовать. В основном backend основан на cms myscon, которая была
-переписана мною несколько раз.&lt;/p&gt;
-&lt;div class="section" id="id2"&gt;
-&lt;h2&gt;2011&lt;/h2&gt;
-&lt;ul class="simple"&gt;
-&lt;li&gt;электронный архив ежемесячного литературно-публицистического журнала
-«&lt;a class="reference external" href="http://agidel-magazine.ru/"&gt;Агидель&lt;/a&gt;» на Django. Предполагается, что ресурс будет содержать архив
-журналов с 1923 года. Для удобной навигации сделал …&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Fri, 12 Oct 2012 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2012-10-12:/portfolio-2007-2011.html</guid><category>php</category><category>codeigniter</category><category>cms myscon</category><category>python</category><category>django</category></item><item><title>Django TODO: тестирование во время конструирования</title><link>http://marselester.com/django-todo-testing-during-construction.html</link><description>&lt;p&gt;Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
+&lt;p&gt;What did you do at …&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Fri, 02 Nov 2012 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2012-11-02:/preparation-to-python-interview.html</guid><category>python</category><category>interview</category></item><item><title>Django TODO: тестирование во время конструирования</title><link>http://marselester.com/django-todo-testing-during-construction.html</link><description>&lt;p&gt;Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
 стратегии тестирования.&lt;/p&gt;
 &lt;p&gt;Тестирование может указать только на отдельные дефектные области программы --
 оно не сделает программу удобнее в использовании, более быстрой, компактной,

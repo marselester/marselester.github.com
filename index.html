@@ -52,6 +52,229 @@
         
 
             <article>
+                <a href="http://marselester.com/how-to-structure-go-projects.html"><h3 class="article-title">How to Structure Go Projects</h3></a>
+<h6 class="subheader" title="2018-09-28T00:00:00+07:00">Fri 28 September 2018
+</h6>
+
+
+<p>I came to Go from Django where the framework defines project layout, thus I wanted to know
+how to structure my Go applications. After reading documentation and building a few Django projects,
+you get a clear mental picture, as most of the questions are already answered.
+That helps to keep the projects within a company consistent, so developers don't have to struggle
+when they land on a new codebase. I was looking for a similar framework approach in Go,
+but none of them felt right to me. For some reason the same concepts do not resonate with Go.
+I didn't have better ideas, so I watched a few videos from conferences.
+Here are the talks I found most helpful and I use them as guidelines:</p>
+<ul class="simple">
+<li>Ben Johnson's <a class="reference external" href="https://www.youtube.com/watch?v=LMSbsW1Xpwg">Structuring Applications for Growth</a></li>
+<li>Kat Zien's <a class="reference external" href="https://www.youtube.com/watch?v=oL6JBUk6tj0">How Do You Structure Your Go Apps</a></li>
+<li>Peter Bourgon's <a class="reference external" href="https://www.youtube.com/watch?v=LHe1Cb_Ud_M">Ways To Do Things</a>.
+I tried his ideas in <a class="reference external" href="https://github.com/marselester/rascaldb/blob/master/rascaldb.go">RascalDB 😜</a>
+to serialize concurrent DB actions.</li>
+</ul>
+<p>I encourage you to watch those talks and go over code examples they provided.</p>
+<p>The following is my takeaway which could be completely misleading and far from the original ideas
+(just in case, you don't have to apply all of them together).
+If you feel something doesn't bring enough value in your case, just skip it, trust your intuition.
+Development requires many iterations to bounce ideas until the result becomes good enough.</p>
+<div class="section" id="know-your-domain">
+<h2>Know Your Domain</h2>
+<p>I like to start a new project on A4 paper and dump everything I know in free form
+(what the problem are you facing, can you solve it without writing code,
+what are possible solutions (pros/cons), terminology, system requirements, API endpoints, sketches,
+doodles, whatever gets your train of thoughts moving). Paper helps to get away from constraints of computer,
+I can write and draw without any programs which would otherwise have taken time and stolen my brain cycles.
+Paper helps me to stay focused — nothing blinks, pops up or rings, there is no urge to multitask
+(check email/Slack, switch between editor and console as if there is something new).</p>
+<p>Once you wrote everything down, you might realize there is not enough information to make progress.
+So you can reach out to stake holders and get more insights using your notes.
+Don't forget to write new info as well. It might take a few iterations when you finally establish
+common terminology, refine the actual project's goal, and cut unnecessary features/requirements.</p>
+<p>Now you have a mental picture of the project with clear deliverables.
+Based on that I like to spend time to come up with a concise project/repository name which
+summarizes nicely the project's goal and spirit (thesaurus comes to the rescue).
+As a next step I usually create README file where insights from the paper are documented.
+This time you want everyone in the world to understand what you learned about the project.
+This helps you to iterate once more as you're documenting in README, and the end result
+can be shared with coworkers (they might not understand your handwriting and doodles).
+If they have questions, that means you have a room for improvement, since other people
+don't have a context you obtained. Take your time and write it down, this will ensure that
+you will be able to get help with the project much easier (when you're on vacation or
+have to hand over the code). With some practice you'll anticipate questions and
+provide answers in README, so it won't take as much time from your coworkers next time.
+Keeping in mind that you are ultimately solving problems for your customers and
+designing the system and writing code for your coworkers (not just for yourself)
+helps to rigorously document as you go. Or else prepare to answer the same questions
+over and over again.</p>
+<p>Let's say you're building an API client, then it makes sense to start from
+a usage example in the README, since most of the documentation work is done by API provider.
+How will people download your library? How will they import it, does the path look concise and clear?
+How will your end user configure a client? What use cases your users might have (custom API domain,
+timeouts, logging, instrumentation)? Think of a few workflows and see how would you handle errors.
+Best case scenario is using your own library to reveal pain points.
+Check out <a class="reference external" href="https://github.com/marselester/bitgo-v2">one of my attempts</a> to find a decent layout of
+an API library. The library has a configurable client (you can instantiate many of them, e.g., one per coin)
+which allows to use a custom logger, http.Client, etc. It also has embedded services — things that know
+how to speak with particular API endpoints to operate API resources.</p>
+</div>
+<div class="section" id="getting-to-the-point">
+<h2>Getting to the Point</h2>
+<p>As you can see from the talks the main theme in Go application structure is heavily
+influenced by Domain-Driven Design (DDD). Using the research done on your project,
+you shall write down entities (as Go structs) of the domain model and services (as Go interfaces)
+which perform operations over those entities.</p>
+<p>I should mention that for simplicity's sake in my projects I decided to combine DDD &quot;service&quot; and
+&quot;repository&quot; concepts under &quot;service&quot; term.</p>
+<p>Let's proceed with listing minimal set of operations over the key entities to keep the scope small.
+It helps to imagine that there are different service implementations,
+an entity can be stored anywhere, for example, in Postgres, Kafka, memory, Redis,
+JSON file, remote API. But keep in mind semantics that storage of choice provides:
+getting a list of entities from Kafka and Postgres are hard to abstract (streaming vs quering).
+Moreover, if you do so, you might create unnecessary constraints for yourself.
+In reality, it is very unlikely that a project will change storages often,
+since you've chosen them for a reason (the choice of the storage is influenced
+by a problem you're solving, its constraints and guarantees you need).
+Most likely you've already chosen the storages in advance, so make sure you
+don't fight with interfaces you defined in your domain model. If you know your services
+need to share the same SQL transaction, embrace it in interfaces, for instance:</p>
+<div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">PaymentService</span> <span class="kd">interface</span> <span class="p">{</span>
+  <span class="nx">CreatePayment</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">tx</span> <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">Tx</span><span class="p">,</span> <span class="o">*</span><span class="nx">Payment</span><span class="p">)</span> <span class="kt">error</span>
+<span class="p">}</span>
+</pre></div>
+<p>Do you put all operations (add/list) into one service interface? I don't know.
+You have to decide. If you add an entity to Postgres, you expect to list them
+from Postgres as well. From this perspective &quot;add&quot; and &quot;list&quot; operations should be
+under the same interface. If in-memory storage can't implement the service interface,
+perhaps you don't have to enforce operation under the same interface,
+then probably it's ok to split it.</p>
+<p>Ben Johnson defines entities in a single package where domain model is described — the package
+shouldn’t have third party dependencies. Whereas Kat Zien in her demo created a package per service:
+&quot;adder&quot; package that adds beers and reviews, &quot;lister&quot; service lists beers and reviews.
+Each package defines its own beer and review structs.</p>
+<p>In my projects I isolate services implementation in a single package.
+For example, if I stored beer reviews in Kafka, I would have a kafka package which exposes
+a client and beer/review services embedded in it. The same applies to postgres package — two services use
+the same db connection pool and beer/review entities might appear in the same db transaction.</p>
+<p>During coding I combine the service implementations into a program (some server or
+a ctl tool) kept in cmd directory. That helps me to validate design ideas and notice any awkward
+component integrations. Similar to service implementations, try to think where the input and
+output could be coming from/to: standard input/output, http, rpc, db.</p>
+</div>
+<div class="section" id="an-example">
+<h2>An Example</h2>
+<p>Now let's have a look at <a class="reference external" href="https://github.com/marselester/distributed-payment">distributed payment</a>
+demo project where I explored an idea of payment transaction
+without atomic commit across 3 Kafka partitions.</p>
+<p>The domain model is defined in the repository root (note, you can place your packages
+in &quot;internal&quot; directory, so you don't mix them up with unrelated files):</p>
+<ul class="simple">
+<li><cite>wallet.go</cite> has <cite>Transfer</cite>, <cite>Payment</cite> entities, and services <cite>TransferService</cite>, <cite>PaymentService</cite>
+which can create and list the entities. Since the project is based on Kafka,
+the interfaces reflect that (<cite>partition</cite>, <cite>offset</cite> params). The services accept <cite>context.Context</cite>
+as a first argument, because we should be able to tell implementations to cancel operation.
+<a class="reference external" href="https://github.com/opentracing/opentracing-go">OpenTracing</a> can leverage context as well.
+Pay attention to a pointer/value semantics (share or not) in the service interfaces.
+Since an entity in DDD terms has a unique identity, a pointer semantics was used,
+hence <cite>*Transfer</cite> is passed to <cite>CreateTransfer()</cite> and returned from <cite>FromOffset()</cite>. Have a look at
+<a class="reference external" href="https://www.ardanlabs.com/blog/2017/06/design-philosophy-on-data-and-semantics.html">Design Philosophy On Data And Semantics</a>
+for more insights.</li>
+<li><cite>error.go</cite> contains errors which are relevant to the whole domain model,
+<a class="reference external" href="https://middlemost.com/failure-is-your-domain/">Failure is your Domain</a>.
+On implementation level there could be their own specific errors, for example, HTTP API errors in
+<cite>rest/error.go</cite> define JSON and validation errors.</li>
+<li><cite>log.go</cite> borrows <cite>Logger</cite> interface from Go kit. Since logging is an integral part of the system,
+placing it nearby the domain model seems justified. There is
+<a class="reference external" href="https://github.com/go-commons/commons/issues/1">Standard logger interface</a> discussion
+where the consensus is to emit events instead of logging in the library.
+Best practices and examples of how to emit events is still an
+<a class="reference external" href="https://github.com/go-commons/event/issues/1">open topic</a> at the time of writing.</li>
+</ul>
+<p>Implementations of the services defined in <cite>wallet.go</cite> are isolated in packages
+by their dependency name, for example, kafka, rest, mock, rocksdb.</p>
+<p>Package kafka implements wallet services and provides the Client access to them.
+There were two design options: embed the services to the Client struct or
+inject a service into each other. The example below would allow to have
+a swappable <cite>PaymentService</cite> (&quot;pg&quot; refers to a Postgres implementation):</p>
+<div class="highlight"><pre><span></span><span class="nx">kafka</span><span class="p">.</span><span class="nx">TransferService</span><span class="p">.</span><span class="nx">PaymentService</span> <span class="p">=</span> <span class="nx">pg</span><span class="p">.</span><span class="nx">NewPaymentService</span><span class="p">()</span>
+</pre></div>
+<p>On the other hand, grouping services in the Client would let services maintain DB transactions
+by sharing the same <cite>*sql.DB</cite>. Here is <cite>pg.Client</cite> example:</p>
+<div class="highlight"><pre><span></span><span class="c1">// Client represents a client to the underlying PostgreSQL data store.</span>
+<span class="kd">type</span> <span class="nx">Client</span> <span class="kd">struct</span> <span class="p">{</span>
+  <span class="nx">Transfer</span> <span class="o">*</span><span class="nx">TransferService</span>
+  <span class="nx">Payment</span>  <span class="o">*</span><span class="nx">PaymentService</span>
+
+  <span class="nx">logger</span> <span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span>
+
+  <span class="nx">db</span>        <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">DB</span>
+  <span class="nx">transferQ</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span>
+  <span class="nx">paymentQ</span>  <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span>
+<span class="p">}</span>
+</pre></div>
+<p>In <a class="reference external" href="https://github.com/marselester/distributed-signup/blob/master/pg/user_service.go">distributed-signup</a>
+project a Client concept is baked into <cite>UserService</cite>, because it was the only service that
+needed access to Postgres.</p>
+<div class="highlight"><pre><span></span><span class="c1">// UserService reprensets a service to store signed up users.</span>
+<span class="kd">type</span> <span class="nx">UserService</span> <span class="kd">struct</span> <span class="p">{</span>
+  <span class="nx">config</span> <span class="nx">Config</span>
+
+  <span class="nx">pool</span> <span class="o">*</span><span class="nx">pgx</span><span class="p">.</span><span class="nx">ConnPool</span>
+<span class="p">}</span>
+</pre></div>
+<p>Package rest is responsible for translating incoming HTTP requests to wallet domain and
+then translating results from wallet model back to HTTP responses.
+The package doesn't implement <cite>TransferService</cite> per se, it uses one in its Server.
+The REST-style API server itself is put together in
+<a class="reference external" href="https://github.com/marselester/distributed-payment/blob/master/cmd/transfer-server/main.go">cmd/transfer-server</a>.</p>
+<div class="highlight"><pre><span></span><span class="c1">// Server represents an HTTP API handler for wallet services.</span>
+<span class="c1">// It wraps a TransferService so we can provide different</span>
+<span class="c1">// implementations, e.g., Kafka or a mock.</span>
+<span class="kd">type</span> <span class="nx">Server</span> <span class="kd">struct</span> <span class="p">{</span>
+  <span class="o">*</span><span class="nx">chi</span><span class="p">.</span><span class="nx">Mux</span>
+  <span class="nx">logger</span>          <span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span>
+  <span class="nx">transferService</span> <span class="nx">wallet</span><span class="p">.</span><span class="nx">TransferService</span>
+  <span class="nx">wopts</span>           <span class="nx">walletOption</span>
+<span class="p">}</span>
+</pre></div>
+<p>Originally in <a class="reference external" href="https://medium.com/wtf-dial/wtf-dial-http-api-d8800ccd605f">WTF Dial: HTTP API</a>
+Ben Johnson explained how to implement API properly and isolate http dependencies in wtf/http package.</p>
+<p>Package mock provides mock services to facilitate testing. For example, for most cases
+we do not need Kafka implementation of a transfer service to be used in HTTP API testing.</p>
+<p>Package rocksdb implements user requests deduplication using RocksDB to
+memorise already processed request IDs. Requests deduplication is an integral part of
+a distributed system, hence the domain model must embrace it.</p>
+<p>Everything is connected in cmd directory. Note, that the domain package is used everywhere.</p>
+<ul class="simple">
+<li><cite>cmd/transfer-server</cite> is HTTP API server to create money transfers which are stored in Kafka.
+It delegates the actual hard work to kafka and rest packages.</li>
+<li><cite>cmd/paymentd</cite> program is responsible for creating incoming &amp; outgoing payment pairs based on
+money transfer requests stored in Kafka.</li>
+<li><cite>cmd/accountantd</cite> is the last program in the pipeline. It sequentially reads Kafka messages
+from <cite>wallet.payment</cite> topic, deduplicates messages by request ID, and applies the changes to
+the account balances. Deduplication is provided by rocksdb package mentioned above.</li>
+</ul>
+<p>To wrap up, that's all I managed to recall :) I look forward for more talks on structuring Go applications.</p>
+</div>
+<p class="subheader">Category: <a href="http://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="http://marselester.com/tag/golang.html">golang </a>
+    <a href="http://marselester.com/tag/project-structure.html">project structure </a>
+    <a href="http://marselester.com/tag/domain-driven-design.html">Domain-Driven Design </a>
+</p>
+
+
+
+<p><a href="http://marselester.com/how-to-structure-go-projects.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="http://marselester.com/prometheus-via-dogstatsd.html"><h3 class="article-title">Forward DogStatsD Metrics to Prometheus</h3></a>
 <h6 class="subheader" title="2017-06-17T00:00:00+07:00">Sat 17 June 2017
 </h6>
@@ -63,76 +286,7 @@
 <hr class="docutils" />
 <p>You got Prometheus up and running and eager to start instrumenting your Django application.
 Don't be hasty and read <a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/">Prometheus Best Practices</a>.</p>
-<p>Let's say our application has to use a Python library to request weather forecast.
-Sometimes Weather API server doesn't work as expected and we find HTTP 500 status codes in our application logs.
-Out of curiosity we want to know how often that happens.
-What if we already have to look for another forecast provider?</p>
-<p>First idea could be using a counter &quot;weatherapi_responses_500_total&quot;.
-From the Prometheus docs:</p>
-<blockquote>
-When reporting failures, you should generally have some other metric
-representing the total number of attempts.
-This makes the failure ratio easy to calculate.</blockquote>
-<p>Alright, then we need to count &quot;HTTP 200 OK&quot; API responses as well &quot;weatherapi_responses_200_total&quot;.
-But what about other HTTP status codes? Shall we create metrics for each of them?</p>
-<blockquote>
-When you have multiple metrics that you want to add/average/sum,
-they should usually be one metric with labels rather than multiple metrics.</blockquote>
-<p>As this is exactly our case, we should use Prometheus labels. Therefore our
-metric name should be &quot;weatherapi_responses_total&quot; with a &quot;code&quot; label for the HTTP response code.</p>
-<p>Depending on a scenario, we might have multiple API clients in our application.
-For example, we may generalize metric to &quot;api_responses_total&quot; with
-the following labels &quot;code=200&quot;, &quot;service=weather&quot;.</p>
-<p>Although we should keep it sane and not overuse labels.</p>
-<div class="section" id="statsd-by-datadog">
-<h2>StatsD by Datadog</h2>
-<p>In <a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html">the previous post</a>
-we used StatsD with statsd_exporter to forward metrics to Prometheus server.
-StatsD protocol doesn't have a notion of labels,
-but <a class="reference external" href="https://docs.datadoghq.com/guides/dogstatsd/#tags">Datadog's fork</a> has introduced tags.
-Moreover statsd_exporter can convert them into Prometheus labels.</p>
-<p>Let's take it step by step.
-Firstly, we need <a class="reference external" href="https://github.com/DataDog/datadogpy">Datadog Python client</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> pip install <span class="nv">datadog</span><span class="o">==</span><span class="m">0</span>.16.0
-</pre></div>
-<p>Secondly, we should increment &quot;weatherapi.responses.total&quot; counter.
-For example:</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">weather</span>
-<span class="kn">from</span> <span class="nn">datadog</span> <span class="kn">import</span> <span class="n">statsd</span>
-
-
-<span class="k">def</span> <span class="nf">request_weather_forecast</span><span class="p">(</span><span class="n">location</span><span class="p">):</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">forecast</span> <span class="o">=</span> <span class="n">weather</span><span class="o">.</span><span class="n">Forecast</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
-    <span class="k">except</span> <span class="n">weather</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-        <span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s1">&#39;weatherapi.responses.total&#39;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span>
-            <span class="s1">&#39;code:{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">http_status_code</span><span class="p">),</span>
-        <span class="p">])</span>
-        <span class="k">raise</span>
-
-    <span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s1">&#39;weatherapi.responses.total&#39;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span>
-        <span class="s1">&#39;code:200&#39;</span><span class="p">,</span>
-    <span class="p">])</span>
-    <span class="k">return</span> <span class="n">forecast</span>
-</pre></div>
-<p>Well, since I made up the weather library, we can just run a Python script:</p>
-<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">datadog</span> <span class="kn">import</span> <span class="n">statsd</span>
-<span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s1">&#39;weatherapi.responses.total&#39;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;code:200&#39;</span><span class="p">])</span>
-</pre></div>
-<p>And finally, we should run statsd_exporter with disabled &quot;-statsd.add-suffix&quot; flag
-which adds the metric type (counter/gauge/timer) as suffix to the generated Prometheus metric.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> statsd_exporter <span class="se">\</span>
-    -statsd.listen-address<span class="o">=</span>:8125 <span class="se">\</span>
-    -statsd.add-suffix<span class="o">=</span><span class="nb">false</span>
-</pre></div>
-<p>The statsd_exporter should expose our metric at <a class="reference external" href="http://localhost:9102/metrics">http://localhost:9102/metrics</a>.</p>
-<div class="highlight"><pre><span></span># HELP weatherapi_responses_total Metric autogenerated by statsd_exporter.
-# TYPE weatherapi_responses_total counter
-weatherapi_responses_total{code=&quot;200&quot;} 1
-</pre></div>
-<p>I hope this helps. Cheers!</p>
-</div>
-<p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+<p>Let's say our application has to …</p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="http://marselester.com/tag/prometheus.html">prometheus </a>
@@ -144,11 +298,9 @@ weatherapi_responses_total{code=&quot;200&quot;} 1
 
 
 
-<p><a href="http://marselester.com/prometheus-via-dogstatsd.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="http://marselester.com/prometheus-via-dogstatsd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/prometheus-via-dogstatsd.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 
@@ -388,36 +540,6 @@ Also …</p><p class="subheader">Category: <a href="http://marselester.com/categ
 
 
             <article>
-                <a href="http://marselester.com/python-developer-at-uploadcare.html"><h3 class="article-title">Python Developer at Uploadcare</h3></a>
-<h6 class="subheader" title="2013-07-31T00:00:00+07:00">Wed 31 July 2013
-</h6>
-
-
-<p>I started to look for a full-time remote job as a Python Developer after
-<a class="reference external" href="http://fangid.com/">FanGid</a> contract has been ended. And I found what
-I was looking for -- <a class="reference external" href="https://uploadcare.com">Uploadcare</a>, a cloud-based
-file upload SaaS -- <a class="reference external" href="https://github.com/uploadcare?tab=members">great team</a>,
-appropriate development process, adherence to quality standards.</p>
-<p>I started to work at Uploadcare from tasks …</p><p class="subheader">Category: <a href="http://marselester.com/category/portfolio.html">Portfolio</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/python.html">python </a>
-    <a href="http://marselester.com/tag/django.html">django </a>
-    <a href="http://marselester.com/tag/tornado.html">tornado </a>
-    <a href="http://marselester.com/tag/flask.html">flask </a>
-    <a href="http://marselester.com/tag/aws.html">aws </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/python-developer-at-uploadcare.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/python-developer-at-uploadcare.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
                 <a href="http://marselester.com/preparation-to-python-interview.html"><h3 class="article-title">Preparation to Python Interview</h3></a>
 <h6 class="subheader" title="2012-11-02T00:00:00+07:00">Fri 02 November 2012
 </h6>
@@ -440,69 +562,6 @@ links which seemed important to me. Maybe it will be helpful.</p>
 
 
 <p><a href="http://marselester.com/preparation-to-python-interview.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/preparation-to-python-interview.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/fangid-startup.html"><h3 class="article-title">Стартап fangid.com</h3></a>
-<h6 class="subheader" title="2012-10-13T00:00:00+07:00">Sat 13 October 2012
-</h6>
-
-
-<p>В середине июля 2012 г. команда <a class="reference external" href="http://fangid.com/">стартапа fangid.com</a>
-приступила к воплощению идеи социальной концертной платформы на севере
-Таиланда. Я занимался подготовительными работами (соглашениями по разработке,
-первоначальной подготовкой репозитория, например, продумыванием структуры,
-организацией тестов, разделением настроек), принимал участие в выработке
-требований к системе и проектировании архитектуры. При конструировании системы
-моими …</p><p class="subheader">Category: <a href="http://marselester.com/category/portfolio.html">Portfolio</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/python.html">python </a>
-    <a href="http://marselester.com/tag/django.html">django </a>
-    <a href="http://marselester.com/tag/startup.html">startup </a>
-    <a href="http://marselester.com/tag/thailand.html">thailand </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/fangid-startup.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/fangid-startup.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/portfolio-2007-2011.html"><h3 class="article-title">Портфолио 2007–2011</h3></a>
-<h6 class="subheader" title="2012-10-12T00:00:00+07:00">Fri 12 October 2012
-</h6>
-
-
-<p>Не стал перечислять те сайты, которые за давностью лет были переделаны либо
-перестали существовать. В основном backend основан на cms myscon, которая была
-переписана мною несколько раз.</p>
-<div class="section" id="id2">
-<h2>2011</h2>
-<ul class="simple">
-<li>электронный архив ежемесячного литературно-публицистического журнала
-«<a class="reference external" href="http://agidel-magazine.ru/">Агидель</a>» на Django. Предполагается, что ресурс будет содержать архив
-журналов с 1923 года. Для удобной навигации сделал …</li></ul></div><p class="subheader">Category: <a href="http://marselester.com/category/portfolio.html">Portfolio</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/php.html">php </a>
-    <a href="http://marselester.com/tag/codeigniter.html">codeigniter </a>
-    <a href="http://marselester.com/tag/cms-myscon.html">cms myscon </a>
-    <a href="http://marselester.com/tag/python.html">python </a>
-    <a href="http://marselester.com/tag/django.html">django </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/portfolio-2007-2011.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/portfolio-2007-2011.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -834,9 +893,9 @@ settings/
 		
         <h5 class="sidebar-title">Categories</h5>
         <ul class="side-nav">
+            <li><a href="http://marselester.com/category/go.html">Go</a></li>
             <li><a href="http://marselester.com/category/infrastructure.html">Infrastructure</a></li>
             <li><a href="http://marselester.com/category/misc.html">Misc</a></li>
-            <li><a href="http://marselester.com/category/portfolio.html">Portfolio</a></li>
             <li><a href="http://marselester.com/category/python.html">Python</a></li>
    
         </ul>

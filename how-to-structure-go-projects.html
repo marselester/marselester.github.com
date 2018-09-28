@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - golang</title>
+    <title>How to Structure Go Projects</title>
 
     <link rel="stylesheet" href="http://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="http://marselester.com/theme/css/foundation.min.css" />
@@ -48,16 +48,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="http://marselester.com/how-to-structure-go-projects.html" rel="bookmark"
+        title="Permalink to How to Structure Go Projects">How to Structure Go Projects</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="http://marselester.com/how-to-structure-go-projects.html"><h3 class="article-title">How to Structure Go Projects</h3></a>
 <h6 class="subheader" title="2018-09-28T00:00:00+07:00">Fri 28 September 2018
 </h6>
 
 
-<p>I came to Go from Django where the framework defines project layout, thus I wanted to know
+    <p>I came to Go from Django where the framework defines project layout, thus I wanted to know
 how to structure my Go applications. After reading documentation and building a few Django projects,
 you get a clear mental picture, as most of the questions are already answered.
 That helps to keep the projects within a company consistent, so developers don't have to struggle
@@ -255,6 +257,7 @@ the account balances. Deduplication is provided by rocksdb package mentioned abo
 </ul>
 <p>To wrap up, that's all I managed to recall :) I look forward for more talks on structuring Go applications.</p>
 </div>
+
 <p class="subheader">Category: <a href="http://marselester.com/category/go.html">Go</a>
 
     Tagged: 
@@ -265,44 +268,22 @@ the account balances. Deduplication is provided by rocksdb package mentioned abo
 
 
 
-<p><a href="http://marselester.com/how-to-structure-go-projects.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "how-to-structure-go-projects.html";
+        var disqus_url = "http://marselester.com/how-to-structure-go-projects.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/prometheus-on-kubernetes.html"><h3 class="article-title">Prometheus on Kubernetes</h3></a>
-<h6 class="subheader" title="2016-11-13T00:00:00+07:00">Sun 13 November 2016
-</h6>
-
-
-<p><a class="reference external" href="https://prometheus.io/">Prometheus</a> is a monitoring toolkit.
-Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
-from <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes">hello web application</a>
-which also runs in the same cluster.</p>
-<p>First of all, we need Kubernetes cluster running. It's easy to bootstrap one via <a class="reference external" href="https://console.cloud.google.com">Google Container Engine</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud …</pre></div><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/prometheus.html">prometheus </a>
-    <a href="http://marselester.com/tag/kubernetes.html">kubernetes </a>
-    <a href="http://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="http://marselester.com/tag/golang.html">golang </a>
-    <a href="http://marselester.com/tag/google-container-engine.html">Google Container Engine </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/prometheus-on-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/prometheus-on-kubernetes.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

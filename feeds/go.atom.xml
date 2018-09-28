@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Go</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/go.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2018-09-28T00:00:00+07:00</updated><entry><title>How to Structure Go Projects</title><link href="http://marselester.com/how-to-structure-go-projects.html" rel="alternate"></link><published>2018-09-28T00:00:00+07:00</published><updated>2018-09-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2018-09-28:/how-to-structure-go-projects.html</id><summary type="html">&lt;p&gt;I came to Go from Django where the framework defines project layout, thus I wanted to know
+how to structure my Go applications. After reading documentation and building a few Django projects,
+you get a clear mental picture, as most of the questions are already answered.
+That helps to keep …&lt;/p&gt;</summary><content type="html">&lt;p&gt;I came to Go from Django where the framework defines project layout, thus I wanted to know
+how to structure my Go applications. After reading documentation and building a few Django projects,
+you get a clear mental picture, as most of the questions are already answered.
+That helps to keep the projects within a company consistent, so developers don't have to struggle
+when they land on a new codebase. I was looking for a similar framework approach in Go,
+but none of them felt right to me. For some reason the same concepts do not resonate with Go.
+I didn't have better ideas, so I watched a few videos from conferences.
+Here are the talks I found most helpful and I use them as guidelines:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;Ben Johnson's &lt;a class="reference external" href="https://www.youtube.com/watch?v=LMSbsW1Xpwg"&gt;Structuring Applications for Growth&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Kat Zien's &lt;a class="reference external" href="https://www.youtube.com/watch?v=oL6JBUk6tj0"&gt;How Do You Structure Your Go Apps&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Peter Bourgon's &lt;a class="reference external" href="https://www.youtube.com/watch?v=LHe1Cb_Ud_M"&gt;Ways To Do Things&lt;/a&gt;.
+I tried his ideas in &lt;a class="reference external" href="https://github.com/marselester/rascaldb/blob/master/rascaldb.go"&gt;RascalDB 😜&lt;/a&gt;
+to serialize concurrent DB actions.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I encourage you to watch those talks and go over code examples they provided.&lt;/p&gt;
+&lt;p&gt;The following is my takeaway which could be completely misleading and far from the original ideas
+(just in case, you don't have to apply all of them together).
+If you feel something doesn't bring enough value in your case, just skip it, trust your intuition.
+Development requires many iterations to bounce ideas until the result becomes good enough.&lt;/p&gt;
+&lt;div class="section" id="know-your-domain"&gt;
+&lt;h2&gt;Know Your Domain&lt;/h2&gt;
+&lt;p&gt;I like to start a new project on A4 paper and dump everything I know in free form
+(what the problem are you facing, can you solve it without writing code,
+what are possible solutions (pros/cons), terminology, system requirements, API endpoints, sketches,
+doodles, whatever gets your train of thoughts moving). Paper helps to get away from constraints of computer,
+I can write and draw without any programs which would otherwise have taken time and stolen my brain cycles.
+Paper helps me to stay focused — nothing blinks, pops up or rings, there is no urge to multitask
+(check email/Slack, switch between editor and console as if there is something new).&lt;/p&gt;
+&lt;p&gt;Once you wrote everything down, you might realize there is not enough information to make progress.
+So you can reach out to stake holders and get more insights using your notes.
+Don't forget to write new info as well. It might take a few iterations when you finally establish
+common terminology, refine the actual project's goal, and cut unnecessary features/requirements.&lt;/p&gt;
+&lt;p&gt;Now you have a mental picture of the project with clear deliverables.
+Based on that I like to spend time to come up with a concise project/repository name which
+summarizes nicely the project's goal and spirit (thesaurus comes to the rescue).
+As a next step I usually create README file where insights from the paper are documented.
+This time you want everyone in the world to understand what you learned about the project.
+This helps you to iterate once more as you're documenting in README, and the end result
+can be shared with coworkers (they might not understand your handwriting and doodles).
+If they have questions, that means you have a room for improvement, since other people
+don't have a context you obtained. Take your time and write it down, this will ensure that
+you will be able to get help with the project much easier (when you're on vacation or
+have to hand over the code). With some practice you'll anticipate questions and
+provide answers in README, so it won't take as much time from your coworkers next time.
+Keeping in mind that you are ultimately solving problems for your customers and
+designing the system and writing code for your coworkers (not just for yourself)
+helps to rigorously document as you go. Or else prepare to answer the same questions
+over and over again.&lt;/p&gt;
+&lt;p&gt;Let's say you're building an API client, then it makes sense to start from
+a usage example in the README, since most of the documentation work is done by API provider.
+How will people download your library? How will they import it, does the path look concise and clear?
+How will your end user configure a client? What use cases your users might have (custom API domain,
+timeouts, logging, instrumentation)? Think of a few workflows and see how would you handle errors.
+Best case scenario is using your own library to reveal pain points.
+Check out &lt;a class="reference external" href="https://github.com/marselester/bitgo-v2"&gt;one of my attempts&lt;/a&gt; to find a decent layout of
+an API library. The library has a configurable client (you can instantiate many of them, e.g., one per coin)
+which allows to use a custom logger, http.Client, etc. It also has embedded services — things that know
+how to speak with particular API endpoints to operate API resources.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="getting-to-the-point"&gt;
+&lt;h2&gt;Getting to the Point&lt;/h2&gt;
+&lt;p&gt;As you can see from the talks the main theme in Go application structure is heavily
+influenced by Domain-Driven Design (DDD). Using the research done on your project,
+you shall write down entities (as Go structs) of the domain model and services (as Go interfaces)
+which perform operations over those entities.&lt;/p&gt;
+&lt;p&gt;I should mention that for simplicity's sake in my projects I decided to combine DDD &amp;quot;service&amp;quot; and
+&amp;quot;repository&amp;quot; concepts under &amp;quot;service&amp;quot; term.&lt;/p&gt;
+&lt;p&gt;Let's proceed with listing minimal set of operations over the key entities to keep the scope small.
+It helps to imagine that there are different service implementations,
+an entity can be stored anywhere, for example, in Postgres, Kafka, memory, Redis,
+JSON file, remote API. But keep in mind semantics that storage of choice provides:
+getting a list of entities from Kafka and Postgres are hard to abstract (streaming vs quering).
+Moreover, if you do so, you might create unnecessary constraints for yourself.
+In reality, it is very unlikely that a project will change storages often,
+since you've chosen them for a reason (the choice of the storage is influenced
+by a problem you're solving, its constraints and guarantees you need).
+Most likely you've already chosen the storages in advance, so make sure you
+don't fight with interfaces you defined in your domain model. If you know your services
+need to share the same SQL transaction, embrace it in interfaces, for instance:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;type&lt;/span&gt; &lt;span class="nx"&gt;PaymentService&lt;/span&gt; &lt;span class="kd"&gt;interface&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="nx"&gt;CreatePayment&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ctx&lt;/span&gt; &lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;tx&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;sql&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Tx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;Payment&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Do you put all operations (add/list) into one service interface? I don't know.
+You have to decide. If you add an entity to Postgres, you expect to list them
+from Postgres as well. From this perspective &amp;quot;add&amp;quot; and &amp;quot;list&amp;quot; operations should be
+under the same interface. If in-memory storage can't implement the service interface,
+perhaps you don't have to enforce operation under the same interface,
+then probably it's ok to split it.&lt;/p&gt;
+&lt;p&gt;Ben Johnson defines entities in a single package where domain model is described — the package
+shouldn’t have third party dependencies. Whereas Kat Zien in her demo created a package per service:
+&amp;quot;adder&amp;quot; package that adds beers and reviews, &amp;quot;lister&amp;quot; service lists beers and reviews.
+Each package defines its own beer and review structs.&lt;/p&gt;
+&lt;p&gt;In my projects I isolate services implementation in a single package.
+For example, if I stored beer reviews in Kafka, I would have a kafka package which exposes
+a client and beer/review services embedded in it. The same applies to postgres package — two services use
+the same db connection pool and beer/review entities might appear in the same db transaction.&lt;/p&gt;
+&lt;p&gt;During coding I combine the service implementations into a program (some server or
+a ctl tool) kept in cmd directory. That helps me to validate design ideas and notice any awkward
+component integrations. Similar to service implementations, try to think where the input and
+output could be coming from/to: standard input/output, http, rpc, db.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="an-example"&gt;
+&lt;h2&gt;An Example&lt;/h2&gt;
+&lt;p&gt;Now let's have a look at &lt;a class="reference external" href="https://github.com/marselester/distributed-payment"&gt;distributed payment&lt;/a&gt;
+demo project where I explored an idea of payment transaction
+without atomic commit across 3 Kafka partitions.&lt;/p&gt;
+&lt;p&gt;The domain model is defined in the repository root (note, you can place your packages
+in &amp;quot;internal&amp;quot; directory, so you don't mix them up with unrelated files):&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;cite&gt;wallet.go&lt;/cite&gt; has &lt;cite&gt;Transfer&lt;/cite&gt;, &lt;cite&gt;Payment&lt;/cite&gt; entities, and services &lt;cite&gt;TransferService&lt;/cite&gt;, &lt;cite&gt;PaymentService&lt;/cite&gt;
+which can create and list the entities. Since the project is based on Kafka,
+the interfaces reflect that (&lt;cite&gt;partition&lt;/cite&gt;, &lt;cite&gt;offset&lt;/cite&gt; params). The services accept &lt;cite&gt;context.Context&lt;/cite&gt;
+as a first argument, because we should be able to tell implementations to cancel operation.
+&lt;a class="reference external" href="https://github.com/opentracing/opentracing-go"&gt;OpenTracing&lt;/a&gt; can leverage context as well.
+Pay attention to a pointer/value semantics (share or not) in the service interfaces.
+Since an entity in DDD terms has a unique identity, a pointer semantics was used,
+hence &lt;cite&gt;*Transfer&lt;/cite&gt; is passed to &lt;cite&gt;CreateTransfer()&lt;/cite&gt; and returned from &lt;cite&gt;FromOffset()&lt;/cite&gt;. Have a look at
+&lt;a class="reference external" href="https://www.ardanlabs.com/blog/2017/06/design-philosophy-on-data-and-semantics.html"&gt;Design Philosophy On Data And Semantics&lt;/a&gt;
+for more insights.&lt;/li&gt;
+&lt;li&gt;&lt;cite&gt;error.go&lt;/cite&gt; contains errors which are relevant to the whole domain model,
+&lt;a class="reference external" href="https://middlemost.com/failure-is-your-domain/"&gt;Failure is your Domain&lt;/a&gt;.
+On implementation level there could be their own specific errors, for example, HTTP API errors in
+&lt;cite&gt;rest/error.go&lt;/cite&gt; define JSON and validation errors.&lt;/li&gt;
+&lt;li&gt;&lt;cite&gt;log.go&lt;/cite&gt; borrows &lt;cite&gt;Logger&lt;/cite&gt; interface from Go kit. Since logging is an integral part of the system,
+placing it nearby the domain model seems justified. There is
+&lt;a class="reference external" href="https://github.com/go-commons/commons/issues/1"&gt;Standard logger interface&lt;/a&gt; discussion
+where the consensus is to emit events instead of logging in the library.
+Best practices and examples of how to emit events is still an
+&lt;a class="reference external" href="https://github.com/go-commons/event/issues/1"&gt;open topic&lt;/a&gt; at the time of writing.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Implementations of the services defined in &lt;cite&gt;wallet.go&lt;/cite&gt; are isolated in packages
+by their dependency name, for example, kafka, rest, mock, rocksdb.&lt;/p&gt;
+&lt;p&gt;Package kafka implements wallet services and provides the Client access to them.
+There were two design options: embed the services to the Client struct or
+inject a service into each other. The example below would allow to have
+a swappable &lt;cite&gt;PaymentService&lt;/cite&gt; (&amp;quot;pg&amp;quot; refers to a Postgres implementation):&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nx"&gt;kafka&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;TransferService&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;PaymentService&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;pg&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NewPaymentService&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;On the other hand, grouping services in the Client would let services maintain DB transactions
+by sharing the same &lt;cite&gt;*sql.DB&lt;/cite&gt;. Here is &lt;cite&gt;pg.Client&lt;/cite&gt; example:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;// Client represents a client to the underlying PostgreSQL data store.&lt;/span&gt;
+&lt;span class="kd"&gt;type&lt;/span&gt; &lt;span class="nx"&gt;Client&lt;/span&gt; &lt;span class="kd"&gt;struct&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="nx"&gt;Transfer&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;TransferService&lt;/span&gt;
+  &lt;span class="nx"&gt;Payment&lt;/span&gt;  &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;PaymentService&lt;/span&gt;
+
+  &lt;span class="nx"&gt;logger&lt;/span&gt; &lt;span class="nx"&gt;wallet&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Logger&lt;/span&gt;
+
+  &lt;span class="nx"&gt;db&lt;/span&gt;        &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;sql&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;DB&lt;/span&gt;
+  &lt;span class="nx"&gt;transferQ&lt;/span&gt; &lt;span class="kd"&gt;map&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;
+  &lt;span class="nx"&gt;paymentQ&lt;/span&gt;  &lt;span class="kd"&gt;map&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;In &lt;a class="reference external" href="https://github.com/marselester/distributed-signup/blob/master/pg/user_service.go"&gt;distributed-signup&lt;/a&gt;
+project a Client concept is baked into &lt;cite&gt;UserService&lt;/cite&gt;, because it was the only service that
+needed access to Postgres.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;// UserService reprensets a service to store signed up users.&lt;/span&gt;
+&lt;span class="kd"&gt;type&lt;/span&gt; &lt;span class="nx"&gt;UserService&lt;/span&gt; &lt;span class="kd"&gt;struct&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="nx"&gt;config&lt;/span&gt; &lt;span class="nx"&gt;Config&lt;/span&gt;
+
+  &lt;span class="nx"&gt;pool&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;pgx&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ConnPool&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Package rest is responsible for translating incoming HTTP requests to wallet domain and
+then translating results from wallet model back to HTTP responses.
+The package doesn't implement &lt;cite&gt;TransferService&lt;/cite&gt; per se, it uses one in its Server.
+The REST-style API server itself is put together in
+&lt;a class="reference external" href="https://github.com/marselester/distributed-payment/blob/master/cmd/transfer-server/main.go"&gt;cmd/transfer-server&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;// Server represents an HTTP API handler for wallet services.&lt;/span&gt;
+&lt;span class="c1"&gt;// It wraps a TransferService so we can provide different&lt;/span&gt;
+&lt;span class="c1"&gt;// implementations, e.g., Kafka or a mock.&lt;/span&gt;
+&lt;span class="kd"&gt;type&lt;/span&gt; &lt;span class="nx"&gt;Server&lt;/span&gt; &lt;span class="kd"&gt;struct&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;chi&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Mux&lt;/span&gt;
+  &lt;span class="nx"&gt;logger&lt;/span&gt;          &lt;span class="nx"&gt;wallet&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Logger&lt;/span&gt;
+  &lt;span class="nx"&gt;transferService&lt;/span&gt; &lt;span class="nx"&gt;wallet&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;TransferService&lt;/span&gt;
+  &lt;span class="nx"&gt;wopts&lt;/span&gt;           &lt;span class="nx"&gt;walletOption&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Originally in &lt;a class="reference external" href="https://medium.com/wtf-dial/wtf-dial-http-api-d8800ccd605f"&gt;WTF Dial: HTTP API&lt;/a&gt;
+Ben Johnson explained how to implement API properly and isolate http dependencies in wtf/http package.&lt;/p&gt;
+&lt;p&gt;Package mock provides mock services to facilitate testing. For example, for most cases
+we do not need Kafka implementation of a transfer service to be used in HTTP API testing.&lt;/p&gt;
+&lt;p&gt;Package rocksdb implements user requests deduplication using RocksDB to
+memorise already processed request IDs. Requests deduplication is an integral part of
+a distributed system, hence the domain model must embrace it.&lt;/p&gt;
+&lt;p&gt;Everything is connected in cmd directory. Note, that the domain package is used everywhere.&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;cite&gt;cmd/transfer-server&lt;/cite&gt; is HTTP API server to create money transfers which are stored in Kafka.
+It delegates the actual hard work to kafka and rest packages.&lt;/li&gt;
+&lt;li&gt;&lt;cite&gt;cmd/paymentd&lt;/cite&gt; program is responsible for creating incoming &amp;amp; outgoing payment pairs based on
+money transfer requests stored in Kafka.&lt;/li&gt;
+&lt;li&gt;&lt;cite&gt;cmd/accountantd&lt;/cite&gt; is the last program in the pipeline. It sequentially reads Kafka messages
+from &lt;cite&gt;wallet.payment&lt;/cite&gt; topic, deduplicates messages by request ID, and applies the changes to
+the account balances. Deduplication is provided by rocksdb package mentioned above.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To wrap up, that's all I managed to recall :) I look forward for more talks on structuring Go applications.&lt;/p&gt;
+&lt;/div&gt;
+</content><category term="golang"></category><category term="project structure"></category><category term="Domain-Driven Design"></category></entry></feed>
