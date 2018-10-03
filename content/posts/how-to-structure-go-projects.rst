@@ -60,7 +60,9 @@ provide answers in README, so it won't take as much time from your coworkers nex
 Keeping in mind that you are ultimately solving problems for your customers and
 designing the system and writing code for your coworkers (not just for yourself)
 helps to rigorously document as you go. Or else prepare to answer the same questions
-over and over again.
+over and over again. In order to get better at documenting, I recommend reading
+`A beginner’s guide to writing documentation <http://www.writethedocs.org/guide/writing/beginners-guide-to-docs/>`_
+and `Documentation Guide <http://www.writethedocs.org/guide/>`_.
 
 Let's say you're building an API client, then it makes sense to start from
 a usage example in the README, since most of the documentation work is done by API provider.
