@@ -17,6 +17,8 @@ I didn't have better ideas, so I watched a few videos from conferences.
 Here are the talks I found most helpful and I use them as guidelines:
 
 - Ben Johnson's `Structuring Applications for Growth <https://www.youtube.com/watch?v=LMSbsW1Xpwg>`_
+- Brian Ketelsen's `Write Code Like the Go Team <https://www.youtube.com/watch?v=MzTcsI6tn-0>`_,
+  `slides <https://talks.bjk.fyi/gcru18-best.html#/>`_
 - Kat Zien's `How Do You Structure Your Go Apps <https://www.youtube.com/watch?v=oL6JBUk6tj0>`_
 - Peter Bourgon's `Ways To Do Things <https://www.youtube.com/watch?v=LHe1Cb_Ud_M>`_.
   I tried his ideas in `RascalDB 😜 <https://github.com/marselester/rascaldb/blob/master/rascaldb.go>`_

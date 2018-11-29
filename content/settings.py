@@ -11,10 +11,6 @@ GITHUB_URL = 'https://github.com/marselester/'
 DISQUS_SITENAME = 'marselester'
 TWITTER_USERNAME = 'marselester'
 
-MENUITEMS = (
-    ('CV', 'http://marselester.com/cv/'),
-)
-
 SOCIAL = (
     ('GitHub', 'https://github.com/marselester'),
     ('Medium', 'https://medium.com/@marselester/'),

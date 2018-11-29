@@ -4,7 +4,7 @@ About
 
 Hi, my name is Marsel.
 
-I am a `Python & Go developer <http://marselester.com/cv/>`_
+I am a `Python & Go developer <https://github.com/marselester>`_
 interested in distributed systems and machine learning.
 
 I like to travel, `ride motorcycles`_, and running.
