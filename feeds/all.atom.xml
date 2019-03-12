@@ -1,5 +1,202 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/all.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2018-09-28T00:00:00+07:00</updated><entry><title>How to Structure Go Projects</title><link href="http://marselester.com/how-to-structure-go-projects.html" rel="alternate"></link><published>2018-09-28T00:00:00+07:00</published><updated>2018-09-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2018-09-28:/how-to-structure-go-projects.html</id><summary type="html">&lt;p&gt;I came to Go from Django where the framework defines project layout, thus I wanted to know
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/all.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2019-03-12T00:00:00+07:00</updated><entry><title>Traefik as API Gateway</title><link href="http://marselester.com/apigate-traefik.html" rel="alternate"></link><published>2019-03-12T00:00:00+07:00</published><updated>2019-03-12T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2019-03-12:/apigate-traefik.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway"&gt;API gateway&lt;/a&gt;
+acts as a reverse proxy, routing API requests from clients to services.
+Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
+In this short tutorial we'll see how to achieve that with &lt;a class="reference external" href="https://traefik.io/"&gt;Traefik&lt;/a&gt; reverse-proxy.&lt;/p&gt;
+&lt;p&gt;The demo is based on a …&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway"&gt;API gateway&lt;/a&gt;
+acts as a reverse proxy, routing API requests from clients to services.
+Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
+In this short tutorial we'll see how to achieve that with &lt;a class="reference external" href="https://traefik.io/"&gt;Traefik&lt;/a&gt; reverse-proxy.&lt;/p&gt;
+&lt;p&gt;The demo is based on a dummy &lt;a class="reference external" href="https://traveling.docs.apiary.io/"&gt;Traveling project&lt;/a&gt;
+where we have services to rent a car and book a hotel.&lt;/p&gt;
+&lt;p&gt;Firstly, we shall install Traefik on &lt;a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/"&gt;Minikube&lt;/a&gt;
+as an &lt;a class="reference external" href="https://kubernetes.io/docs/concepts/services-networking/ingress/"&gt;Ingress Controller&lt;/a&gt;
+by following &lt;a class="reference external" href="https://docs.traefik.io/user-guide/kubernetes/"&gt;Traefik user guide&lt;/a&gt;.
+Ingress Controller is a Pod that's responsible for fulfilling the Ingress:
+it watches the &lt;cite&gt;/ingresses&lt;/cite&gt; Kubernetes endpoint for updates to satisfy requests for Ingresses.
+Ingress exposes HTTP routes from outside the cluster to Services within the cluster.
+HTTP traffic routing is controlled by rules defined on the Ingress resource.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; minikube start
+&lt;span class="go"&gt;Starting local Kubernetes v1.13.2 cluster...&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f https://raw.githubusercontent.com/containous/traefik/master/examples/k8s/traefik-rbac.yaml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f https://raw.githubusercontent.com/containous/traefik/master/examples/k8s/traefik-deployment.yaml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Traefik ingress service (port 80, NodePort 32518) is the entry point of our API gateway.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; minikube service list
+&lt;span class="go"&gt;|-------------|-------------------------|--------------------------------|&lt;/span&gt;
+&lt;span class="go"&gt;|  NAMESPACE  |          NAME           |              URL               |&lt;/span&gt;
+&lt;span class="go"&gt;|-------------|-------------------------|--------------------------------|&lt;/span&gt;
+&lt;span class="go"&gt;| default     | kubernetes              | No node port                   |&lt;/span&gt;
+&lt;span class="go"&gt;| kube-system | kube-dns                | No node port                   |&lt;/span&gt;
+&lt;span class="go"&gt;| kube-system | traefik-ingress-service | http://192.168.99.100:32518    |&lt;/span&gt;
+&lt;span class="go"&gt;|             |                         | http://192.168.99.100:31735    |&lt;/span&gt;
+&lt;span class="go"&gt;|-------------|-------------------------|--------------------------------|&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nv"&gt;TRAEFIKURL&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;http://192.168.99.100:32518
+&lt;span class="gp"&gt;$&lt;/span&gt; curl &lt;span class="nv"&gt;$TRAEFIKURL&lt;/span&gt;
+&lt;span class="go"&gt;404 page not found&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Note, there is also Traefik admin dashboard (port 8080) running at &lt;cite&gt;http://192.168.99.100:31735&lt;/cite&gt;.&lt;/p&gt;
+&lt;img alt="" src="http://marselester.com/images/traefik-providers.png" /&gt;
+&lt;div class="section" id="travel-apps"&gt;
+&lt;h2&gt;Travel Apps&lt;/h2&gt;
+&lt;p&gt;Let's deploy the travel apps on Kubernetes. For simplicity, you can use the images uploaded to Docker Hub.
+If you prefer to build Docker images yourself, make sure they are accessible from Minikube:
+configure Docker client to communicate with the Minikube Docker daemon.
+Note, you can restore your local Docker environment with &lt;cite&gt;eval $(minikube docker-env --unset)&lt;/cite&gt; later on.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; git clone https://github.com/marselester/apigate.git
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;cd&lt;/span&gt; ./apigate/
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;eval&lt;/span&gt; &lt;span class="k"&gt;$(&lt;/span&gt;minikube docker-env&lt;span class="k"&gt;)&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; docker build --tag&lt;span class="o"&gt;=&lt;/span&gt;marselester/travel-hotel:v1.0.0 --file&lt;span class="o"&gt;=&lt;/span&gt;docker/hotel.Dockerfile .
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f k8s-traefik/hotel/deployment.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f k8s-traefik/hotel/service.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The hotel app should be running:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl get pods -l &lt;span class="nv"&gt;app&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;hotel
+&lt;span class="go"&gt;hotel-api-8d7d59b69-bcsvh&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward hotel-api-8d7d59b69-bcsvh &lt;span class="m"&gt;8000&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; curl localhost:8000/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;id&amp;quot;: &amp;quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;hotel_id&amp;quot;: &amp;quot;046d471d-70c7-4595-80cc-266d3e6e07fa&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;status&amp;quot;: &amp;quot;confirmed&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now, it's time to put the &lt;cite&gt;hotel&lt;/cite&gt; Service behind the gateway by creating an Ingress rule.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f - &lt;span class="o"&gt;&amp;lt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;apiVersion: extensions/v1beta1&lt;/span&gt;
+&lt;span class="go"&gt;kind: Ingress&lt;/span&gt;
+&lt;span class="go"&gt;metadata:&lt;/span&gt;
+&lt;span class="go"&gt;  name: hotel-ingress&lt;/span&gt;
+&lt;span class="go"&gt;spec:&lt;/span&gt;
+&lt;span class="go"&gt;  rules:&lt;/span&gt;
+&lt;span class="go"&gt;    - http:&lt;/span&gt;
+&lt;span class="go"&gt;        paths:&lt;/span&gt;
+&lt;span class="go"&gt;          - path: /v1/hotels&lt;/span&gt;
+&lt;span class="go"&gt;            backend:&lt;/span&gt;
+&lt;span class="go"&gt;              serviceName: hotel&lt;/span&gt;
+&lt;span class="go"&gt;              servicePort: 80&lt;/span&gt;
+&lt;span class="go"&gt;&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Hotel booking requests should be routed to the hotel app:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl &lt;span class="nv"&gt;$TRAEFIKURL&lt;/span&gt;/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;id&amp;quot;: &amp;quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;hotel_id&amp;quot;: &amp;quot;046d471d-70c7-4595-80cc-266d3e6e07fa&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;status&amp;quot;: &amp;quot;confirmed&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The car rental app is deployed similarly.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; docker build --tag&lt;span class="o"&gt;=&lt;/span&gt;marselester/travel-car:v1.0.0 --file&lt;span class="o"&gt;=&lt;/span&gt;docker/car.Dockerfile .
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f k8s-traefik/car/deployment.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f k8s-traefik/car/service.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f - &lt;span class="o"&gt;&amp;lt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;apiVersion: extensions/v1beta1&lt;/span&gt;
+&lt;span class="go"&gt;kind: Ingress&lt;/span&gt;
+&lt;span class="go"&gt;metadata:&lt;/span&gt;
+&lt;span class="go"&gt;  name: car-ingress&lt;/span&gt;
+&lt;span class="go"&gt;spec:&lt;/span&gt;
+&lt;span class="go"&gt;  rules:&lt;/span&gt;
+&lt;span class="go"&gt;    - http:&lt;/span&gt;
+&lt;span class="go"&gt;        paths:&lt;/span&gt;
+&lt;span class="go"&gt;          - path: /v1/cars&lt;/span&gt;
+&lt;span class="go"&gt;            backend:&lt;/span&gt;
+&lt;span class="go"&gt;              serviceName: car&lt;/span&gt;
+&lt;span class="go"&gt;              servicePort: 80&lt;/span&gt;
+&lt;span class="go"&gt;&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You can see that the car booking is available at the gateway.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl &lt;span class="nv"&gt;$TRAEFIKURL&lt;/span&gt;/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
+&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;id&amp;quot;: &amp;quot;9e0d65f5-9de2-4428-9bee-1f3967f05129&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;car_id&amp;quot;: &amp;quot;cfb6f7a5-4591-4f5c-8b17-9a1b10f98ada&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;status&amp;quot;: &amp;quot;confirmed&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="authentication-service"&gt;
+&lt;h2&gt;Authentication Service&lt;/h2&gt;
+&lt;p&gt;API requests must be authenticated before reaching the Travel apps.
+This work is delegated to &lt;cite&gt;travelauth&lt;/cite&gt; Service that performs HTTP Basic authentication
+and returns a username in &lt;cite&gt;X-Travel-User&lt;/cite&gt; header if credentials matched.
+We shall start from deploying it on the cluster.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; docker build --tag&lt;span class="o"&gt;=&lt;/span&gt;marselester/travel-auth:v1.0.0 --file&lt;span class="o"&gt;=&lt;/span&gt;docker/auth.Dockerfile .
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f k8s-traefik/auth/deployment.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f k8s-traefik/auth/service.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If the auth server is properly deployed, it will prompt for username/password.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl get pods -l &lt;span class="nv"&gt;app&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;auth
+&lt;span class="go"&gt;auth-api-556685f658-h9qb4&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl port-forward auth-api-556685f658-h9qb4 &lt;span class="m"&gt;8000&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; curl -i -u bob:bob localhost:8000/v1/hotels
+&lt;span class="go"&gt;HTTP/1.1 200 OK&lt;/span&gt;
+&lt;span class="go"&gt;X-Travel-User: bob&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's tell Traefik to
+&lt;a class="reference external" href="https://docs.traefik.io/configuration/entrypoints/#forward-authentication"&gt;forward all requests to the auth server&lt;/a&gt;
+and copy &lt;cite&gt;X-Travel-User&lt;/cite&gt; response header from the auth server to the routed request.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;[entryPoints]
+  [entryPoints.http]
+  address = &amp;quot;:80&amp;quot;
+
+    [entryPoints.http.auth.forward]
+    address = &amp;quot;http://travelauth.default/&amp;quot;
+    authResponseHeaders = [&amp;quot;X-Travel-User&amp;quot;]
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Create a ConfigMap entry for the Traefik config file and
+mount &lt;cite&gt;traefik-conf&lt;/cite&gt; ConfigMap volume to &lt;cite&gt;traefik-ingress-controller&lt;/cite&gt; Pod.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl create configmap traefik-conf --from-file&lt;span class="o"&gt;=&lt;/span&gt;traefik.toml&lt;span class="o"&gt;=&lt;/span&gt;k8s-traefik/traefik/traefik.toml --namespace&lt;span class="o"&gt;=&lt;/span&gt;kube-system
+&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f k8s-traefik/traefik/deployment.yml
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The updated Traefik deployment is now enforces authentication on API gateway.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl -i &lt;span class="nv"&gt;$TRAEFIKURL&lt;/span&gt;/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+&lt;span class="go"&gt;HTTP/1.1 401 Unauthorized&lt;/span&gt;
+&lt;span class="gp"&gt;$&lt;/span&gt; curl -i -u bob:bob &lt;span class="nv"&gt;$TRAEFIKURL&lt;/span&gt;/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+&lt;span class="go"&gt;HTTP/1.1 200 OK&lt;/span&gt;
+&lt;span class="go"&gt;{&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;id&amp;quot;: &amp;quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;hotel_id&amp;quot;: &amp;quot;046d471d-70c7-4595-80cc-266d3e6e07fa&amp;quot;,&lt;/span&gt;
+&lt;span class="go"&gt;    &amp;quot;status&amp;quot;: &amp;quot;confirmed&amp;quot;&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="section" id="rate-limiting"&gt;
+&lt;h2&gt;Rate Limiting&lt;/h2&gt;
+&lt;p&gt;Request rate limiting is configured via Ingress &lt;a class="reference external" href="https://docs.traefik.io/configuration/backends/kubernetes/#annotations"&gt;annotations&lt;/a&gt;.
+For example, we allow to send only 2 hotel requests per 15 seconds for each logged in customer.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="l l-Scalar l-Scalar-Plain"&gt;apiVersion&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;extensions/v1beta1&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;kind&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;Ingress&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;metadata&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;name&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;hotel-ingress&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;annotations&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="l l-Scalar l-Scalar-Plain"&gt;traefik.ingress.kubernetes.io/rate-limit&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="p p-Indicator"&gt;|&lt;/span&gt;
+      &lt;span class="no"&gt;extractorfunc: &amp;quot;request.header.X-Travel-User&amp;quot;&lt;/span&gt;
+      &lt;span class="no"&gt;rateset:&lt;/span&gt;
+        &lt;span class="no"&gt;# Allow 2 requests every 15 seconds.&lt;/span&gt;
+        &lt;span class="no"&gt;modest:&lt;/span&gt;
+          &lt;span class="no"&gt;period: 15s&lt;/span&gt;
+          &lt;span class="no"&gt;average: 2&lt;/span&gt;
+          &lt;span class="no"&gt;burst: 2&lt;/span&gt;
+&lt;span class="l l-Scalar l-Scalar-Plain"&gt;spec&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+  &lt;span class="l l-Scalar l-Scalar-Plain"&gt;rules&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+    &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;http&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+        &lt;span class="l l-Scalar l-Scalar-Plain"&gt;paths&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+          &lt;span class="p p-Indicator"&gt;-&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;path&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;/v1/hotels&lt;/span&gt;
+            &lt;span class="l l-Scalar l-Scalar-Plain"&gt;backend&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt;
+              &lt;span class="l l-Scalar l-Scalar-Plain"&gt;serviceName&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;hotel&lt;/span&gt;
+              &lt;span class="l l-Scalar l-Scalar-Plain"&gt;servicePort&lt;/span&gt;&lt;span class="p p-Indicator"&gt;:&lt;/span&gt; &lt;span class="l l-Scalar l-Scalar-Plain"&gt;80&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Let's apply these limits onto the hotel app.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; kubectl apply -f k8s-traefik/hotel/ingress.yml
+&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; i in &lt;span class="o"&gt;{&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;..3&lt;span class="o"&gt;}&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="k"&gt;do&lt;/span&gt; curl -i -s -u bob:bob &lt;span class="nv"&gt;$TRAEFIKURL&lt;/span&gt;/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef &lt;span class="p"&gt;|&lt;/span&gt; head -n &lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="k"&gt;done&lt;/span&gt;
+&lt;span class="go"&gt;HTTP/1.1 200 OK&lt;/span&gt;
+&lt;span class="go"&gt;HTTP/1.1 200 OK&lt;/span&gt;
+&lt;span class="go"&gt;HTTP/1.1 429 Too Many Requests&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;As you can see the third request was throttled.&lt;/p&gt;
+&lt;p&gt;Although it's convenient enough to apply rate limiting using annotations,
+I would've preferred rate limiting to be decoupled from Traefik similar to authentication service.&lt;/p&gt;
+&lt;/div&gt;
+</content><category term="traefik"></category><category term="kubernetes"></category><category term="api gateway"></category><category term="auth"></category><category term="rate limiting"></category></entry><entry><title>How to Structure Go Projects</title><link href="http://marselester.com/how-to-structure-go-projects.html" rel="alternate"></link><published>2018-09-28T00:00:00+07:00</published><updated>2018-09-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2018-09-28:/how-to-structure-go-projects.html</id><summary type="html">&lt;p&gt;I came to Go from Django where the framework defines project layout, thus I wanted to know
 how to structure my Go applications. After reading documentation and building a few Django projects,
 you get a clear mental picture, as most of the questions are already answered.
 That helps to keep …&lt;/p&gt;</summary><content type="html">&lt;p&gt;I came to Go from Django where the framework defines project layout, thus I wanted to know

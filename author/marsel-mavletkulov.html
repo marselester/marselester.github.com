@@ -51,6 +51,226 @@
         
 
             <article>
+                <a href="http://marselester.com/apigate-traefik.html"><h3 class="article-title">Traefik as API Gateway</h3></a>
+<h6 class="subheader" title="2019-03-12T00:00:00+07:00">Tue 12 March 2019
+</h6>
+
+
+<p><a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway">API gateway</a>
+acts as a reverse proxy, routing API requests from clients to services.
+Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
+In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://traefik.io/">Traefik</a> reverse-proxy.</p>
+<p>The demo is based on a dummy <a class="reference external" href="https://traveling.docs.apiary.io/">Traveling project</a>
+where we have services to rent a car and book a hotel.</p>
+<p>Firstly, we shall install Traefik on <a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minikube</a>
+as an <a class="reference external" href="https://kubernetes.io/docs/concepts/services-networking/ingress/">Ingress Controller</a>
+by following <a class="reference external" href="https://docs.traefik.io/user-guide/kubernetes/">Traefik user guide</a>.
+Ingress Controller is a Pod that's responsible for fulfilling the Ingress:
+it watches the <cite>/ingresses</cite> Kubernetes endpoint for updates to satisfy requests for Ingresses.
+Ingress exposes HTTP routes from outside the cluster to Services within the cluster.
+HTTP traffic routing is controlled by rules defined on the Ingress resource.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
+<span class="go">Starting local Kubernetes v1.13.2 cluster...</span>
+<span class="gp">$</span> kubectl apply -f https://raw.githubusercontent.com/containous/traefik/master/examples/k8s/traefik-rbac.yaml
+<span class="gp">$</span> kubectl apply -f https://raw.githubusercontent.com/containous/traefik/master/examples/k8s/traefik-deployment.yaml
+</pre></div>
+<p>Traefik ingress service (port 80, NodePort 32518) is the entry point of our API gateway.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> minikube service list
+<span class="go">|-------------|-------------------------|--------------------------------|</span>
+<span class="go">|  NAMESPACE  |          NAME           |              URL               |</span>
+<span class="go">|-------------|-------------------------|--------------------------------|</span>
+<span class="go">| default     | kubernetes              | No node port                   |</span>
+<span class="go">| kube-system | kube-dns                | No node port                   |</span>
+<span class="go">| kube-system | traefik-ingress-service | http://192.168.99.100:32518    |</span>
+<span class="go">|             |                         | http://192.168.99.100:31735    |</span>
+<span class="go">|-------------|-------------------------|--------------------------------|</span>
+<span class="gp">$</span> <span class="nv">TRAEFIKURL</span><span class="o">=</span>http://192.168.99.100:32518
+<span class="gp">$</span> curl <span class="nv">$TRAEFIKURL</span>
+<span class="go">404 page not found</span>
+</pre></div>
+<p>Note, there is also Traefik admin dashboard (port 8080) running at <cite>http://192.168.99.100:31735</cite>.</p>
+<img alt="" src="http://marselester.com/images/traefik-providers.png" />
+<div class="section" id="travel-apps">
+<h2>Travel Apps</h2>
+<p>Let's deploy the travel apps on Kubernetes. For simplicity, you can use the images uploaded to Docker Hub.
+If you prefer to build Docker images yourself, make sure they are accessible from Minikube:
+configure Docker client to communicate with the Minikube Docker daemon.
+Note, you can restore your local Docker environment with <cite>eval $(minikube docker-env --unset)</cite> later on.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> git clone https://github.com/marselester/apigate.git
+<span class="gp">$</span> <span class="nb">cd</span> ./apigate/
+<span class="gp">$</span> <span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
+<span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-hotel:v1.0.0 --file<span class="o">=</span>docker/hotel.Dockerfile .
+<span class="gp">$</span> kubectl apply -f k8s-traefik/hotel/deployment.yml
+<span class="gp">$</span> kubectl apply -f k8s-traefik/hotel/service.yml
+</pre></div>
+<p>The hotel app should be running:</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>hotel
+<span class="go">hotel-api-8d7d59b69-bcsvh</span>
+<span class="gp">$</span> kubectl port-forward hotel-api-8d7d59b69-bcsvh <span class="m">8000</span>
+<span class="gp">$</span> curl localhost:8000/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<span class="go">{</span>
+<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
+<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
+<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
+<span class="go">}</span>
+</pre></div>
+<p>Now, it's time to put the <cite>hotel</cite> Service behind the gateway by creating an Ingress rule.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
+<span class="go">apiVersion: extensions/v1beta1</span>
+<span class="go">kind: Ingress</span>
+<span class="go">metadata:</span>
+<span class="go">  name: hotel-ingress</span>
+<span class="go">spec:</span>
+<span class="go">  rules:</span>
+<span class="go">    - http:</span>
+<span class="go">        paths:</span>
+<span class="go">          - path: /v1/hotels</span>
+<span class="go">            backend:</span>
+<span class="go">              serviceName: hotel</span>
+<span class="go">              servicePort: 80</span>
+<span class="go">&#39;</span>
+</pre></div>
+<p>Hotel booking requests should be routed to the hotel app:</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$TRAEFIKURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<span class="go">{</span>
+<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
+<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
+<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
+<span class="go">}</span>
+</pre></div>
+<p>The car rental app is deployed similarly.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-car:v1.0.0 --file<span class="o">=</span>docker/car.Dockerfile .
+<span class="gp">$</span> kubectl apply -f k8s-traefik/car/deployment.yml
+<span class="gp">$</span> kubectl apply -f k8s-traefik/car/service.yml
+<span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
+<span class="go">apiVersion: extensions/v1beta1</span>
+<span class="go">kind: Ingress</span>
+<span class="go">metadata:</span>
+<span class="go">  name: car-ingress</span>
+<span class="go">spec:</span>
+<span class="go">  rules:</span>
+<span class="go">    - http:</span>
+<span class="go">        paths:</span>
+<span class="go">          - path: /v1/cars</span>
+<span class="go">            backend:</span>
+<span class="go">              serviceName: car</span>
+<span class="go">              servicePort: 80</span>
+<span class="go">&#39;</span>
+</pre></div>
+<p>You can see that the car booking is available at the gateway.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$TRAEFIKURL</span>/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
+<span class="go">{</span>
+<span class="go">    &quot;id&quot;: &quot;9e0d65f5-9de2-4428-9bee-1f3967f05129&quot;,</span>
+<span class="go">    &quot;car_id&quot;: &quot;cfb6f7a5-4591-4f5c-8b17-9a1b10f98ada&quot;,</span>
+<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<div class="section" id="authentication-service">
+<h2>Authentication Service</h2>
+<p>API requests must be authenticated before reaching the Travel apps.
+This work is delegated to <cite>travelauth</cite> Service that performs HTTP Basic authentication
+and returns a username in <cite>X-Travel-User</cite> header if credentials matched.
+We shall start from deploying it on the cluster.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-auth:v1.0.0 --file<span class="o">=</span>docker/auth.Dockerfile .
+<span class="gp">$</span> kubectl apply -f k8s-traefik/auth/deployment.yml
+<span class="gp">$</span> kubectl apply -f k8s-traefik/auth/service.yml
+</pre></div>
+<p>If the auth server is properly deployed, it will prompt for username/password.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>auth
+<span class="go">auth-api-556685f658-h9qb4</span>
+<span class="gp">$</span> kubectl port-forward auth-api-556685f658-h9qb4 <span class="m">8000</span>
+<span class="gp">$</span> curl -i -u bob:bob localhost:8000/v1/hotels
+<span class="go">HTTP/1.1 200 OK</span>
+<span class="go">X-Travel-User: bob</span>
+</pre></div>
+<p>Let's tell Traefik to
+<a class="reference external" href="https://docs.traefik.io/configuration/entrypoints/#forward-authentication">forward all requests to the auth server</a>
+and copy <cite>X-Travel-User</cite> response header from the auth server to the routed request.</p>
+<div class="highlight"><pre><span></span>[entryPoints]
+  [entryPoints.http]
+  address = &quot;:80&quot;
+
+    [entryPoints.http.auth.forward]
+    address = &quot;http://travelauth.default/&quot;
+    authResponseHeaders = [&quot;X-Travel-User&quot;]
+</pre></div>
+<p>Create a ConfigMap entry for the Traefik config file and
+mount <cite>traefik-conf</cite> ConfigMap volume to <cite>traefik-ingress-controller</cite> Pod.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap traefik-conf --from-file<span class="o">=</span>traefik.toml<span class="o">=</span>k8s-traefik/traefik/traefik.toml --namespace<span class="o">=</span>kube-system
+<span class="gp">$</span> kubectl apply -f k8s-traefik/traefik/deployment.yml
+</pre></div>
+<p>The updated Traefik deployment is now enforces authentication on API gateway.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl -i <span class="nv">$TRAEFIKURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<span class="go">HTTP/1.1 401 Unauthorized</span>
+<span class="gp">$</span> curl -i -u bob:bob <span class="nv">$TRAEFIKURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<span class="go">HTTP/1.1 200 OK</span>
+<span class="go">{</span>
+<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
+<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
+<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<div class="section" id="rate-limiting">
+<h2>Rate Limiting</h2>
+<p>Request rate limiting is configured via Ingress <a class="reference external" href="https://docs.traefik.io/configuration/backends/kubernetes/#annotations">annotations</a>.
+For example, we allow to send only 2 hotel requests per 15 seconds for each logged in customer.</p>
+<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">extensions/v1beta1</span>
+<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Ingress</span>
+<span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel-ingress</span>
+  <span class="l l-Scalar l-Scalar-Plain">annotations</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">traefik.ingress.kubernetes.io/rate-limit</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">|</span>
+      <span class="no">extractorfunc: &quot;request.header.X-Travel-User&quot;</span>
+      <span class="no">rateset:</span>
+        <span class="no"># Allow 2 requests every 15 seconds.</span>
+        <span class="no">modest:</span>
+          <span class="no">period: 15s</span>
+          <span class="no">average: 2</span>
+          <span class="no">burst: 2</span>
+<span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">rules</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">http</span><span class="p p-Indicator">:</span>
+        <span class="l l-Scalar l-Scalar-Plain">paths</span><span class="p p-Indicator">:</span>
+          <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">path</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">/v1/hotels</span>
+            <span class="l l-Scalar l-Scalar-Plain">backend</span><span class="p p-Indicator">:</span>
+              <span class="l l-Scalar l-Scalar-Plain">serviceName</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
+              <span class="l l-Scalar l-Scalar-Plain">servicePort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+</pre></div>
+<p>Let's apply these limits onto the hotel app.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-traefik/hotel/ingress.yml
+<span class="gp">$</span> <span class="k">for</span> i in <span class="o">{</span><span class="m">1</span>..3<span class="o">}</span><span class="p">;</span> <span class="k">do</span> curl -i -s -u bob:bob <span class="nv">$TRAEFIKURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef <span class="p">|</span> head -n <span class="m">1</span><span class="p">;</span> <span class="k">done</span>
+<span class="go">HTTP/1.1 200 OK</span>
+<span class="go">HTTP/1.1 200 OK</span>
+<span class="go">HTTP/1.1 429 Too Many Requests</span>
+</pre></div>
+<p>As you can see the third request was throttled.</p>
+<p>Although it's convenient enough to apply rate limiting using annotations,
+I would've preferred rate limiting to be decoupled from Traefik similar to authentication service.</p>
+</div>
+<p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="http://marselester.com/tag/traefik.html">traefik </a>
+    <a href="http://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="http://marselester.com/tag/api-gateway.html">api gateway </a>
+    <a href="http://marselester.com/tag/auth.html">auth </a>
+    <a href="http://marselester.com/tag/rate-limiting.html">rate limiting </a>
+</p>
+
+
+
+<p><a href="http://marselester.com/apigate-traefik.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="http://marselester.com/how-to-structure-go-projects.html"><h3 class="article-title">How to Structure Go Projects</h3></a>
 <h6 class="subheader" title="2018-09-28T00:00:00+07:00">Fri 28 September 2018
 </h6>
@@ -59,206 +279,7 @@
 <p>I came to Go from Django where the framework defines project layout, thus I wanted to know
 how to structure my Go applications. After reading documentation and building a few Django projects,
 you get a clear mental picture, as most of the questions are already answered.
-That helps to keep the projects within a company consistent, so developers don't have to struggle
-when they land on a new codebase. I was looking for a similar framework approach in Go,
-but none of them felt right to me. For some reason the same concepts do not resonate with Go.
-I didn't have better ideas, so I watched a few videos from conferences.
-Here are the talks I found most helpful and I use them as guidelines:</p>
-<ul class="simple">
-<li>Ben Johnson's <a class="reference external" href="https://www.youtube.com/watch?v=LMSbsW1Xpwg">Structuring Applications for Growth</a></li>
-<li>Brian Ketelsen's <a class="reference external" href="https://www.youtube.com/watch?v=MzTcsI6tn-0">Write Code Like the Go Team</a>,
-<a class="reference external" href="https://talks.bjk.fyi/gcru18-best.html#/">slides</a></li>
-<li>Kat Zien's <a class="reference external" href="https://www.youtube.com/watch?v=oL6JBUk6tj0">How Do You Structure Your Go Apps</a></li>
-<li>Peter Bourgon's <a class="reference external" href="https://www.youtube.com/watch?v=LHe1Cb_Ud_M">Ways To Do Things</a>.
-I tried his ideas in <a class="reference external" href="https://github.com/marselester/rascaldb/blob/master/rascaldb.go">RascalDB 😜</a>
-to serialize concurrent DB actions.</li>
-</ul>
-<p>I encourage you to watch those talks and go over code examples they provided.</p>
-<p>The following is my takeaway which could be completely misleading and far from the original ideas
-(just in case, you don't have to apply all of them together).
-If you feel something doesn't bring enough value in your case, just skip it, trust your intuition.
-Development requires many iterations to bounce ideas until the result becomes good enough.</p>
-<div class="section" id="know-your-domain">
-<h2>Know Your Domain</h2>
-<p>I like to start a new project on A4 paper and dump everything I know in free form
-(what the problem are you facing, can you solve it without writing code,
-what are possible solutions (pros/cons), terminology, system requirements, API endpoints, sketches,
-doodles, whatever gets your train of thoughts moving). Paper helps to get away from constraints of computer,
-I can write and draw without any programs which would otherwise have taken time and stolen my brain cycles.
-Paper helps me to stay focused — nothing blinks, pops up or rings, there is no urge to multitask
-(check email/Slack, switch between editor and console as if there is something new).</p>
-<p>Once you wrote everything down, you might realize there is not enough information to make progress.
-So you can reach out to stake holders and get more insights using your notes.
-Don't forget to write new info as well. It might take a few iterations when you finally establish
-common terminology, refine the actual project's goal, and cut unnecessary features/requirements.</p>
-<p>Now you have a mental picture of the project with clear deliverables.
-Based on that I like to spend time to come up with a concise project/repository name which
-summarizes nicely the project's goal and spirit (thesaurus comes to the rescue).
-As a next step I usually create README file where insights from the paper are documented.
-This time you want everyone in the world to understand what you learned about the project.
-This helps you to iterate once more as you're documenting in README, and the end result
-can be shared with coworkers (they might not understand your handwriting and doodles).
-If they have questions, that means you have a room for improvement, since other people
-don't have a context you obtained. Take your time and write it down, this will ensure that
-you will be able to get help with the project much easier (when you're on vacation or
-have to hand over the code). With some practice you'll anticipate questions and
-provide answers in README, so it won't take as much time from your coworkers next time.
-Keeping in mind that you are ultimately solving problems for your customers and
-designing the system and writing code for your coworkers (not just for yourself)
-helps to rigorously document as you go. Or else prepare to answer the same questions
-over and over again. In order to get better at documenting, I recommend reading
-<a class="reference external" href="http://www.writethedocs.org/guide/writing/beginners-guide-to-docs/">A beginner’s guide to writing documentation</a>
-and <a class="reference external" href="http://www.writethedocs.org/guide/">Documentation Guide</a>.</p>
-<p>Let's say you're building an API client, then it makes sense to start from
-a usage example in the README, since most of the documentation work is done by API provider.
-How will people download your library? How will they import it, does the path look concise and clear?
-How will your end user configure a client? What use cases your users might have (custom API domain,
-timeouts, logging, instrumentation)? Think of a few workflows and see how would you handle errors.
-Best case scenario is using your own library to reveal pain points.
-Check out <a class="reference external" href="https://github.com/marselester/bitgo-v2">one of my attempts</a> to find a decent layout of
-an API library. The library has a configurable client (you can instantiate many of them, e.g., one per coin)
-which allows to use a custom logger, http.Client, etc. It also has embedded services — things that know
-how to speak with particular API endpoints to operate API resources.</p>
-</div>
-<div class="section" id="getting-to-the-point">
-<h2>Getting to the Point</h2>
-<p>As you can see from the talks the main theme in Go application structure is heavily
-influenced by Domain-Driven Design (DDD). Using the research done on your project,
-you shall write down entities (as Go structs) of the domain model and services (as Go interfaces)
-which perform operations over those entities.</p>
-<p>I should mention that for simplicity's sake in my projects I decided to combine DDD &quot;service&quot; and
-&quot;repository&quot; concepts under &quot;service&quot; term.</p>
-<p>Let's proceed with listing minimal set of operations over the key entities to keep the scope small.
-It helps to imagine that there are different service implementations,
-an entity can be stored anywhere, for example, in Postgres, Kafka, memory, Redis,
-JSON file, remote API. But keep in mind semantics that storage of choice provides:
-getting a list of entities from Kafka and Postgres are hard to abstract (streaming vs quering).
-Moreover, if you do so, you might create unnecessary constraints for yourself.
-In reality, it is very unlikely that a project will change storages often,
-since you've chosen them for a reason (the choice of the storage is influenced
-by a problem you're solving, its constraints and guarantees you need).
-Most likely you've already chosen the storages in advance, so make sure you
-don't fight with interfaces you defined in your domain model. If you know your services
-need to share the same SQL transaction, embrace it in interfaces, for instance:</p>
-<div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">PaymentService</span> <span class="kd">interface</span> <span class="p">{</span>
-  <span class="nx">CreatePayment</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">tx</span> <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">Tx</span><span class="p">,</span> <span class="o">*</span><span class="nx">Payment</span><span class="p">)</span> <span class="kt">error</span>
-<span class="p">}</span>
-</pre></div>
-<p>Do you put all operations (add/list) into one service interface? I don't know.
-You have to decide. If you add an entity to Postgres, you expect to list them
-from Postgres as well. From this perspective &quot;add&quot; and &quot;list&quot; operations should be
-under the same interface. If in-memory storage can't implement the service interface,
-perhaps you don't have to enforce operation under the same interface,
-then probably it's ok to split it.</p>
-<p>Ben Johnson defines entities in a single package where domain model is described — the package
-shouldn’t have third party dependencies. Whereas Kat Zien in her demo created a package per service:
-&quot;adder&quot; package that adds beers and reviews, &quot;lister&quot; service lists beers and reviews.
-Each package defines its own beer and review structs.</p>
-<p>In my projects I isolate services implementation in a single package.
-For example, if I stored beer reviews in Kafka, I would have a kafka package which exposes
-a client and beer/review services embedded in it. The same applies to postgres package — two services use
-the same db connection pool and beer/review entities might appear in the same db transaction.</p>
-<p>During coding I combine the service implementations into a program (some server or
-a ctl tool) kept in cmd directory. That helps me to validate design ideas and notice any awkward
-component integrations. Similar to service implementations, try to think where the input and
-output could be coming from/to: standard input/output, http, rpc, db.</p>
-</div>
-<div class="section" id="an-example">
-<h2>An Example</h2>
-<p>Now let's have a look at <a class="reference external" href="https://github.com/marselester/distributed-payment">distributed payment</a>
-demo project where I explored an idea of payment transaction
-without atomic commit across 3 Kafka partitions.</p>
-<p>The domain model is defined in the repository root (note, you can place your packages
-in &quot;internal&quot; directory, so you don't mix them up with unrelated files):</p>
-<ul class="simple">
-<li><cite>wallet.go</cite> has <cite>Transfer</cite>, <cite>Payment</cite> entities, and services <cite>TransferService</cite>, <cite>PaymentService</cite>
-which can create and list the entities. Since the project is based on Kafka,
-the interfaces reflect that (<cite>partition</cite>, <cite>offset</cite> params). The services accept <cite>context.Context</cite>
-as a first argument, because we should be able to tell implementations to cancel operation.
-<a class="reference external" href="https://github.com/opentracing/opentracing-go">OpenTracing</a> can leverage context as well.
-Pay attention to a pointer/value semantics (share or not) in the service interfaces.
-Since an entity in DDD terms has a unique identity, a pointer semantics was used,
-hence <cite>*Transfer</cite> is passed to <cite>CreateTransfer()</cite> and returned from <cite>FromOffset()</cite>. Have a look at
-<a class="reference external" href="https://www.ardanlabs.com/blog/2017/06/design-philosophy-on-data-and-semantics.html">Design Philosophy On Data And Semantics</a>
-for more insights.</li>
-<li><cite>error.go</cite> contains errors which are relevant to the whole domain model,
-<a class="reference external" href="https://middlemost.com/failure-is-your-domain/">Failure is your Domain</a>.
-On implementation level there could be their own specific errors, for example, HTTP API errors in
-<cite>rest/error.go</cite> define JSON and validation errors.</li>
-<li><cite>log.go</cite> borrows <cite>Logger</cite> interface from Go kit. Since logging is an integral part of the system,
-placing it nearby the domain model seems justified. There is
-<a class="reference external" href="https://github.com/go-commons/commons/issues/1">Standard logger interface</a> discussion
-where the consensus is to emit events instead of logging in the library.
-Best practices and examples of how to emit events is still an
-<a class="reference external" href="https://github.com/go-commons/event/issues/1">open topic</a> at the time of writing.</li>
-</ul>
-<p>Implementations of the services defined in <cite>wallet.go</cite> are isolated in packages
-by their dependency name, for example, kafka, rest, mock, rocksdb.</p>
-<p>Package kafka implements wallet services and provides the Client access to them.
-There were two design options: embed the services to the Client struct or
-inject a service into each other. The example below would allow to have
-a swappable <cite>PaymentService</cite> (&quot;pg&quot; refers to a Postgres implementation):</p>
-<div class="highlight"><pre><span></span><span class="nx">kafka</span><span class="p">.</span><span class="nx">TransferService</span><span class="p">.</span><span class="nx">PaymentService</span> <span class="p">=</span> <span class="nx">pg</span><span class="p">.</span><span class="nx">NewPaymentService</span><span class="p">()</span>
-</pre></div>
-<p>On the other hand, grouping services in the Client would let services maintain DB transactions
-by sharing the same <cite>*sql.DB</cite>. Here is <cite>pg.Client</cite> example:</p>
-<div class="highlight"><pre><span></span><span class="c1">// Client represents a client to the underlying PostgreSQL data store.</span>
-<span class="kd">type</span> <span class="nx">Client</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="nx">Transfer</span> <span class="o">*</span><span class="nx">TransferService</span>
-  <span class="nx">Payment</span>  <span class="o">*</span><span class="nx">PaymentService</span>
-
-  <span class="nx">logger</span> <span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span>
-
-  <span class="nx">db</span>        <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">DB</span>
-  <span class="nx">transferQ</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span>
-  <span class="nx">paymentQ</span>  <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span>
-<span class="p">}</span>
-</pre></div>
-<p>In <a class="reference external" href="https://github.com/marselester/distributed-signup/blob/master/pg/user_service.go">distributed-signup</a>
-project a Client concept is baked into <cite>UserService</cite>, because it was the only service that
-needed access to Postgres.</p>
-<div class="highlight"><pre><span></span><span class="c1">// UserService reprensets a service to store signed up users.</span>
-<span class="kd">type</span> <span class="nx">UserService</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="nx">config</span> <span class="nx">Config</span>
-
-  <span class="nx">pool</span> <span class="o">*</span><span class="nx">pgx</span><span class="p">.</span><span class="nx">ConnPool</span>
-<span class="p">}</span>
-</pre></div>
-<p>Package rest is responsible for translating incoming HTTP requests to wallet domain and
-then translating results from wallet model back to HTTP responses.
-The package doesn't implement <cite>TransferService</cite> per se, it uses one in its Server.
-The REST-style API server itself is put together in
-<a class="reference external" href="https://github.com/marselester/distributed-payment/blob/master/cmd/transfer-server/main.go">cmd/transfer-server</a>.</p>
-<div class="highlight"><pre><span></span><span class="c1">// Server represents an HTTP API handler for wallet services.</span>
-<span class="c1">// It wraps a TransferService so we can provide different</span>
-<span class="c1">// implementations, e.g., Kafka or a mock.</span>
-<span class="kd">type</span> <span class="nx">Server</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="o">*</span><span class="nx">chi</span><span class="p">.</span><span class="nx">Mux</span>
-  <span class="nx">logger</span>          <span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span>
-  <span class="nx">transferService</span> <span class="nx">wallet</span><span class="p">.</span><span class="nx">TransferService</span>
-  <span class="nx">wopts</span>           <span class="nx">walletOption</span>
-<span class="p">}</span>
-</pre></div>
-<p>Originally in <a class="reference external" href="https://medium.com/wtf-dial/wtf-dial-http-api-d8800ccd605f">WTF Dial: HTTP API</a>
-Ben Johnson explained how to implement API properly and isolate http dependencies in wtf/http package.</p>
-<p>Package mock provides mock services to facilitate testing. For example, for most cases
-we do not need Kafka implementation of a transfer service to be used in HTTP API testing.</p>
-<p>Package rocksdb implements user requests deduplication using RocksDB to
-memorise already processed request IDs. Requests deduplication is an integral part of
-a distributed system, hence the domain model must embrace it.</p>
-<p>Everything is connected in cmd directory. Note, that the domain package is used everywhere.</p>
-<ul class="simple">
-<li><cite>cmd/transfer-server</cite> is HTTP API server to create money transfers which are stored in Kafka.
-It delegates the actual hard work to kafka and rest packages.</li>
-<li><cite>cmd/paymentd</cite> program is responsible for creating incoming &amp; outgoing payment pairs based on
-money transfer requests stored in Kafka.</li>
-<li><cite>cmd/accountantd</cite> is the last program in the pipeline. It sequentially reads Kafka messages
-from <cite>wallet.payment</cite> topic, deduplicates messages by request ID, and applies the changes to
-the account balances. Deduplication is provided by rocksdb package mentioned above.</li>
-</ul>
-<p>To wrap up, that's all I managed to recall :) I look forward for more talks on structuring Go applications.</p>
-</div>
-<p class="subheader">Category: <a href="http://marselester.com/category/go.html">Go</a>
+That helps to keep …</p><p class="subheader">Category: <a href="http://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="http://marselester.com/tag/golang.html">golang </a>
@@ -268,11 +289,9 @@ the account balances. Deduplication is provided by rocksdb package mentioned abo
 
 
 
-<p><a href="http://marselester.com/how-to-structure-go-projects.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="http://marselester.com/how-to-structure-go-projects.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/how-to-structure-go-projects.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 
