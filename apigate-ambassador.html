@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - rate limiting</title>
+    <title>Ambassador as API Gateway</title>
 
     <link rel="stylesheet" href="http://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="http://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="http://marselester.com/apigate-ambassador.html" rel="bookmark"
+        title="Permalink to Ambassador as API Gateway">Ambassador as API Gateway</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="http://marselester.com/apigate-ambassador.html"><h3 class="article-title">Ambassador as API Gateway</h3></a>
 <h6 class="subheader" title="2019-03-13T00:00:00+07:00">Wed 13 March 2019
 </h6>
 
 
-<p><a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway">API gateway</a>
+    <p><a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway">API gateway</a>
 acts as a reverse proxy, routing API requests from clients to services.
 Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
 In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://getambassador.io/">Ambassador</a>.</p>
@@ -361,6 +363,7 @@ it should be eligible for rate limiting.</p>
 <p>Unfortunately I have not been able to make rate limiting work yet.
 Here is the corresponding <a class="reference external" href="https://github.com/datawire/ambassador/issues/1144">GitHub issue</a>.</p>
 </div>
+
 <p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
@@ -373,43 +376,22 @@ Here is the corresponding <a class="reference external" href="https://github.com
 
 
 
-<p><a href="http://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "apigate-ambassador.html";
+        var disqus_url = "http://marselester.com/apigate-ambassador.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="http://marselester.com/apigate-traefik.html"><h3 class="article-title">Traefik as API Gateway</h3></a>
-<h6 class="subheader" title="2019-03-12T00:00:00+07:00">Tue 12 March 2019
-</h6>
-
-
-<p><a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway">API gateway</a>
-acts as a reverse proxy, routing API requests from clients to services.
-Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
-In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://traefik.io/">Traefik</a> reverse-proxy.</p>
-<p>The demo is based on a …</p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="http://marselester.com/tag/traefik.html">traefik </a>
-    <a href="http://marselester.com/tag/kubernetes.html">kubernetes </a>
-    <a href="http://marselester.com/tag/api-gateway.html">api gateway </a>
-    <a href="http://marselester.com/tag/auth.html">auth </a>
-    <a href="http://marselester.com/tag/rate-limiting.html">rate limiting </a>
-</p>
-
-
-
-<p><a href="http://marselester.com/apigate-traefik.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/apigate-traefik.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

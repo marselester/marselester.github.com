@@ -51,45 +51,43 @@
         
 
             <article>
-                <a href="http://marselester.com/apigate-traefik.html"><h3 class="article-title">Traefik as API Gateway</h3></a>
-<h6 class="subheader" title="2019-03-12T00:00:00+07:00">Tue 12 March 2019
+                <a href="http://marselester.com/apigate-ambassador.html"><h3 class="article-title">Ambassador as API Gateway</h3></a>
+<h6 class="subheader" title="2019-03-13T00:00:00+07:00">Wed 13 March 2019
 </h6>
 
 
 <p><a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway">API gateway</a>
 acts as a reverse proxy, routing API requests from clients to services.
 Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
-In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://traefik.io/">Traefik</a> reverse-proxy.</p>
+In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://getambassador.io/">Ambassador</a>.</p>
 <p>The demo is based on a dummy <a class="reference external" href="https://traveling.docs.apiary.io/">Traveling project</a>
 where we have services to rent a car and book a hotel.</p>
-<p>Firstly, we shall install Traefik on <a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minikube</a>
-as an <a class="reference external" href="https://kubernetes.io/docs/concepts/services-networking/ingress/">Ingress Controller</a>
-by following <a class="reference external" href="https://docs.traefik.io/user-guide/kubernetes/">Traefik user guide</a>.
-Ingress Controller is a Pod that's responsible for fulfilling the Ingress:
-it watches the <cite>/ingresses</cite> Kubernetes endpoint for updates to satisfy requests for Ingresses.
-Ingress exposes HTTP routes from outside the cluster to Services within the cluster.
-HTTP traffic routing is controlled by rules defined on the Ingress resource.</p>
+<p>Firstly, we shall install Ambassador on <a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minikube</a>
+by following <a class="reference external" href="https://www.getambassador.io/user-guide/getting-started/">Ambassador user guide</a>.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
 <span class="go">Starting local Kubernetes v1.13.2 cluster...</span>
-<span class="gp">$</span> kubectl apply -f https://raw.githubusercontent.com/containous/traefik/master/examples/k8s/traefik-rbac.yaml
-<span class="gp">$</span> kubectl apply -f https://raw.githubusercontent.com/containous/traefik/master/examples/k8s/traefik-deployment.yaml
+<span class="gp">$</span> kubectl apply -f https://www.getambassador.io/yaml/ambassador/ambassador-rbac.yaml
 </pre></div>
-<p>Traefik ingress service (port 80, NodePort 32518) is the entry point of our API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> minikube service list
-<span class="go">|-------------|-------------------------|--------------------------------|</span>
-<span class="go">|  NAMESPACE  |          NAME           |              URL               |</span>
-<span class="go">|-------------|-------------------------|--------------------------------|</span>
-<span class="go">| default     | kubernetes              | No node port                   |</span>
-<span class="go">| kube-system | kube-dns                | No node port                   |</span>
-<span class="go">| kube-system | traefik-ingress-service | http://192.168.99.100:32518    |</span>
-<span class="go">|             |                         | http://192.168.99.100:31735    |</span>
-<span class="go">|-------------|-------------------------|--------------------------------|</span>
-<span class="gp">$</span> <span class="nv">TRAEFIKURL</span><span class="o">=</span>http://192.168.99.100:32518
-<span class="gp">$</span> curl <span class="nv">$TRAEFIKURL</span>
-<span class="go">404 page not found</span>
+<p>Next, create Kubernetes service for Ambassador deployment of type NodePort, so it's easily accessible outside of the cluster.
+It will be the entry point of our API gateway.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
+<span class="go">apiVersion: v1</span>
+<span class="go">kind: Service</span>
+<span class="go">metadata:</span>
+<span class="go">  name: ambassador</span>
+<span class="go">spec:</span>
+<span class="go">  selector:</span>
+<span class="go">    service: ambassador</span>
+<span class="go">  type: NodePort</span>
+<span class="go">  ports:</span>
+<span class="go">    - port: 80</span>
+<span class="gp">  #</span> Propagate the original <span class="nb">source</span> IP of the client.
+<span class="go">  externalTrafficPolicy: Local</span>
+<span class="go">&#39;</span>
+<span class="gp">$</span> <span class="nv">AMBASSADORURL</span><span class="o">=</span><span class="k">$(</span>minikube service --url ambassador<span class="k">)</span>
 </pre></div>
-<p>Note, there is also Traefik admin dashboard (port 8080) running at <cite>http://192.168.99.100:31735</cite>.</p>
-<img alt="" src="http://marselester.com/images/traefik-providers.png" />
+<p>Note, there is a diagnostic web UI at <cite>$AMBASSADORURL/ambassador/v0/diag/</cite>.
+You should restrict access to it from your custom auth service.</p>
 <div class="section" id="travel-apps">
 <h2>Travel Apps</h2>
 <p>Let's deploy the travel apps on Kubernetes. For simplicity, you can use the images uploaded to Docker Hub.
@@ -100,8 +98,8 @@ Note, you can restore your local Docker environment with <cite>eval $(minikube d
 <span class="gp">$</span> <span class="nb">cd</span> ./apigate/
 <span class="gp">$</span> <span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
 <span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-hotel:v1.0.0 --file<span class="o">=</span>docker/hotel.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-traefik/hotel/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-traefik/hotel/service.yml
+<span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/deployment.yml
+<span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service.yml
 </pre></div>
 <p>The hotel app should be running:</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>hotel
@@ -114,24 +112,35 @@ Note, you can restore your local Docker environment with <cite>eval $(minikube d
 <span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
 <span class="go">}</span>
 </pre></div>
-<p>Now, it's time to put the <cite>hotel</cite> Service behind the gateway by creating an Ingress rule.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
-<span class="go">apiVersion: extensions/v1beta1</span>
-<span class="go">kind: Ingress</span>
-<span class="go">metadata:</span>
-<span class="go">  name: hotel-ingress</span>
-<span class="go">spec:</span>
-<span class="go">  rules:</span>
-<span class="go">    - http:</span>
-<span class="go">        paths:</span>
-<span class="go">          - path: /v1/hotels</span>
-<span class="go">            backend:</span>
-<span class="go">              serviceName: hotel</span>
-<span class="go">              servicePort: 80</span>
-<span class="go">&#39;</span>
+<p>Now, it's time to put the <cite>hotel</cite> Service behind the gateway by adding annotations to the service.</p>
+<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
+<span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
+  <span class="l l-Scalar l-Scalar-Plain">annotations</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">getambassador.io/config</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">|</span>
+      <span class="no">---</span>
+      <span class="no">apiVersion: ambassador/v1</span>
+      <span class="no">kind: Mapping</span>
+      <span class="no">name: hotel_mapping</span>
+      <span class="no">prefix: /v1/hotels</span>
+      <span class="no">rewrite: &quot;&quot;</span>
+      <span class="no">service: hotel</span>
+<span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">selector</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">app</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
+  <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
+  <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">port</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+      <span class="l l-Scalar l-Scalar-Plain">targetPort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
 </pre></div>
-<p>Hotel booking requests should be routed to the hotel app:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$TRAEFIKURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service-gate.yml
+</pre></div>
+<p>By default, Ambassador would rewrite <cite>/v1/hotels</cite> prefix to <cite>/</cite>.
+With <cite>rewrite: &quot;&quot;</cite> directive we configure Ambassador to not change the prefix as
+it forwards a request to the <cite>hotel</cite> service.
+Let's confirm that hotel booking requests are routed to the hotel app:</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
 <span class="go">{</span>
 <span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
 <span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
@@ -139,26 +148,33 @@ Note, you can restore your local Docker environment with <cite>eval $(minikube d
 <span class="go">}</span>
 </pre></div>
 <p>The car rental app is deployed similarly.</p>
+<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
+<span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">car</span>
+  <span class="l l-Scalar l-Scalar-Plain">annotations</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">getambassador.io/config</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">|</span>
+      <span class="no">---</span>
+      <span class="no">apiVersion: ambassador/v1</span>
+      <span class="no">kind: Mapping</span>
+      <span class="no">name: car_mapping</span>
+      <span class="no">prefix: /v1/cars</span>
+      <span class="no">rewrite: &quot;&quot;</span>
+      <span class="no">service: car</span>
+<span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">selector</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">app</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">car</span>
+  <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
+  <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">port</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+      <span class="l l-Scalar l-Scalar-Plain">targetPort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
+</pre></div>
 <div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-car:v1.0.0 --file<span class="o">=</span>docker/car.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-traefik/car/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-traefik/car/service.yml
-<span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
-<span class="go">apiVersion: extensions/v1beta1</span>
-<span class="go">kind: Ingress</span>
-<span class="go">metadata:</span>
-<span class="go">  name: car-ingress</span>
-<span class="go">spec:</span>
-<span class="go">  rules:</span>
-<span class="go">    - http:</span>
-<span class="go">        paths:</span>
-<span class="go">          - path: /v1/cars</span>
-<span class="go">            backend:</span>
-<span class="go">              serviceName: car</span>
-<span class="go">              servicePort: 80</span>
-<span class="go">&#39;</span>
+<span class="gp">$</span> kubectl apply -f k8s-ambassador/car/deployment.yml
+<span class="gp">$</span> kubectl apply -f k8s-ambassador/car/service-gate.yml
 </pre></div>
 <p>You can see that the car booking is available at the gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$TRAEFIKURL</span>/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$AMBASSADORURL</span>/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
 <span class="go">{</span>
 <span class="go">    &quot;id&quot;: &quot;9e0d65f5-9de2-4428-9bee-1f3967f05129&quot;,</span>
 <span class="go">    &quot;car_id&quot;: &quot;cfb6f7a5-4591-4f5c-8b17-9a1b10f98ada&quot;,</span>
@@ -173,8 +189,8 @@ This work is delegated to <cite>travelauth</cite> Service that performs HTTP Bas
 and returns a username in <cite>X-Travel-User</cite> header if credentials matched.
 We shall start from deploying it on the cluster.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-auth:v1.0.0 --file<span class="o">=</span>docker/auth.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-traefik/auth/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-traefik/auth/service.yml
+<span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/deployment.yml
+<span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/service.yml
 </pre></div>
 <p>If the auth server is properly deployed, it will prompt for username/password.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>auth
@@ -184,26 +200,41 @@ We shall start from deploying it on the cluster.</p>
 <span class="go">HTTP/1.1 200 OK</span>
 <span class="go">X-Travel-User: bob</span>
 </pre></div>
-<p>Let's tell Traefik to
-<a class="reference external" href="https://docs.traefik.io/configuration/entrypoints/#forward-authentication">forward all requests to the auth server</a>
+<p>Let's tell Ambassador to
+<a class="reference external" href="https://www.getambassador.io/reference/services/auth-service/">forward all requests to the auth server</a>
 and copy <cite>X-Travel-User</cite> response header from the auth server to the routed request.</p>
-<div class="highlight"><pre><span></span>[entryPoints]
-  [entryPoints.http]
-  address = &quot;:80&quot;
-
-    [entryPoints.http.auth.forward]
-    address = &quot;http://travelauth.default/&quot;
-    authResponseHeaders = [&quot;X-Travel-User&quot;]
+<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
+<span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">travelauth</span>
+  <span class="l l-Scalar l-Scalar-Plain">annotations</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">getambassador.io/config</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">|</span>
+      <span class="no">---</span>
+      <span class="no">apiVersion: ambassador/v1</span>
+      <span class="no">kind: AuthService</span>
+      <span class="no">name: gate_auth</span>
+      <span class="no"># This is k8s service name; all API requests are sent there. For example,</span>
+      <span class="no"># API request /v1/hotels will be sent to http://travelauth:80/v1/hotels.</span>
+      <span class="no">auth_service: travelauth</span>
+      <span class="no">proto: http</span>
+      <span class="no"># The travelauth service adds a username into a header after successful authentication,</span>
+      <span class="no"># so all the other services know who the user is (ratelimit, hotel, car services).</span>
+      <span class="no">allowed_authorization_headers:</span>
+        <span class="no">- &quot;X-Travel-User&quot;</span>
+<span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">selector</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">app</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">auth</span>
+  <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
+  <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">port</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+      <span class="l l-Scalar l-Scalar-Plain">targetPort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
 </pre></div>
-<p>Create a ConfigMap entry for the Traefik config file and
-mount <cite>traefik-conf</cite> ConfigMap volume to <cite>traefik-ingress-controller</cite> Pod.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap traefik-conf --from-file<span class="o">=</span>traefik.toml<span class="o">=</span>k8s-traefik/traefik/traefik.toml --namespace<span class="o">=</span>kube-system
-<span class="gp">$</span> kubectl apply -f k8s-traefik/traefik/deployment.yml
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/service-auth.yml
 </pre></div>
-<p>The updated Traefik deployment is now enforces authentication on API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl -i <span class="nv">$TRAEFIKURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<p>With updated config Ambassador should enforce authentication on API gateway.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl -i <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
 <span class="go">HTTP/1.1 401 Unauthorized</span>
-<span class="gp">$</span> curl -i -u bob:bob <span class="nv">$TRAEFIKURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<span class="gp">$</span> curl -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
 <span class="go">HTTP/1.1 200 OK</span>
 <span class="go">{</span>
 <span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
@@ -212,44 +243,156 @@ mount <cite>traefik-conf</cite> ConfigMap volume to <cite>traefik-ingress-contro
 <span class="go">}</span>
 </pre></div>
 </div>
-<div class="section" id="rate-limiting">
-<h2>Rate Limiting</h2>
-<p>Request rate limiting is configured via Ingress <a class="reference external" href="https://docs.traefik.io/configuration/backends/kubernetes/#annotations">annotations</a>.
-For example, we allow to send only 2 hotel requests per 15 seconds for each logged in customer.</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">extensions/v1beta1</span>
-<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Ingress</span>
+<div class="section" id="rate-limiting-service">
+<h2>Rate Limiting Service</h2>
+<p>With Ambassador, individual requests can be annotated with metadata, called labels.
+These labels can then be passed to a third party rate limiting service through a gRPC interface
+which implements actual rate limit logic.
+Check out <a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Node.js</a> and
+<a class="reference external" href="https://blog.getambassador.io/designing-a-rate-limiting-service-for-ambassador-f460e9fabedb">Java</a> based examples.</p>
+<p>In order to build such service, it must support Envoy's <a class="reference external" href="https://github.com/datawire/ambassador/blob/master/ambassador/common/ratelimit/ratelimit.proto">ratelimit.proto</a> interface.
+The protocol buffer definition of RateLimitService service is described in <cite>./internal/pb/ratelimit.proto</cite>.
+You need to <a class="reference external" href="https://grpc.io/docs/quickstart/go.html">install</a> protoc compiler and protoc plugin for Go
+(beware of <a class="reference external" href="https://github.com/golang/protobuf/issues/763">ProtoPackageIsVersion3 issue</a>)
+to generate gRPC service code.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> brew install protobuf
+<span class="gp">$</span> go get -u github.com/golang/protobuf/protoc-gen-go
+<span class="gp">$</span> <span class="nb">cd</span> <span class="nv">$GOPATH</span>/src/github.com/golang/protobuf/protoc-gen-go
+<span class="gp">$</span> git checkout v1.2.0
+<span class="gp">$</span> go install
+</pre></div>
+<p>The arguments tell protoc to use <cite>ratelimit.proto</cite> definition,
+search for imports in <cite>./internal/pb/</cite> dir, generate Go code using gprc plugin,
+and place the result in <cite>./internal/pb/</cite> dir.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> protoc ratelimit.proto -I internal/pb/ --go_out<span class="o">=</span><span class="nv">plugins</span><span class="o">=</span>grpc:internal/pb/
+</pre></div>
+<p>We now have a newly generated gRPC server and client code in <cite>./internal/pb/ratelimit.pb.go</cite>.
+Our ratelimit server already implements <cite>RateLimitServiceServer</cite> interface.</p>
+<div class="highlight"><pre><span></span><span class="c1">// ShouldRateLimit must respond to the request with an OK or OVER_LIMIT code.</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">)</span> <span class="nx">ShouldRateLimit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">req</span> <span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Descriptors is a list of labels on which the rate limit service can base</span>
+    <span class="c1">// its decision to accept or reject the request.</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s: %+v&quot;</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">GetDomain</span><span class="p">(),</span> <span class="nx">req</span><span class="p">.</span><span class="nx">GetDescriptors</span><span class="p">())</span>
+
+    <span class="nx">resp</span> <span class="o">:=</span> <span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">{</span>
+        <span class="nx">OverallCode</span><span class="p">:</span> <span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse_OVER_LIMIT</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">resp</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</pre></div>
+<p>Let's deploy it on the cluster and send a few requests using
+<a class="reference external" href="https://github.com/fullstorydev/grpcurl">grpcurl</a>.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-ratelimit:v1.0.0 --file<span class="o">=</span>docker/ratelimit.Dockerfile .
+<span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/deployment.yml
+<span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/service.yml
+<span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>ratelimit
+<span class="go">ratelimit-api-5554898589-4gmv5</span>
+<span class="gp">$</span> kubectl port-forward ratelimit-api-5554898589-4gmv5 <span class="m">5000</span>
+</pre></div>
+<p>As we can see the server exposes RateLimitService.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> grpcurl -plaintext localhost:5000 list
+<span class="go">grpc.reflection.v1alpha.ServerReflection</span>
+<span class="go">pb.lyft.ratelimit.RateLimitService</span>
+</pre></div>
+<p>Its ShouldRateLimit method should return <cite>OK</cite> or <cite>OVER_LIMIT</cite> reply.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> grpcurl -d <span class="s1">&#39;{&quot;domain&quot;:&quot;envoy&quot;}&#39;</span> -plaintext localhost:5000 pb.lyft.ratelimit.RateLimitService/ShouldRateLimit
+<span class="go">{</span>
+<span class="go">  &quot;overallCode&quot;: &quot;OVER_LIMIT&quot;</span>
+<span class="go">}</span>
+</pre></div>
+<p>Now we shall introduce the ratelimit service to Ambassador.</p>
+<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
 <span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel-ingress</span>
+  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">travelratelimit</span>
   <span class="l l-Scalar l-Scalar-Plain">annotations</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">traefik.ingress.kubernetes.io/rate-limit</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">extractorfunc: &quot;request.header.X-Travel-User&quot;</span>
-      <span class="no">rateset:</span>
-        <span class="no"># Allow 2 requests every 15 seconds.</span>
-        <span class="no">modest:</span>
-          <span class="no">period: 15s</span>
-          <span class="no">average: 2</span>
-          <span class="no">burst: 2</span>
+    <span class="l l-Scalar l-Scalar-Plain">getambassador.io/config</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">|</span>
+      <span class="no">---</span>
+      <span class="no">apiVersion: ambassador/v1</span>
+      <span class="no">kind: RateLimitService</span>
+      <span class="no">name: gate_ratelimit</span>
+      <span class="no">service: travelratelimit</span>
 <span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">rules</span><span class="p p-Indicator">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">http</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">paths</span><span class="p p-Indicator">:</span>
-          <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">path</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">/v1/hotels</span>
-            <span class="l l-Scalar l-Scalar-Plain">backend</span><span class="p p-Indicator">:</span>
-              <span class="l l-Scalar l-Scalar-Plain">serviceName</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-              <span class="l l-Scalar l-Scalar-Plain">servicePort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+  <span class="l l-Scalar l-Scalar-Plain">selector</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">app</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">ratelimit</span>
+  <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
+  <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">port</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+      <span class="l l-Scalar l-Scalar-Plain">targetPort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">5000</span>
 </pre></div>
-<p>Let's apply these limits onto the hotel app.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-traefik/hotel/ingress.yml
-<span class="gp">$</span> <span class="k">for</span> i in <span class="o">{</span><span class="m">1</span>..3<span class="o">}</span><span class="p">;</span> <span class="k">do</span> curl -i -s -u bob:bob <span class="nv">$TRAEFIKURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef <span class="p">|</span> head -n <span class="m">1</span><span class="p">;</span> <span class="k">done</span>
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">HTTP/1.1 429 Too Many Requests</span>
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/service-rate.yml
 </pre></div>
-<p>As you can see the third request was throttled.</p>
-<p>Although it's convenient enough to apply rate limiting using annotations,
-I would've preferred rate limiting to be decoupled from Traefik similar to authentication service.</p>
+<p>Finally, I am going to add <cite>labels</cite> to attach rate limiting descriptors as shown in
+<a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Rate Limiting tutorial</a>.</p>
+<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
+<span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
+  <span class="l l-Scalar l-Scalar-Plain">annotations</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">getambassador.io/config</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">|</span>
+      <span class="no">---</span>
+      <span class="no">apiVersion: ambassador/v1</span>
+      <span class="no">kind: Mapping</span>
+      <span class="no">name: hotel_mapping</span>
+      <span class="no">prefix: /v1/hotels</span>
+      <span class="no">rewrite: &quot;&quot;</span>
+      <span class="no">service: hotel</span>
+      <span class="no">labels:</span>
+        <span class="no">ambassador:</span>
+          <span class="no">- request_label_group:</span>
+            <span class="no">- x-ambassador-test-allow:</span>
+                <span class="no">header: &quot;x-ambassador-test-allow&quot;</span>
+                <span class="no">omit_if_not_present: true</span>
+<span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">selector</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">app</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
+  <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
+  <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">port</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+      <span class="l l-Scalar l-Scalar-Plain">targetPort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
+</pre></div>
+<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service-rate.yml
+</pre></div>
+<p>If a request made to the hotel API has header <cite>X-Ambassador-Test-Allow</cite>,
+it should be eligible for rate limiting.</p>
+<div class="highlight"><pre><span></span><span class="gp">$</span> curl -H <span class="s2">&quot;x-ambassador-test-allow: probably&quot;</span> -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels
+<span class="go">HTTP/1.1 200 OK</span>
+</pre></div>
+<p>Unfortunately I have not been able to make rate limiting work yet.
+Here is the corresponding <a class="reference external" href="https://github.com/datawire/ambassador/issues/1144">GitHub issue</a>.</p>
 </div>
 <p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="http://marselester.com/tag/ambassador.html">ambassador </a>
+    <a href="http://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="http://marselester.com/tag/api-gateway.html">api gateway </a>
+    <a href="http://marselester.com/tag/auth.html">auth </a>
+    <a href="http://marselester.com/tag/rate-limiting.html">rate limiting </a>
+</p>
+
+
+
+<p><a href="http://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
+                <a href="http://marselester.com/apigate-traefik.html"><h3 class="article-title">Traefik as API Gateway</h3></a>
+<h6 class="subheader" title="2019-03-12T00:00:00+07:00">Tue 12 March 2019
+</h6>
+
+
+<p><a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway">API gateway</a>
+acts as a reverse proxy, routing API requests from clients to services.
+Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
+In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://traefik.io/">Traefik</a> reverse-proxy.</p>
+<p>The demo is based on a …</p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="http://marselester.com/tag/traefik.html">traefik </a>
@@ -261,10 +404,9 @@ I would've preferred rate limiting to be decoupled from Traefik similar to authe
 
 
 
-<p><a href="http://marselester.com/apigate-traefik.html#disqus_thread">comments</a></p>            </article>
-
-
-
+<p><a href="http://marselester.com/apigate-traefik.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/apigate-traefik.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
 
             <!-- /#posts-list -->
 
