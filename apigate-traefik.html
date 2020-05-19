@@ -189,13 +189,13 @@ We shall start from deploying it on the cluster.</p>
 <p>Let's tell Traefik to
 <a class="reference external" href="https://docs.traefik.io/configuration/entrypoints/#forward-authentication">forward all requests to the auth server</a>
 and copy <cite>X-Travel-User</cite> response header from the auth server to the routed request.</p>
-<div class="highlight"><pre><span></span>[entryPoints]
-  [entryPoints.http]
-  address = &quot;:80&quot;
+<div class="highlight"><pre><span></span><span class="k">[entryPoints]</span>
+  <span class="k">[entryPoints.http]</span>
+  <span class="n">address</span> <span class="o">=</span> <span class="s">&quot;:80&quot;</span>
 
-    [entryPoints.http.auth.forward]
-    address = &quot;http://travelauth.default/&quot;
-    authResponseHeaders = [&quot;X-Travel-User&quot;]
+    <span class="k">[entryPoints.http.auth.forward]</span>
+    <span class="n">address</span> <span class="o">=</span> <span class="s">&quot;http://travelauth.default/&quot;</span>
+    <span class="n">authResponseHeaders</span> <span class="o">=</span> <span class="k">[&quot;X-Travel-User&quot;]</span>
 </pre></div>
 <p>Create a ConfigMap entry for the Traefik config file and
 mount <cite>traefik-conf</cite> ConfigMap volume to <cite>traefik-ingress-controller</cite> Pod.</p>
@@ -218,12 +218,12 @@ mount <cite>traefik-conf</cite> ConfigMap volume to <cite>traefik-ingress-contro
 <h2>Rate Limiting</h2>
 <p>Request rate limiting is configured via Ingress <a class="reference external" href="https://docs.traefik.io/configuration/backends/kubernetes/#annotations">annotations</a>.
 For example, we allow to send only 2 hotel requests per 15 seconds for each logged in customer.</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">extensions/v1beta1</span>
-<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Ingress</span>
-<span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel-ingress</span>
-  <span class="l l-Scalar l-Scalar-Plain">annotations</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">traefik.ingress.kubernetes.io/rate-limit</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">|</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">extensions/v1beta1</span>
+<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Ingress</span>
+<span class="nt">metadata</span><span class="p">:</span>
+  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel-ingress</span>
+  <span class="nt">annotations</span><span class="p">:</span>
+    <span class="nt">traefik.ingress.kubernetes.io/rate-limit</span><span class="p">:</span> <span class="p p-Indicator">|</span>
       <span class="no">extractorfunc: &quot;request.header.X-Travel-User&quot;</span>
       <span class="no">rateset:</span>
         <span class="no"># Allow 2 requests every 15 seconds.</span>
@@ -231,14 +231,14 @@ For example, we allow to send only 2 hotel requests per 15 seconds for each logg
           <span class="no">period: 15s</span>
           <span class="no">average: 2</span>
           <span class="no">burst: 2</span>
-<span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">rules</span><span class="p p-Indicator">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">http</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">paths</span><span class="p p-Indicator">:</span>
-          <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">path</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">/v1/hotels</span>
-            <span class="l l-Scalar l-Scalar-Plain">backend</span><span class="p p-Indicator">:</span>
-              <span class="l l-Scalar l-Scalar-Plain">serviceName</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-              <span class="l l-Scalar l-Scalar-Plain">servicePort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+<span class="nt">spec</span><span class="p">:</span>
+  <span class="nt">rules</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="nt">http</span><span class="p">:</span>
+        <span class="nt">paths</span><span class="p">:</span>
+          <span class="p p-Indicator">-</span> <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/v1/hotels</span>
+            <span class="nt">backend</span><span class="p">:</span>
+              <span class="nt">serviceName</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
+              <span class="nt">servicePort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
 </pre></div>
 <p>Let's apply these limits onto the hotel app.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-traefik/hotel/ingress.yml

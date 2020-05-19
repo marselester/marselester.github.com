@@ -81,7 +81,7 @@ One option is to store books count in <tt class="docutils literal">Author</tt> m
 other SQL queries. Another one is to keep count somewhere else, e.g., Redis.</p>
 <div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
     <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
-    <span class="n">books_count</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">books_count</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
         <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;author&#39;</span>
@@ -103,7 +103,7 @@ acquiring a DB lock on author record):</p>
 
     <span class="k">with</span> <span class="n">atomic</span><span class="p">():</span>
         <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">select_for_update</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">book</span><span class="o">.</span><span class="n">author_id</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="o">=</span> <span class="n">author</span><span class="o">.</span><span class="n">books</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -223,7 +223,7 @@ from <tt class="docutils literal">Author</tt> model and return it, instead of de
 
         <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">author_id</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;books_count&#39;</span><span class="p">)</span>
         <span class="c1"># In case we got unsynced author, we fallback to SQL COUNT.</span>
-        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_count</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span>

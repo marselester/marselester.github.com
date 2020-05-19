@@ -110,22 +110,22 @@ To see whether Prometheus started up, we can run a proxy between terminal and Ku
 <p>Its advisable to describe Deployments in configuration files,
 so we can have a better visibility and version control over our cluster.
 The following Deployment manifest is similar to what we achieved with <cite>kubectl run</cite> command.</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">extensions/v1beta1</span>
-<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Deployment</span>
-<span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-deployment</span>
-<span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">replicas</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span> <span class="c1"># tells deployment to run 1 pod matching the template below</span>
-  <span class="l l-Scalar l-Scalar-Plain">template</span><span class="p p-Indicator">:</span> <span class="c1"># crete pods using pod definition in this template</span>
-    <span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
-      <span class="l l-Scalar l-Scalar-Plain">labels</span><span class="p p-Indicator">:</span> <span class="c1"># these key value pairs will be attached to pods</span>
-        <span class="l l-Scalar l-Scalar-Plain">app</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-server</span>
-    <span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
-      <span class="l l-Scalar l-Scalar-Plain">containers</span><span class="p p-Indicator">:</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus</span>
-          <span class="l l-Scalar l-Scalar-Plain">image</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">prom/prometheus:v1.2.1</span>
-          <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
-            <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">containerPort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">9090</span> <span class="c1"># port we open in the container</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">extensions/v1beta1</span>
+<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-deployment</span>
+<span class="nt">spec</span><span class="p">:</span>
+  <span class="nt">replicas</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span> <span class="c1"># tells deployment to run 1 pod matching the template below</span>
+  <span class="nt">template</span><span class="p">:</span> <span class="c1"># crete pods using pod definition in this template</span>
+    <span class="nt">metadata</span><span class="p">:</span>
+      <span class="nt">labels</span><span class="p">:</span> <span class="c1"># these key value pairs will be attached to pods</span>
+        <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-server</span>
+    <span class="nt">spec</span><span class="p">:</span>
+      <span class="nt">containers</span><span class="p">:</span>
+        <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus</span>
+          <span class="nt">image</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prom/prometheus:v1.2.1</span>
+          <span class="nt">ports</span><span class="p">:</span>
+            <span class="p p-Indicator">-</span> <span class="nt">containerPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">9090</span> <span class="c1"># port we open in the container</span>
 </pre></div>
 <p>Let's delete <cite>prometheus-deployment</cite> we created via <cite>kubectl run</cite> command</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl delete deployment prometheus-deployment
@@ -165,22 +165,22 @@ Let's delete the Service and create it via Service config file.</p>
 </pre></div>
 <p>Since the Prometheus Pod exposes <cite>9090</cite> port and has <cite>app: prometheus-server</cite> label,
 our config should be as following:</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">apiVersion</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="l l-Scalar l-Scalar-Plain">metadata</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-service</span>
-<span class="l l-Scalar l-Scalar-Plain">spec</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">selector</span><span class="p p-Indicator">:</span> <span class="c1"># exposes any pods with the following labels as a service</span>
-    <span class="l l-Scalar l-Scalar-Plain">app</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-server</span>
-  <span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">port</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span> <span class="c1"># this Service&#39;s port (cluster-internal IP clusterIP)</span>
-      <span class="l l-Scalar l-Scalar-Plain">targetPort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">9090</span> <span class="c1"># pods expose this port</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
+<span class="nt">metadata</span><span class="p">:</span>
+  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-service</span>
+<span class="nt">spec</span><span class="p">:</span>
+  <span class="nt">selector</span><span class="p">:</span> <span class="c1"># exposes any pods with the following labels as a service</span>
+    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-server</span>
+  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
+  <span class="nt">ports</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span> <span class="c1"># this Service&#39;s port (cluster-internal IP clusterIP)</span>
+      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">9090</span> <span class="c1"># pods expose this port</span>
       <span class="c1"># Kubernetes master will allocate a port from a flag-configured range (default: 30000-32767),</span>
       <span class="c1"># or we can set a specific port number (in our case).</span>
       <span class="c1"># Each node will proxy 32514 port (the same port number on every node) into this service.</span>
       <span class="c1"># Note that this Service will be visible as both NodeIP:nodePort and clusterIp:port</span>
-      <span class="l l-Scalar l-Scalar-Plain">nodePort</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">32514</span>
+      <span class="nt">nodePort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">32514</span>
 </pre></div>
 </div>
 <div class="section" id="prometheus-config">
@@ -320,32 +320,32 @@ We use <cite>32515</cite> NodePort here.</p>
 <h2>Hello Prometheus</h2>
 <p>Since the web app is run on Kubernetes, we can configure Prometheus
 to scrape metrics from <cite>/metrics</cite> HTTP endpoint of hello-app Pods.</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">global</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">scrape_interval</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">5s</span>
-  <span class="l l-Scalar l-Scalar-Plain">evaluation_interval</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">5s</span>
+<div class="highlight"><pre><span></span><span class="nt">global</span><span class="p">:</span>
+  <span class="nt">scrape_interval</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5s</span>
+  <span class="nt">evaluation_interval</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5s</span>
 
-<span class="l l-Scalar l-Scalar-Plain">scrape_configs</span><span class="p p-Indicator">:</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">job_name</span><span class="p p-Indicator">:</span> <span class="s">&#39;prometheus&#39;</span>
-    <span class="l l-Scalar l-Scalar-Plain">static_configs</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">targets</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;localhost:9090&#39;</span><span class="p p-Indicator">]</span>
+<span class="nt">scrape_configs</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">job_name</span><span class="p">:</span> <span class="s">&#39;prometheus&#39;</span>
+    <span class="nt">static_configs</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">targets</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;localhost:9090&#39;</span><span class="p p-Indicator">]</span>
 
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">job_name</span><span class="p p-Indicator">:</span> <span class="s">&#39;hello&#39;</span>
+  <span class="p p-Indicator">-</span> <span class="nt">job_name</span><span class="p">:</span> <span class="s">&#39;hello&#39;</span>
     <span class="c1"># The information to access the Kubernetes API to discover targets.</span>
-    <span class="l l-Scalar l-Scalar-Plain">kubernetes_sd_configs</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">api_servers</span><span class="p p-Indicator">:</span>
+    <span class="nt">kubernetes_sd_configs</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">api_servers</span><span class="p">:</span>
         <span class="p p-Indicator">-</span> <span class="s">&#39;https://kubernetes.default.svc&#39;</span>
         <span class="c1"># Prometheus assumes it is being run inside a Kubernetes pod.</span>
-        <span class="l l-Scalar l-Scalar-Plain">in_cluster</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+        <span class="nt">in_cluster</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
         <span class="c1"># Only pods should be discovered.</span>
-        <span class="l l-Scalar l-Scalar-Plain">role</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">pod</span>
+        <span class="nt">role</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">pod</span>
     <span class="c1"># Prometheus collects metrics from pods with &quot;app: hello-server&quot; label.</span>
     <span class="c1"># Prometheus gets &#39;hello_requests_total{status=&quot;500&quot;} 1&#39;</span>
     <span class="c1"># from hello:8000/metrics and adds &quot;job&quot; and &quot;instance&quot; labels, so it becomes</span>
     <span class="c1"># &#39;hello_requests_total{instance=&quot;10.16.0.10:8000&quot;,job=&quot;hello&quot;,status=&quot;500&quot;} 1&#39;.</span>
-    <span class="l l-Scalar l-Scalar-Plain">relabel_configs</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">source_labels</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="nv">__meta_kubernetes_pod_label_app</span><span class="p p-Indicator">]</span>
-        <span class="l l-Scalar l-Scalar-Plain">regex</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">hello-server</span>
-        <span class="l l-Scalar l-Scalar-Plain">action</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">keep</span>
+    <span class="nt">relabel_configs</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">source_labels</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">__meta_kubernetes_pod_label_app</span><span class="p p-Indicator">]</span>
+        <span class="nt">regex</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hello-server</span>
+        <span class="nt">action</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">keep</span>
 </pre></div>
 <p>Update a ConfigMap of Prometheus config and re-create a Prometheus Pod so it picks up changes.</p>
 <div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf <span class="se">\</span>

@@ -197,7 +197,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 <span class="k">def</span> <span class="nf">runtests</span><span class="p">():</span>
     <span class="n">TestRunner</span> <span class="o">=</span> <span class="n">get_runner</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
 
-    <span class="n">test_runner</span> <span class="o">=</span> <span class="n">TestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interactive</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">failfast</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">test_runner</span> <span class="o">=</span> <span class="n">TestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interactive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">failfast</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">failures</span> <span class="o">=</span> <span class="n">test_runner</span><span class="o">.</span><span class="n">run_tests</span><span class="p">([])</span>
     <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">failures</span><span class="p">)</span>
 

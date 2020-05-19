@@ -107,7 +107,7 @@ For example:</p>
         <span class="n">forecast</span> <span class="o">=</span> <span class="n">weather</span><span class="o">.</span><span class="n">Forecast</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">weather</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
         <span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s1">&#39;weatherapi.responses.total&#39;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span>
-            <span class="s1">&#39;code:{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">http_status_code</span><span class="p">),</span>
+            <span class="s1">&#39;code:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">http_status_code</span><span class="p">),</span>
         <span class="p">])</span>
         <span class="k">raise</span>
 

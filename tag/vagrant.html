@@ -63,37 +63,37 @@ but deployment was not considered in the <a class="reference external" href="htt
 environment by default.</p>
 <p>Environments are set in <tt class="docutils literal">minion.conf</tt> because masterless minion is used.
 When no environment is set, Salt assumes following configuration:</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">file_roots</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">base</span><span class="p p-Indicator">:</span>
+<div class="highlight"><pre><span></span><span class="nt">file_roots</span><span class="p">:</span>
+  <span class="nt">base</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt</span>
 
-<span class="l l-Scalar l-Scalar-Plain">pillar_roots</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">base</span><span class="p p-Indicator">:</span>
+<span class="nt">pillar_roots</span><span class="p">:</span>
+  <span class="nt">base</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/pillar</span>
 </pre></div>
 <p>Salt will look for states in <tt class="docutils literal">/srv/salt</tt> and pillars in <tt class="docutils literal">/srv/pillar</tt>.</p>
 <p>Let's introduce <strong>dev</strong> and <strong>prod</strong> environments.</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">file_roots</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">base</span><span class="p p-Indicator">:</span>
+<div class="highlight"><pre><span></span><span class="nt">file_roots</span><span class="p">:</span>
+  <span class="nt">base</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/salt/base</span>
 
-  <span class="l l-Scalar l-Scalar-Plain">dev</span><span class="p p-Indicator">:</span>
+  <span class="nt">dev</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/salt/dev</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/salt/base</span>
 
-  <span class="l l-Scalar l-Scalar-Plain">prod</span><span class="p p-Indicator">:</span>
+  <span class="nt">prod</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/salt/prod</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/salt/base</span>
 
-<span class="l l-Scalar l-Scalar-Plain">pillar_roots</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">base</span><span class="p p-Indicator">:</span>
+<span class="nt">pillar_roots</span><span class="p">:</span>
+  <span class="nt">base</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
 
-  <span class="l l-Scalar l-Scalar-Plain">dev</span><span class="p p-Indicator">:</span>
+  <span class="nt">dev</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/pillar/dev</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
 
-  <span class="l l-Scalar l-Scalar-Plain">prod</span><span class="p p-Indicator">:</span>
+  <span class="nt">prod</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/pillar/prod</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/srv/salt_roots/pillar/base</span>
 </pre></div>
@@ -112,69 +112,69 @@ Production environment needs to get code from private git repository.
 In order to do it user <em>jon_snow</em> must have ssh keys. Here I don't use
 private repository, but keys are still needed to log in to production server
 by Fabric.</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">jon_snow</span><span class="p p-Indicator">:</span>
+<div class="highlight"><pre><span></span><span class="nt">jon_snow</span><span class="p">:</span>
   <span class="l l-Scalar l-Scalar-Plain">user.present</span>
 
-<span class="l l-Scalar l-Scalar-Plain">jon_snow public key</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">ssh_auth</span><span class="p p-Indicator">:</span>
+<span class="nt">jon_snow public key</span><span class="p">:</span>
+  <span class="nt">ssh_auth</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">present</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">user</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">source</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">salt://user/id_rsa.pub</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">require</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">user</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
+    <span class="p p-Indicator">-</span> <span class="nt">user</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
+    <span class="p p-Indicator">-</span> <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">salt://user/id_rsa.pub</span>
+    <span class="p p-Indicator">-</span> <span class="nt">require</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">user</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
 
-<span class="l l-Scalar l-Scalar-Plain">jon_snow secret key</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">file</span><span class="p p-Indicator">:</span>
+<span class="nt">jon_snow secret key</span><span class="p">:</span>
+  <span class="nt">file</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">managed</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">/home/jon_snow/.ssh/id_rsa</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">source</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">salt://user/id_rsa</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">user</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">group</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">mode</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">600</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">require</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">ssh_auth</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow public key</span>
+    <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/home/jon_snow/.ssh/id_rsa</span>
+    <span class="p p-Indicator">-</span> <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">salt://user/id_rsa</span>
+    <span class="p p-Indicator">-</span> <span class="nt">user</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
+    <span class="p p-Indicator">-</span> <span class="nt">group</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
+    <span class="p p-Indicator">-</span> <span class="nt">mode</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">600</span>
+    <span class="p p-Indicator">-</span> <span class="nt">require</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">ssh_auth</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow public key</span>
 </pre></div>
 <p><tt class="docutils literal">prod/source_code.sls</tt> fetches source code from GitHub.
 I have tried to use built in <tt class="docutils literal">git.latest</tt> Salt state but it requires
 to configure git name and email on server. I solved this issue by using
 git hard reset.</p>
-<div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">git</span><span class="p p-Indicator">:</span>
+<div class="highlight"><pre><span></span><span class="nt">git</span><span class="p">:</span>
   <span class="l l-Scalar l-Scalar-Plain">pkg.installed</span>
 
-<span class="l l-Scalar l-Scalar-Plain">github.com</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">ssh_known_hosts</span><span class="p p-Indicator">:</span>
+<span class="nt">github.com</span><span class="p">:</span>
+  <span class="nt">ssh_known_hosts</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">present</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">user</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">fingerprint</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48</span>
+    <span class="p p-Indicator">-</span> <span class="nt">user</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
+    <span class="p p-Indicator">-</span> <span class="nt">fingerprint</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48</span>
 
-<span class="l l-Scalar l-Scalar-Plain">messaging repository clone</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">cmd</span><span class="p p-Indicator">:</span>
+<span class="nt">messaging repository clone</span><span class="p">:</span>
+  <span class="nt">cmd</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">run</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">unless</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">test -d /home/jon_snow/messaging_repository</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">user</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">&gt;</span>
+    <span class="p p-Indicator">-</span> <span class="nt">unless</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">test -d /home/jon_snow/messaging_repository</span>
+    <span class="p p-Indicator">-</span> <span class="nt">user</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
+    <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="p p-Indicator">&gt;</span>
               <span class="no">git clone https://github.com/marselester/abstract-internal-messaging.git /home/jon_snow/messaging_repository</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">require</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pkg</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">git</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">ssh_known_hosts</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">github.com</span>
+    <span class="p p-Indicator">-</span> <span class="nt">require</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">pkg</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">git</span>
+      <span class="p p-Indicator">-</span> <span class="nt">ssh_known_hosts</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">github.com</span>
 
-<span class="l l-Scalar l-Scalar-Plain">messaging latest source code</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">cmd</span><span class="p p-Indicator">:</span>
+<span class="nt">messaging latest source code</span><span class="p">:</span>
+  <span class="nt">cmd</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">run</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">cwd</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">/home/jon_snow/messaging_repository</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">user</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">&gt;</span>
+    <span class="p p-Indicator">-</span> <span class="nt">cwd</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/home/jon_snow/messaging_repository</span>
+    <span class="p p-Indicator">-</span> <span class="nt">user</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
+    <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="p p-Indicator">&gt;</span>
               <span class="no">git fetch origin &amp;&amp;</span>
               <span class="no">git reset --hard origin/master</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">require</span><span class="p p-Indicator">:</span>
-      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">cmd</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">messaging repository clone</span>
+    <span class="p p-Indicator">-</span> <span class="nt">require</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">cmd</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">messaging repository clone</span>
 
-  <span class="l l-Scalar l-Scalar-Plain">file</span><span class="p p-Indicator">:</span>
+  <span class="nt">file</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">symlink</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">{{</span> <span class="nv">pillar</span><span class="p p-Indicator">[</span><span class="s">&#39;website_src_dir&#39;</span><span class="p p-Indicator">]</span> <span class="p p-Indicator">}}</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">target</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">/home/jon_snow/messaging_repository</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">force</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">user</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
+    <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">pillar</span><span class="p p-Indicator">[</span><span class="s">&#39;website_src_dir&#39;</span><span class="p p-Indicator">]</span> <span class="p p-Indicator">}}</span>
+    <span class="p p-Indicator">-</span> <span class="nt">target</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/home/jon_snow/messaging_repository</span>
+    <span class="p p-Indicator">-</span> <span class="nt">force</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
+    <span class="p p-Indicator">-</span> <span class="nt">user</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">jon_snow</span>
 </pre></div>
 </div>
 <div class="section" id="fabric-as-deployment-runner">
