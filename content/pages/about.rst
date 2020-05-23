@@ -42,6 +42,6 @@ so I changed schools to get prepared to eventually apply and join CS program in 
 
 Once I've graduated with MS degree I took off to travel as
 during my last summer holidays at the university I went to Europe in my first trip abroad
-and was stricken with wanderlust that brough me to Thailand.
+and was stricken with wanderlust that brought me to Thailand.
 
 .. _circuit races: https://medium.com/@marselester/lessons-learned-from-motorcycle-riding-5d55f42ee744
