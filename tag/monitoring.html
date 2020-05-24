@@ -6,11 +6,11 @@
 
     <title>marselester's blog - monitoring</title>
 
-    <link rel="stylesheet" href="http://marselester.com/theme/css/normalize.css" />
-    <link rel="stylesheet" href="http://marselester.com/theme/css/foundation.min.css" />
-    <link rel="stylesheet" href="http://marselester.com/theme/css/style.css" />
-    <link rel="stylesheet" href="http://marselester.com/theme/css/pygments.css" />	
-    <script src="http://marselester.com/theme/js/custom.modernizr.js"></script>
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
 
     <!-- So Firefox can bookmark->"abo this site" -->
         <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
@@ -24,7 +24,7 @@
 <div class="top-bar">
 <div class="row">
     <div class="large-9 large-centered columns">
-	    <h1><a href="http://marselester.com">marselester's blog</a></h1>
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
     </div>
 </div>
 </div>
@@ -34,7 +34,7 @@
 <div class="large-9 columns">
     <ul class="button-group navigation">
 
-            <li><a href="http://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
     </ul>
 </div>
 </div>
@@ -51,14 +51,14 @@
         
 
             <article>
-                <a href="http://marselester.com/prometheus-via-dogstatsd.html"><h3 class="article-title">Forward DogStatsD Metrics to Prometheus</h3></a>
+                <a href="https://marselester.com/prometheus-via-dogstatsd.html"><h3 class="article-title">Forward DogStatsD Metrics to Prometheus</h3></a>
 <h6 class="subheader" title="2017-06-17T00:00:00+07:00">Sat 17 June 2017
 </h6>
 
 
 <p><strong>tl;dr:</strong> StatsD doesn't have metric labels, DogStatsD does.</p>
 <p>This is a follow up post after
-<a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html">Instrumenting Django with Prometheus and StatsD</a>.</p>
+<a class="reference external" href="https://marselester.com/django-prometheus-via-statsd.html">Instrumenting Django with Prometheus and StatsD</a>.</p>
 <hr class="docutils" />
 <p>You got Prometheus up and running and eager to start instrumenting your Django application.
 Don't be hasty and read <a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/">Prometheus Best Practices</a>.</p>
@@ -85,7 +85,7 @@ the following labels &quot;code=200&quot;, &quot;service=weather&quot;.</p>
 <p>Although we should keep it sane and not overuse labels.</p>
 <div class="section" id="statsd-by-datadog">
 <h2>StatsD by Datadog</h2>
-<p>In <a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html">the previous post</a>
+<p>In <a class="reference external" href="https://marselester.com/django-prometheus-via-statsd.html">the previous post</a>
 we used StatsD with statsd_exporter to forward metrics to Prometheus server.
 StatsD protocol doesn't have a notion of labels,
 but <a class="reference external" href="https://docs.datadoghq.com/guides/dogstatsd/#tags">Datadog's fork</a> has introduced tags.
@@ -131,19 +131,19 @@ weatherapi_responses_total{code=&quot;200&quot;} 1
 </pre></div>
 <p>I hope this helps. Cheers!</p>
 </div>
-<p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+<p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
-    <a href="http://marselester.com/tag/prometheus.html">prometheus </a>
-    <a href="http://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="http://marselester.com/tag/statsd.html">statsd </a>
-    <a href="http://marselester.com/tag/dogstatsd.html">dogstatsd </a>
-    <a href="http://marselester.com/tag/datadog.html">datadog </a>
+    <a href="https://marselester.com/tag/prometheus.html">prometheus </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/statsd.html">statsd </a>
+    <a href="https://marselester.com/tag/dogstatsd.html">dogstatsd </a>
+    <a href="https://marselester.com/tag/datadog.html">datadog </a>
 </p>
 
 
 
-<p><a href="http://marselester.com/prometheus-via-dogstatsd.html#disqus_thread">comments</a></p>            </article>
+<p><a href="https://marselester.com/prometheus-via-dogstatsd.html#disqus_thread">comments</a></p>            </article>
 
 
                 <hr  class="gradient"/>
@@ -153,7 +153,7 @@ weatherapi_responses_total{code=&quot;200&quot;} 1
 
 
             <article>
-                <a href="http://marselester.com/django-prometheus-via-statsd.html"><h3 class="article-title">Instrumenting Django with Prometheus and StatsD</h3></a>
+                <a href="https://marselester.com/django-prometheus-via-statsd.html"><h3 class="article-title">Instrumenting Django with Prometheus and StatsD</h3></a>
 <h6 class="subheader" title="2017-06-09T00:00:00+07:00">Fri 09 June 2017
 </h6>
 
@@ -162,20 +162,20 @@ weatherapi_responses_total{code=&quot;200&quot;} 1
 Quick search on the topic will lead you to <a class="reference external" href="https://github.com/korfuri/django-prometheus/">django-prometheus</a>.
 For those who don't want to use it, there is another way to export application metrics
 via <a class="reference external" href="https://www.datadoghq.com/blog/statsd/">StatsD</a>.</p>
-<p>The idea is to send …</p><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+<p>The idea is to send …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
-    <a href="http://marselester.com/tag/django.html">django </a>
-    <a href="http://marselester.com/tag/prometheus.html">prometheus </a>
-    <a href="http://marselester.com/tag/kubernetes.html">kubernetes </a>
-    <a href="http://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="http://marselester.com/tag/statsd.html">statsd </a>
-    <a href="http://marselester.com/tag/helm.html">helm </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/prometheus.html">prometheus </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/statsd.html">statsd </a>
+    <a href="https://marselester.com/tag/helm.html">helm </a>
 </p>
 
 
 
-<p><a href="http://marselester.com/django-prometheus-via-statsd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/django-prometheus-via-statsd.html">Read More</a>
+<p><a href="https://marselester.com/django-prometheus-via-statsd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-prometheus-via-statsd.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -183,7 +183,7 @@ via <a class="reference external" href="https://www.datadoghq.com/blog/statsd/">
 
 
             <article>
-                <a href="http://marselester.com/prometheus-on-kubernetes.html"><h3 class="article-title">Prometheus on Kubernetes</h3></a>
+                <a href="https://marselester.com/prometheus-on-kubernetes.html"><h3 class="article-title">Prometheus on Kubernetes</h3></a>
 <h6 class="subheader" title="2016-11-13T00:00:00+07:00">Sun 13 November 2016
 </h6>
 
@@ -193,19 +193,19 @@ Let's set it up on Kubernetes and test how it works by scraping HTTP request met
 from <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes">hello web application</a>
 which also runs in the same cluster.</p>
 <p>First of all, we need Kubernetes cluster running. It's easy to bootstrap one via <a class="reference external" href="https://console.cloud.google.com">Google Container Engine</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud …</pre></div><p class="subheader">Category: <a href="http://marselester.com/category/infrastructure.html">Infrastructure</a>
+<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud …</pre></div><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
-    <a href="http://marselester.com/tag/prometheus.html">prometheus </a>
-    <a href="http://marselester.com/tag/kubernetes.html">kubernetes </a>
-    <a href="http://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="http://marselester.com/tag/golang.html">golang </a>
-    <a href="http://marselester.com/tag/google-container-engine.html">Google Container Engine </a>
+    <a href="https://marselester.com/tag/prometheus.html">prometheus </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/google-container-engine.html">Google Container Engine </a>
 </p>
 
 
 
-<p><a href="http://marselester.com/prometheus-on-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="http://marselester.com/prometheus-on-kubernetes.html">Read More</a>
+<p><a href="https://marselester.com/prometheus-on-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/prometheus-on-kubernetes.html">Read More</a>
                 <hr  class="gradient"/>
             </article>
 
@@ -218,20 +218,20 @@ which also runs in the same cluster.</p>
     <aside class="large-3 columns">
         <h5 class="sidebar-title">Site</h5>
         <ul class="side-nav">
-            <li><a href="http://marselester.com/archives.html">Archives</a>
-            <li><a href="http://marselester.com/tags.html">Tags</a>
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
 
 
-                <li><a href="http://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
         </ul>
 
 		
         <h5 class="sidebar-title">Categories</h5>
         <ul class="side-nav">
-            <li><a href="http://marselester.com/category/go.html">Go</a></li>
-            <li><a href="http://marselester.com/category/infrastructure.html">Infrastructure</a></li>
-            <li><a href="http://marselester.com/category/misc.html">Misc</a></li>
-            <li><a href="http://marselester.com/category/python.html">Python</a></li>
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
    
         </ul>
 

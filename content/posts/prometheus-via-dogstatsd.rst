@@ -10,7 +10,7 @@ Forward DogStatsD Metrics to Prometheus
 **tl;dr:** StatsD doesn't have metric labels, DogStatsD does.
 
 This is a follow up post after
-`Instrumenting Django with Prometheus and StatsD <http://marselester.com/django-prometheus-via-statsd.html>`_.
+`Instrumenting Django with Prometheus and StatsD <https://marselester.com/django-prometheus-via-statsd.html>`_.
 
 ----
 
@@ -47,7 +47,7 @@ Although we should keep it sane and not overuse labels.
 StatsD by Datadog
 -----------------
 
-In `the previous post <http://marselester.com/django-prometheus-via-statsd.html>`_
+In `the previous post <https://marselester.com/django-prometheus-via-statsd.html>`_
 we used StatsD with statsd_exporter to forward metrics to Prometheus server.
 StatsD protocol doesn't have a notion of labels,
 but `Datadog's fork <https://docs.datadoghq.com/guides/dogstatsd/#tags>`_ has introduced tags.

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Infrastructure</title><link href="http://marselester.com/" rel="alternate"></link><link href="http://marselester.com/feeds/infrastructure.atom.xml" rel="self"></link><id>http://marselester.com/</id><updated>2019-03-13T00:00:00+07:00</updated><entry><title>Ambassador as API Gateway</title><link href="http://marselester.com/apigate-ambassador.html" rel="alternate"></link><published>2019-03-13T00:00:00+07:00</published><updated>2019-03-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2019-03-13:/apigate-ambassador.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway"&gt;API gateway&lt;/a&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Infrastructure</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/infrastructure.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2019-03-13T00:00:00+07:00</updated><entry><title>Ambassador as API Gateway</title><link href="https://marselester.com/apigate-ambassador.html" rel="alternate"></link><published>2019-03-13T00:00:00+07:00</published><updated>2019-03-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2019-03-13:/apigate-ambassador.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway"&gt;API gateway&lt;/a&gt;
 acts as a reverse proxy, routing API requests from clients to services.
 Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
 In this short tutorial we'll see how to achieve that with &lt;a class="reference external" href="https://getambassador.io/"&gt;Ambassador&lt;/a&gt;.&lt;/p&gt;
@@ -308,7 +308,7 @@ it should be eligible for rate limiting.&lt;/p&gt;
 &lt;p&gt;Unfortunately I have not been able to make rate limiting work yet.
 Here is the corresponding &lt;a class="reference external" href="https://github.com/datawire/ambassador/issues/1144"&gt;GitHub issue&lt;/a&gt;.&lt;/p&gt;
 &lt;/div&gt;
-</content><category term="ambassador"></category><category term="kubernetes"></category><category term="api gateway"></category><category term="auth"></category><category term="rate limiting"></category></entry><entry><title>Traefik as API Gateway</title><link href="http://marselester.com/apigate-traefik.html" rel="alternate"></link><published>2019-03-12T00:00:00+07:00</published><updated>2019-03-12T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2019-03-12:/apigate-traefik.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway"&gt;API gateway&lt;/a&gt;
+</content><category term="ambassador"></category><category term="kubernetes"></category><category term="api gateway"></category><category term="auth"></category><category term="rate limiting"></category></entry><entry><title>Traefik as API Gateway</title><link href="https://marselester.com/apigate-traefik.html" rel="alternate"></link><published>2019-03-12T00:00:00+07:00</published><updated>2019-03-12T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2019-03-12:/apigate-traefik.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway"&gt;API gateway&lt;/a&gt;
 acts as a reverse proxy, routing API requests from clients to services.
 Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
 In this short tutorial we'll see how to achieve that with &lt;a class="reference external" href="https://traefik.io/"&gt;Traefik&lt;/a&gt; reverse-proxy.&lt;/p&gt;
@@ -345,7 +345,7 @@ HTTP traffic routing is controlled by rules defined on the Ingress resource.&lt;
 &lt;span class="go"&gt;404 page not found&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Note, there is also Traefik admin dashboard (port 8080) running at &lt;cite&gt;http://192.168.99.100:31735&lt;/cite&gt;.&lt;/p&gt;
-&lt;img alt="" src="http://marselester.com/images/traefik-providers.png" /&gt;
+&lt;img alt="" src="https://marselester.com/images/traefik-providers.png" /&gt;
 &lt;div class="section" id="travel-apps"&gt;
 &lt;h2&gt;Travel Apps&lt;/h2&gt;
 &lt;p&gt;Let's deploy the travel apps on Kubernetes. For simplicity, you can use the images uploaded to Docker Hub.
@@ -505,15 +505,15 @@ For example, we allow to send only 2 hotel requests per 15 seconds for each logg
 &lt;p&gt;Although it's convenient enough to apply rate limiting using annotations,
 I would've preferred rate limiting to be decoupled from Traefik similar to authentication service.&lt;/p&gt;
 &lt;/div&gt;
-</content><category term="traefik"></category><category term="kubernetes"></category><category term="api gateway"></category><category term="auth"></category><category term="rate limiting"></category></entry><entry><title>Forward DogStatsD Metrics to Prometheus</title><link href="http://marselester.com/prometheus-via-dogstatsd.html" rel="alternate"></link><published>2017-06-17T00:00:00+07:00</published><updated>2017-06-17T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2017-06-17:/prometheus-via-dogstatsd.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;tl;dr:&lt;/strong&gt; StatsD doesn't have metric labels, DogStatsD does.&lt;/p&gt;
+</content><category term="traefik"></category><category term="kubernetes"></category><category term="api gateway"></category><category term="auth"></category><category term="rate limiting"></category></entry><entry><title>Forward DogStatsD Metrics to Prometheus</title><link href="https://marselester.com/prometheus-via-dogstatsd.html" rel="alternate"></link><published>2017-06-17T00:00:00+07:00</published><updated>2017-06-17T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2017-06-17:/prometheus-via-dogstatsd.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;tl;dr:&lt;/strong&gt; StatsD doesn't have metric labels, DogStatsD does.&lt;/p&gt;
 &lt;p&gt;This is a follow up post after
-&lt;a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html"&gt;Instrumenting Django with Prometheus and StatsD&lt;/a&gt;.&lt;/p&gt;
+&lt;a class="reference external" href="https://marselester.com/django-prometheus-via-statsd.html"&gt;Instrumenting Django with Prometheus and StatsD&lt;/a&gt;.&lt;/p&gt;
 &lt;hr class="docutils" /&gt;
 &lt;p&gt;You got Prometheus up and running and eager to start instrumenting your Django application.
 Don't be hasty and read &lt;a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/"&gt;Prometheus Best Practices&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Let's say our application has to …&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;strong&gt;tl;dr:&lt;/strong&gt; StatsD doesn't have metric labels, DogStatsD does.&lt;/p&gt;
 &lt;p&gt;This is a follow up post after
-&lt;a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html"&gt;Instrumenting Django with Prometheus and StatsD&lt;/a&gt;.&lt;/p&gt;
+&lt;a class="reference external" href="https://marselester.com/django-prometheus-via-statsd.html"&gt;Instrumenting Django with Prometheus and StatsD&lt;/a&gt;.&lt;/p&gt;
 &lt;hr class="docutils" /&gt;
 &lt;p&gt;You got Prometheus up and running and eager to start instrumenting your Django application.
 Don't be hasty and read &lt;a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/"&gt;Prometheus Best Practices&lt;/a&gt;.&lt;/p&gt;
@@ -540,7 +540,7 @@ the following labels &amp;quot;code=200&amp;quot;, &amp;quot;service=weather&amp
 &lt;p&gt;Although we should keep it sane and not overuse labels.&lt;/p&gt;
 &lt;div class="section" id="statsd-by-datadog"&gt;
 &lt;h2&gt;StatsD by Datadog&lt;/h2&gt;
-&lt;p&gt;In &lt;a class="reference external" href="http://marselester.com/django-prometheus-via-statsd.html"&gt;the previous post&lt;/a&gt;
+&lt;p&gt;In &lt;a class="reference external" href="https://marselester.com/django-prometheus-via-statsd.html"&gt;the previous post&lt;/a&gt;
 we used StatsD with statsd_exporter to forward metrics to Prometheus server.
 StatsD protocol doesn't have a notion of labels,
 but &lt;a class="reference external" href="https://docs.datadoghq.com/guides/dogstatsd/#tags"&gt;Datadog's fork&lt;/a&gt; has introduced tags.
@@ -586,7 +586,7 @@ weatherapi_responses_total{code=&amp;quot;200&amp;quot;} 1
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;I hope this helps. Cheers!&lt;/p&gt;
 &lt;/div&gt;
-</content><category term="prometheus"></category><category term="monitoring"></category><category term="statsd"></category><category term="dogstatsd"></category><category term="datadog"></category></entry><entry><title>Instrumenting Django with Prometheus and StatsD</title><link href="http://marselester.com/django-prometheus-via-statsd.html" rel="alternate"></link><published>2017-06-09T00:00:00+07:00</published><updated>2017-06-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2017-06-09:/django-prometheus-via-statsd.html</id><summary type="html">&lt;p&gt;If you ever wondered how to monitor your Django application with Prometheus this article is for you.
+</content><category term="prometheus"></category><category term="monitoring"></category><category term="statsd"></category><category term="dogstatsd"></category><category term="datadog"></category></entry><entry><title>Instrumenting Django with Prometheus and StatsD</title><link href="https://marselester.com/django-prometheus-via-statsd.html" rel="alternate"></link><published>2017-06-09T00:00:00+07:00</published><updated>2017-06-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2017-06-09:/django-prometheus-via-statsd.html</id><summary type="html">&lt;p&gt;If you ever wondered how to monitor your Django application with Prometheus this article is for you.
 Quick search on the topic will lead you to &lt;a class="reference external" href="https://github.com/korfuri/django-prometheus/"&gt;django-prometheus&lt;/a&gt;.
 For those who don't want to use it, there is another way to export application metrics
 via &lt;a class="reference external" href="https://www.datadoghq.com/blog/statsd/"&gt;StatsD&lt;/a&gt;.&lt;/p&gt;
@@ -747,7 +747,7 @@ Let's overwrite it with our prometheus.yml.&lt;/p&gt;
 &lt;p&gt;I hope this helps. Cheers!&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-</content><category term="django"></category><category term="prometheus"></category><category term="kubernetes"></category><category term="monitoring"></category><category term="statsd"></category><category term="helm"></category></entry><entry><title>Minukube &amp; Amazon EC2 Container Registry</title><link href="http://marselester.com/minukube-aws-ecr.html" rel="alternate"></link><published>2016-12-05T00:00:00+07:00</published><updated>2016-12-05T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-12-05:/minukube-aws-ecr.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/"&gt;Minukube&lt;/a&gt; is an easy way to run Kubernetes locally.
+</content><category term="django"></category><category term="prometheus"></category><category term="kubernetes"></category><category term="monitoring"></category><category term="statsd"></category><category term="helm"></category></entry><entry><title>Minukube &amp; Amazon EC2 Container Registry</title><link href="https://marselester.com/minukube-aws-ecr.html" rel="alternate"></link><published>2016-12-05T00:00:00+07:00</published><updated>2016-12-05T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-12-05:/minukube-aws-ecr.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/"&gt;Minukube&lt;/a&gt; is an easy way to run Kubernetes locally.
 When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
 we can configure our Docker client to communicate with the Minikube Docker daemon.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; minikube start
@@ -824,7 +824,7 @@ Note that we've added &lt;strong&gt;imagePullSecrets&lt;/strong&gt; which refere
 &lt;span class="go"&gt;&amp;#39;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Kubernetes should be able to pull the image from Amazon Container Registry.&lt;/p&gt;
-</content><category term="kubernetes"></category><category term="aws"></category><category term="minukube"></category></entry><entry><title>Prometheus on Kubernetes</title><link href="http://marselester.com/prometheus-on-kubernetes.html" rel="alternate"></link><published>2016-11-13T00:00:00+07:00</published><updated>2016-11-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-11-13:/prometheus-on-kubernetes.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; is a monitoring toolkit.
+</content><category term="kubernetes"></category><category term="aws"></category><category term="minukube"></category></entry><entry><title>Prometheus on Kubernetes</title><link href="https://marselester.com/prometheus-on-kubernetes.html" rel="alternate"></link><published>2016-11-13T00:00:00+07:00</published><updated>2016-11-13T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2016-11-13:/prometheus-on-kubernetes.html</id><summary type="html">&lt;p&gt;&lt;a class="reference external" href="https://prometheus.io/"&gt;Prometheus&lt;/a&gt; is a monitoring toolkit.
 Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
 from &lt;a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes"&gt;hello web application&lt;/a&gt;
 which also runs in the same cluster.&lt;/p&gt;
@@ -1133,19 +1133,19 @@ and collect metrics from a simple web app.
 However recently I have encountered CoreOS &lt;a class="reference external" href="https://github.com/coreos/kube-prometheus"&gt;kube-prometheus&lt;/a&gt;
 which makes it easier. Have a look at &lt;a class="reference external" href="https://coreos.com/blog/the-prometheus-operator.html"&gt;The Prometheus Operator: Managed Prometheus setups for Kubernetes&lt;/a&gt; for more details.&lt;/p&gt;
 &lt;/div&gt;
-</content><category term="prometheus"></category><category term="kubernetes"></category><category term="monitoring"></category><category term="golang"></category><category term="Google Container Engine"></category></entry><entry><title>Slides about SaltStack</title><link href="http://marselester.com/saltstack-slides.html" rel="alternate"></link><published>2013-12-03T00:00:00+07:00</published><updated>2013-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-03:/saltstack-slides.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
+</content><category term="prometheus"></category><category term="kubernetes"></category><category term="monitoring"></category><category term="golang"></category><category term="Google Container Engine"></category></entry><entry><title>Slides about SaltStack</title><link href="https://marselester.com/saltstack-slides.html" rel="alternate"></link><published>2013-12-03T00:00:00+07:00</published><updated>2013-12-03T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-12-03:/saltstack-slides.html</id><summary type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
 Thailand on 12 Dec 2013. We compared Salt and &lt;a class="reference external" href="http://slid.es/simonrobson/ansible"&gt;Ansible&lt;/a&gt;.
 Here are my &lt;a class="reference external" href="https://slid.es/marselester/saltstack"&gt;slides&lt;/a&gt;.&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt; I gave a talk with &lt;a class="reference external" href="https://twitter.com/shr"&gt;Simon Robson&lt;/a&gt; at &lt;a class="reference external" href="https://twitter.com/barcampcm"&gt;Beercamp&lt;/a&gt; in Chiang Mai,
 Thailand on 12 Dec 2013. We compared Salt and &lt;a class="reference external" href="http://slid.es/simonrobson/ansible"&gt;Ansible&lt;/a&gt;.
 Here are my &lt;a class="reference external" href="https://slid.es/marselester/saltstack"&gt;slides&lt;/a&gt;.&lt;/p&gt;
-</content><category term="salt"></category><category term="saltstack"></category><category term="slides"></category><category term="talk"></category></entry><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="http://marselester.com/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-28T00:00:00+07:00</published><updated>2013-11-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-28:/developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
-but deployment was not considered in the &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
+</content><category term="salt"></category><category term="saltstack"></category><category term="slides"></category><category term="talk"></category></entry><entry><title>Developing &amp; Deploying Django project with SaltStack</title><link href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-28T00:00:00+07:00</published><updated>2013-11-28T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-28:/developing-and-deploying-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Eventually you will need to deploy project,
+but deployment was not considered in the &lt;a class="reference external" href="https://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
 &lt;p&gt;Server configuration is different from local, thus environments will be needed
 (at least production &lt;strong&gt;prod&lt;/strong&gt; and development &lt;strong&gt;dev&lt;/strong&gt;). Salt uses &lt;strong&gt;base&lt;/strong&gt;
 environment by default.&lt;/p&gt;
 &lt;p&gt;Environments are set in &lt;tt class="docutils literal"&gt;minion.conf …&lt;/tt&gt;&lt;/p&gt;</summary><content type="html">&lt;p&gt;Eventually you will need to deploy project,
-but deployment was not considered in the &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
+but deployment was not considered in the &lt;a class="reference external" href="https://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt;. Let's find it out.&lt;/p&gt;
 &lt;p&gt;Server configuration is different from local, thus environments will be needed
 (at least production &lt;strong&gt;prod&lt;/strong&gt; and development &lt;strong&gt;dev&lt;/strong&gt;). Salt uses &lt;strong&gt;base&lt;/strong&gt;
 environment by default.&lt;/p&gt;
@@ -1188,7 +1188,7 @@ When no environment is set, Salt assumes following configuration:&lt;/p&gt;
 &lt;p&gt;Each environment describes paths where to find files.
 File is searched in the first directory and if it is not found it is
 searched in the second one.&lt;/p&gt;
-&lt;p&gt;States and pillars which were described in &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; are splitted
+&lt;p&gt;States and pillars which were described in &lt;a class="reference external" href="https://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; are splitted
 to environment folders. Most of files are located in &lt;tt class="docutils literal"&gt;base&lt;/tt&gt; folder,
 because they are the same to &lt;strong&gt;dev&lt;/strong&gt; and &lt;strong&gt;prod&lt;/strong&gt; environments.
 You can find &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy"&gt;complete example&lt;/a&gt; on GitHub.&lt;/p&gt;
@@ -1285,7 +1285,7 @@ in &lt;tt class="docutils literal"&gt;minion.conf&lt;/tt&gt; (to &lt;tt class="d
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;Let's try to deploy &lt;strong&gt;prod&lt;/strong&gt; environment to VM. I assume that you have
-&lt;tt class="docutils literal"&gt;messaging&lt;/tt&gt; directory (see &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;Developing Django project with SaltStack&lt;/a&gt;).
+&lt;tt class="docutils literal"&gt;messaging&lt;/tt&gt; directory (see &lt;a class="reference external" href="https://marselester.com/developing-django-project-with-saltstack.html"&gt;Developing Django project with SaltStack&lt;/a&gt;).
 You need to clone &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging-deploy"&gt;Deploy Abstract Internal Messaging System&lt;/a&gt; in it
 and start VM.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; &lt;span class="nb"&gt;cd&lt;/span&gt; messaging
@@ -1310,11 +1310,11 @@ to &lt;tt class="docutils literal"&gt;/etc/hosts&lt;/tt&gt;.&lt;/p&gt;
 to arbitrary targets. It gives us opportunity to test deployment itself.
 You can improve this solution by adding ability to specify git branch
 which will be deployed.&lt;/p&gt;
-&lt;p&gt;As in &lt;a class="reference external" href="http://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; project should work:&lt;/p&gt;
+&lt;p&gt;As in &lt;a class="reference external" href="https://marselester.com/developing-django-project-with-saltstack.html"&gt;previous post&lt;/a&gt; project should work:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="gp"&gt;$&lt;/span&gt; curl -i messaging-part-2
 &lt;/pre&gt;&lt;/div&gt;
 &lt;/div&gt;
-</content><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="http://marselester.com/developing-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-09T00:00:00+07:00</published><updated>2013-11-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-09:/developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
+</content><category term="python"></category><category term="django"></category><category term="vagrant"></category><category term="salt"></category><category term="saltstack"></category></entry><entry><title>Developing Django project with SaltStack</title><link href="https://marselester.com/developing-django-project-with-saltstack.html" rel="alternate"></link><published>2013-11-09T00:00:00+07:00</published><updated>2013-11-09T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2013-11-09:/developing-django-project-with-saltstack.html</id><summary type="html">&lt;p&gt;Let's use &lt;a class="reference external" href="https://github.com/marselester/abstract-internal-messaging"&gt;Messaging System&lt;/a&gt; as an example of Django project. I want it to
 run in VirtualBox which is managed by Vagrant. Infrastructure management
 is provided by SaltStack.&lt;/p&gt;
 &lt;p&gt;I advise you to create separate folder for repositories (currently there

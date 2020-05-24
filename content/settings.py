@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 AUTHOR = 'Marsel Mavletkulov'
 SITENAME = "marselester's blog"
-SITEURL = 'http://marselester.com'
+SITEURL = 'https://marselester.com'
 TIMEZONE = 'Asia/Bangkok'
 LOCALE = (
     'en_US',
