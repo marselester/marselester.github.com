@@ -16,7 +16,7 @@ I've participated in four `circuit races`_ taking third place in one of them,
 apart from that I reduced my personal lap time from 58 to 52.57 seconds.
 After that I shifted my focus to off-road (motocross, enduro)
 and soon discovered the lack of foundational skills impeding my progress.
-I found out that `motorcycle trials <https://www.instagram.com/p/B4r0EL1AzOv/>`_,
+I found out that `motorcycle trials <https://marselester.com/instagram/content/201911_17864684032553298.mp4>`_,
 while being a sport in its own right, was the way to go.
 With practice I've been gradually improving and discovered in process that I like trials more than other motorsports.
 Following this I found confidence to join competitions first in a beginner class,

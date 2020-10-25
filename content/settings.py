@@ -13,9 +13,9 @@ TWITTER_USERNAME = 'marselester'
 
 SOCIAL = (
     ('GitHub', 'https://github.com/marselester'),
-    ('Medium', 'https://medium.com/@marselester/'),
+    (u'Instagram 📷', 'instagram/index.html'),
     ('Twitter', 'http://twitter.com/marselester'),
-    ('Instagram', 'http://instagram.com/marselester'),
+    ('Medium', 'https://medium.com/@marselester/'),
 )
 
 THEME = '../../pelican-themes/tuxlite_zf'
