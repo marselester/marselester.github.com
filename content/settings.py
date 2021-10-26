@@ -18,5 +18,5 @@ SOCIAL = (
     ('Medium', 'https://medium.com/@marselester/'),
 )
 
-THEME = '../../pelican-themes/tuxlite_zf'
+THEME = 'pelican-themes/tuxlite_zf'
 RELATIVE_URLS = False
