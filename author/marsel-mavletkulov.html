@@ -51,6 +51,432 @@
         
 
             <article>
+                <a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"><h3 class="article-title">BPF: Go frontend for execsnoop</h3></a>
+<h6 class="subheader" title="2021-10-26T00:00:00+07:00">Tue 26 October 2021
+</h6>
+
+
+<p>After reading Brendan Gregg's books about BPF I was excited to try and implement something in Go.
+At a first glance it turned out I would need to install LLVM, Clang, and kernel header dependencies to run a simple program.
+Fortunately <a href="https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html">BTF, CO-RE technologies</a>
+eliminate those dependencies though kernel &gt;=5.8 should be used.</p>
+<p>Since I don't know C, I resorted to <a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools">BCC libbpf-tools</a>,
+from which I picked a few BPF C programs (tcpconnect.bpf.c, execsnoop.bpf.c) to write Go frontends.
+Below I will be focusing on execsnoop,
+and you can find my experiments at <a href="https://github.com/marselester/libbpf-tools">github.com/marselester/libbpf-tools</a>.</p>
+<h2>Preparing the environment</h2>
+<p>First things first, I ran Ubuntu 21.04 in a virtual machine and installed Clang, Go.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ cat &gt; Vagrantfile &lt;&lt;CFG</span>
+<span class="go">Vagrant.configure(&quot;2&quot;) do |config|</span>
+<span class="go">    config.vm.box = &quot;ubuntu/hirsute64&quot;</span>
+<span class="go">end</span>
+<span class="go">CFG</span>
+<span class="go">﹪ vagrant up</span>
+<span class="go">﹪ vagrant ssh</span>
+<span class="go">﹩ sudo apt-get update</span>
+<span class="go">﹩ sudo apt-get install clang</span>
+<span class="go">﹩ sudo snap install go --classic</span>
+<span class="go">﹩ uname -nr</span>
+<span class="go">ubuntu-hirsute 5.11.0-37-generic</span>
+<span class="go">﹩ clang -v</span>
+<span class="go">Ubuntu clang version 12.0.0-3ubuntu1~21.04.2</span>
+</code></pre></div>
+
+<p>Then I made sure the execsnoop program from BCC toolkit showed new processes
+(it prints one line for every <code>execve</code> syscall),
+so I could compare its output later with the Go implementation.</p>
+<p>The ELF binary <code>execsnoop</code> was copied from a Docker container to the virtual machine as follows.
+In case you wanted to build the image yourself,
+here is a <a href="https://gist.github.com/marselester/ac8e4262742c90539c8c53f37d9a6965">Dockerfile</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ docker run --name libbpf marselester/libbpf-tools:latest</span>
+<span class="go">﹪ docker cp libbpf:/opt/execsnoop .</span>
+</code></pre></div>
+
+<p>The execsnoop captured <code>sshd</code> and <code>ls</code> processes, nice!</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo /vagrant/execsnoop</span>
+<span class="go">PCOMM            PID    PPID   RET ARGS</span>
+<span class="go">sshd             21254  832      0 /usr/sbin/sshd -D -R</span>
+<span class="go">ls               21361  21351    0 /usr/bin/ls --color=auto</span>
+</code></pre></div>
+
+<p>It can be useful to check for short-lived processes that consume CPU resources,
+e.g., slow or failing application/container startup.</p>
+<h2>Embedding BPF in Go</h2>
+<p>My search for a BPF Go library stopped at <a href="https://github.com/cilium/ebpf">github.com/cilium/ebpf</a>
+since it had several examples to build upon, and folks from Cilium were <a href="https://github.com/cilium/ebpf/issues/303">very helpful</a>.</p>
+<p>The repository also contains <a href="https://github.com/cilium/ebpf/tree/master/cmd/bpf2go">bpf2go</a> tool to compile a BPF C source file into BPF bytecode.
+It emits Go files containing compiled BPF for little and big endian systems.</p>
+<p>I copied <a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/execsnoop.bpf.c">execsnoop.bpf.c</a>,
+<a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/execsnoop.h">execsnoop.h</a> files from BCC toolkit
+and tried to generate Go files.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cd /vagrant/</span>
+<span class="go">﹩ mkdir -p cmd/execsnoop/bpf/</span>
+<span class="go">﹩ curl -o cmd/execsnoop/bpf/execsnoop.bpf.c https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.bpf.c</span>
+<span class="go">﹩ curl -o cmd/execsnoop/bpf/execsnoop.h https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.h</span>
+<span class="go">﹩ cat &gt; cmd/execsnoop/main.go &lt;&lt;&lt;&#39;&#39;&#39;</span>
+<span class="go">package main</span>
+
+<span class="go">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 ExecSnoop ./bpf/execsnoop.bpf.c -- -I../../headers</span>
+
+<span class="go">func main() {}</span>
+<span class="go">&#39;&#39;&#39;</span>
+<span class="go">﹩ go mod init execsnoop</span>
+<span class="go">﹩ go get github.com/cilium/ebpf/cmd/bpf2go</span>
+<span class="go">﹩ go generate ./cmd/execsnoop/</span>
+<span class="go">/vagrant/cmd/execsnoop/bpf/execsnoop.bpf.c:2:10: fatal error: &#39;vmlinux.h&#39; file not found</span>
+</code></pre></div>
+
+<p>Unfortunately that didn't work because the <code>vmlinux.h</code> header was missing.
+This file contains kernel's type definitions that can be generated from the installed kernel using bpftool tool.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo apt-get install linux-tools-$(uname -r) linux-tools-common</span>
+<span class="go">﹩ bpftool btf dump file /sys/kernel/btf/vmlinux format c &gt; ./headers/vmlinux.h</span>
+</code></pre></div>
+
+<p>There were three more header files missing that I copied from ubuntu-kernel and libbpf repositories.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ mkdir -p headers/bpf/</span>
+<span class="go">﹩ curl -o ./headers/bpf/bpf_helpers.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/hirsute/plain/tools/lib/bpf/bpf_helpers.h</span>
+<span class="go">﹩ curl -o ./headers/bpf/bpf_helper_defs.h https://raw.githubusercontent.com/libbpf/libbpf/master/src/bpf_helper_defs.h</span>
+<span class="go">﹩ curl -o ./headers/bpf/bpf_core_read.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/hirsute/plain/tools/lib/bpf/bpf_core_read.h</span>
+</code></pre></div>
+
+<p>Finally the Go files were generated and the BPF program was loaded into the kernel from an ELF.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ go generate ./cmd/execsnoop/</span>
+<span class="go">Compiled /vagrant/cmd/execsnoop/execsnoop_bpfel.o</span>
+<span class="go">Wrote /vagrant/cmd/execsnoop/execsnoop_bpfel.go</span>
+<span class="go">Compiled /vagrant/cmd/execsnoop/execsnoop_bpfeb.o</span>
+<span class="go">Wrote /vagrant/cmd/execsnoop/execsnoop_bpfeb.go</span>
+<span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
+</code></pre></div>
+
+<p>Note, bpf2go tool uses Clang to compile the BPF program:</p>
+<ul>
+<li><code>-cflags $BPF_CFLAGS</code> are flags passed to the compiler from the <code>$BPF_CFLAGS</code> env var,
+  for example, <code>BPF_CFLAGS='-D__TARGET_ARCH_x86' go generate</code> is expected in
+  <a href="https://elixir.bootlin.com/linux/latest/source/tools/lib/bpf/bpf_tracing.h#L5">bpf_tracing.h</a> header
+  (it is not used in execsnoop though)</li>
+<li><code>-cc clang-12</code> is a Clang binary name</li>
+<li><code>ExecSnoop</code> is a name used by a code generation</li>
+<li><code>./bpf/execsnoop.bpf.c</code> is a path to the BPF C file that is compiled</li>
+<li><code>-- -I../../headers</code> are compiler options that indicate where to find header files</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&quot;log&quot;</span>
+
+    <span class="s">&quot;golang.org/x/sys/unix&quot;</span>
+<span class="p">)</span>
+
+<span class="c1">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 ExecSnoop ./bpf/execsnoop.bpf.c -- -I../../headers</span>
+
+<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// Increase the resource limit of the current process to provide sufficient space</span>
+    <span class="c1">// for locking memory for the BPF maps.</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">Setrlimit</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIMIT_MEMLOCK</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">Rlimit</span><span class="p">{</span>
+        <span class="nx">Cur</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span>
+        <span class="nx">Max</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span>
+    <span class="p">});</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to set temporary RLIMIT_MEMLOCK: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Load the BPF program into the kernel from an ELF.</span>
+    <span class="c1">// ExecSnoopObjects contains all objects (BPF programs and maps) after they have been loaded into the kernel:</span>
+    <span class="c1">// TracepointSyscallsSysEnterExecve and TracepointSyscallsSysExitExecve BPF programs,</span>
+    <span class="c1">// Events and Execs BPF maps.</span>
+    <span class="nx">objs</span> <span class="o">:=</span> <span class="nx">ExecSnoopObjects</span><span class="p">{}</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">LoadExecSnoopObjects</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF programs and maps: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="k">defer</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2>Tracepoints</h2>
+<p>The BPF program is executed on events such as tracepoints.
+Tracepoint is a static instrumentation (hard-coded to the source code) of the Linux kernel,
+see <code>/sys/kernel/debug/tracing/events</code> to find available tracepoints.</p>
+<p>From looking at BPF C source file <code>execsnoop.bpf.c</code> we can see two tracepoints instrumented:
+the entry and the return of the <code>execve</code> syscall so that
+the process ID, command name, arguments, and the return value can be printed.</p>
+<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_enter_execve&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">tracepoint__syscalls__sys_enter_execve</span><span class="p">(</span><span class="k">struct</span> <span class="n">trace_event_raw_sys_enter</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_exit_execve&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">tracepoint__syscalls__sys_exit_execve</span><span class="p">(</span><span class="k">struct</span> <span class="n">trace_event_raw_sys_exit</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+</code></pre></div>
+
+<p><code>SEC</code> declares an ELF section named <code>tracepoint/syscalls/sys_enter_execve</code>, followed by a BPF program.
+A user-level loader may use this section header to determine where to attach a program.</p>
+<p><code>tracepoint__syscalls__sys_enter_execve</code> function is called for the tracepoint event.
+The struct <code>trace_event_raw_sys_enter</code> argument contains register state and BPF context.
+From the registers, function arguments <code>ctx-&gt;args</code> and return value <code>ctx-&gt;ret</code> can be read.</p>
+<p>On Go side I attached the BPF program to <code>syscalls/sys_enter_execve</code> tracepoint using <code>github.com/cilium/ebpf/link</code> package.
+The <code>link.Tracepoint()</code> function returns a link (it represents a program attached to a BPF hook)
+which is later used to detach the program.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">tpEnter</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span> <span class="s">&quot;sys_enter_execve&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysEnterExecve</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_enter_execve tracepoint: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">tpEnter</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+
+<span class="nx">tpExit</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span> <span class="s">&quot;sys_exit_execve&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysExitExecve</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_exit_execve tracepoint: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">tpExit</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>The <code>bpf_perf_event_output()</code> C function emits records to user space via a BPF map <code>events</code>
+that accesses perf per-CPU ring buffers.</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="p">{</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_PERF_EVENT_ARRAY</span><span class="p">);</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
+<span class="p">}</span> <span class="n">events</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+
+<span class="k">struct</span> <span class="n">event</span> <span class="n">e</span><span class="p">;</span>
+<span class="n">bpf_perf_event_output</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">events</span><span class="p">,</span> <span class="n">BPF_F_CURRENT_CPU</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">e</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="p">));</span>
+</code></pre></div>
+
+<p>In user space the events are read using <code>github.com/cilium/ebpf/perf</code> package.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Open a perf event reader from user space on the PERF_EVENT_ARRAY map</span>
+<span class="c1">// defined in the BPF C program.</span>
+<span class="nx">rd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopMaps</span><span class="p">.</span><span class="nx">Events</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Getpagesize</span><span class="p">())</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to create perf event reader: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="p">{</span>
+    <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">break</span>
+        <span class="p">}</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;received from perf ring buffer: %s&quot;</span><span class="p">,</span> <span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>In order to verify that the events are captured, I ran the Go program and <code>ls</code> in another terminal.
+Luckily it worked!</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
+<span class="go">received from perf ring buffer: ?????ls/usr/bin/ls--color=auto</span>
+</code></pre></div>
+
+<h2>Decoding events</h2>
+<p>I wanted to match the output of the original execsnoop program, for that I needed to decode <code>record.RawSample</code>
+which contains bytes of the <code>event</code> C struct into a Go struct.</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="p">{</span>
+    <span class="kt">pid_t</span> <span class="n">pid</span><span class="p">;</span>
+    <span class="kt">pid_t</span> <span class="n">ppid</span><span class="p">;</span>
+    <span class="kt">uid_t</span> <span class="n">uid</span><span class="p">;</span>
+    <span class="n">int32</span> <span class="n">retval</span><span class="p">;</span> <span class="c1">// it&#39;s int in https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.h</span>
+    <span class="n">int32</span> <span class="n">args_count</span><span class="p">;</span> <span class="c1">// int</span>
+    <span class="n">u32</span> <span class="n">args_size</span><span class="p">;</span> <span class="c1">// unsigned int</span>
+    <span class="kt">char</span> <span class="n">comm</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+    <span class="kt">char</span> <span class="n">args</span><span class="p">[</span><span class="mi">7680</span><span class="p">];</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p>Go <code>event</code> struct represents a perf event sent to user space from the BPF program running in the kernel.
+Note, that it should match the C event struct, and both C and Go structs must be aligned the same way.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span> <span class="nx">event</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// PID is the process ID.</span>
+    <span class="nx">PID</span> <span class="kt">int32</span>
+    <span class="c1">// PPID is the process ID of the parent of this process.</span>
+    <span class="nx">PPID</span> <span class="kt">int32</span>
+    <span class="c1">// UID is the process user ID, e.g., 1000.</span>
+    <span class="nx">UID</span> <span class="kt">uint32</span>
+    <span class="c1">// Retval is the return value of the execve().</span>
+    <span class="nx">Retval</span> <span class="kt">int32</span>
+    <span class="c1">// ArgsCount is a number of arguments.</span>
+    <span class="nx">ArgsCount</span> <span class="kt">int32</span>
+    <span class="c1">// ArgSize is a size of arguments in bytes.</span>
+    <span class="nx">ArgsSize</span> <span class="kt">uint32</span>
+    <span class="c1">// Comm is the parent process/command name, e.g., bash.</span>
+    <span class="nx">Comm</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The variable length <code>args</code> field is omitted on Go side and decoded manually,
+because I kept getting <code>failed to parse perf event: unexpected EOF error</code>.
+Perhaps the Go program got trailing garbage from the ring buffer which couldn't be unmarshalled.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// The data submitted via bpf_perf_event_output.</span>
+<span class="c1">// Due to a kernel bug, this can contain between 0 and 7 bytes of trailing</span>
+<span class="c1">// garbage from the ring depending on the input sample&#39;s length.</span>
+<span class="c1">// See https://pkg.go.dev/github.com/cilium/ebpf/perf#Record.</span>
+<span class="nx">RawSample</span> <span class="p">[]</span><span class="kt">byte</span>
+</code></pre></div>
+
+<p>Timo Beckers in Cilium's Slack channel recommended to check alignment and hand-write an unmarshaller.
+Here you can find my attempts to verify alignments <a href="https://github.com/marselester/libbpf-tools/pull/3">#3</a>
+with alignchecker program.</p>
+<blockquote>
+<p>Everything up until ArgsCount should be aligned on 8 bytes, but I'd expect the Go compiler to insert 4 bytes of padding between ArgsSize and Args, which would lead to an underrun on the C side. I've found hand-writing binary unmarshalers for these structs to be the most robust, but also the most annoying if your event format changes frequently.</p>
+<p>Cilium has a few alignchecker.go files if you're looking to dive deeper, we compare the DWARF info from the eBPF ELFs to Go struct fields annotated with align tags to make sure C and Go alignment corresponds</p>
+</blockquote>
+<p><code>binary.Read()</code> is used to read structured binary data from <code>record.RawSample</code> into the <code>event</code> struct.
+The remaining bytes belong to <code>args</code> field and just printed.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// eventSize is the event struct size in bytes, i.e., unsafe.Sizeof(e).</span>
+<span class="c1">// It&#39;s used to obtain the variable length args from the perf record.</span>
+<span class="kd">const</span> <span class="nx">eventSize</span> <span class="p">=</span> <span class="mi">40</span>
+
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%-16s %-6s %-6s %3s %s\n&quot;</span><span class="p">,</span> <span class="s">&quot;PCOMM&quot;</span><span class="p">,</span> <span class="s">&quot;PID&quot;</span><span class="p">,</span> <span class="s">&quot;PPID&quot;</span><span class="p">,</span> <span class="s">&quot;RET&quot;</span><span class="p">,</span> <span class="s">&quot;ARGS&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="p">{</span>
+    <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">break</span>
+        <span class="p">}</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;ring event perf buffer is full, dropped %d samples&quot;</span><span class="p">,</span> <span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span><span class="p">)</span>
+        <span class="k">continue</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">e</span> <span class="nx">event</span>
+    <span class="nx">err</span> <span class="p">=</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span>
+        <span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">),</span>
+        <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="nx">e</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to parse perf event: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">continue</span>
+    <span class="p">}</span>
+
+    <span class="nx">args</span> <span class="o">:=</span> <span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">[</span><span class="nx">eventSize</span><span class="p">:]</span>
+
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span>
+        <span class="s">&quot;%-16s %-6d %-6d %3d %s\n&quot;</span><span class="p">,</span>
+        <span class="nx">bytes</span><span class="p">.</span><span class="nx">TrimRight</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Comm</span><span class="p">[:],</span> <span class="s">&quot;\x00&quot;</span><span class="p">),</span>
+        <span class="nx">e</span><span class="p">.</span><span class="nx">PID</span><span class="p">,</span>
+        <span class="nx">e</span><span class="p">.</span><span class="nx">PPID</span><span class="p">,</span>
+        <span class="nx">e</span><span class="p">.</span><span class="nx">Retval</span><span class="p">,</span>
+        <span class="nx">strings</span><span class="p">.</span><span class="nx">ReplaceAll</span><span class="p">(</span>
+            <span class="nb">string</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">Trim</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="s">&quot;\x00&quot;</span><span class="p">)),</span>
+            <span class="s">&quot;\x00&quot;</span><span class="p">,</span>
+            <span class="s">&quot; &quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The resulting output of the Go execsnoop program is very close to the original 🎉.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
+<span class="go">PCOMM            PID    PPID   RET ARGS</span>
+<span class="go">ls               69672  60093    0 /usr/bin/ls --color=auto</span>
+<span class="go">sh               69783  69782    0 /bin/sh -c    cd / &amp;&amp; run-parts --report /etc/cron.hourly</span>
+<span class="go">run-parts        69784  69783    0 /usr/bin/run-parts --report /etc/cron.hourly</span>
+</code></pre></div>
+
+<p>You can find all the source code at
+<a href="https://github.com/marselester/libbpf-tools">github.com/marselester/libbpf-tools</a>.</p>
+<h2>Appendix</h2>
+<p><a href="https://www.brendangregg.com/bpf-performance-tools-book.html">BPF performance tools</a> book
+aided to navigate BPF C code.
+Here are a few notes that are relevant to execsnoop program.</p>
+<p>A BPF program has to use <a href="https://elixir.bootlin.com/linux/v5.11/source/include/uapi/linux/bpf.h#L712">helpers</a>
+because it can't access arbitrary memory (outside of BPF) and can't call arbitrary kernel functions.
+The <code>execsnoop.bpf.c</code> makes use of the following helpers.</p>
+<p><code>bpf_probe_read_user(dst, size, unsafe_ptr)</code> safely attempts to read <em>size</em> bytes from user space address
+<em>unsafe_ptr</em> and stores the data in <em>dst</em>.</p>
+<p><code>bpf_get_current_pid_tgid()</code> returns an unsigned 64-bit integer containing the current TGID (what user space calls the PID) in the upper bits
+and the current PID (what user space calls the kernel thread ID) in the lower bits.</p>
+<div class="highlight"><pre><span></span><code><span class="n">u64</span> <span class="n">id</span> <span class="o">=</span> <span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span>
+<span class="kt">pid_t</span> <span class="n">pid</span> <span class="o">=</span> <span class="p">(</span><span class="kt">pid_t</span><span class="p">)</span><span class="n">id</span><span class="p">;</span>
+<span class="kt">pid_t</span> <span class="n">tgid</span> <span class="o">=</span> <span class="n">id</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">;</span>
+<span class="n">e</span><span class="o">-&gt;</span><span class="n">pid</span> <span class="o">=</span> <span class="n">tgid</span><span class="p">;</span>
+</code></pre></div>
+
+<p><code>bpf_get_current_uid_gid()</code> returns a u64 integer containing the current GID in the upper bits
+and UID in the lower bits.</p>
+<div class="highlight"><pre><span></span><code><span class="kt">uid_t</span> <span class="n">uid</span> <span class="o">=</span> <span class="p">(</span><span class="n">u32</span><span class="p">)</span><span class="n">bpf_get_current_uid_gid</span><span class="p">();</span>
+</code></pre></div>
+
+<p><code>bpf_get_current_task()</code> returns a pointer to the current (on-CPU)
+<a href="https://elixir.bootlin.com/linux/v5.11/source/include/linux/sched.h#L649">task struct</a> (a process).
+This contains many details about the running process and links to other structs containing system state.</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">t</span><span class="p">;</span>
+<span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span><span class="o">*</span><span class="p">)</span><span class="n">bpf_get_current_task</span><span class="p">();</span>
+</code></pre></div>
+
+<p><code>bpf_get_current_comm(buf, buf_size)</code> copies the task name to the buffer.</p>
+<div class="highlight"><pre><span></span><code><span class="n">bpf_get_current_comm</span><span class="p">(</span><span class="o">&amp;</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">));</span>
+</code></pre></div>
+
+<p><code>bpf_perf_event_output(ctx, map, data, size)</code> writes data to the <code>perf_event</code> ring buffers;
+this is used for per-event output.</p>
+<p><code>bpf_map_lookup_elem(map, key)</code> finds a key in a map and returns its value (pointer).</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="o">*</span><span class="n">e</span><span class="p">;</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pid</span><span class="p">);</span>
+</code></pre></div>
+
+<p><code>bpf_map_update_elem(map, key, value, flags)</code> atomically updates the value of the entry selected by key.</p>
+<div class="highlight"><pre><span></span><code><span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">event</span> <span class="n">empty_event</span> <span class="o">=</span> <span class="p">{};</span>
+
+<span class="k">struct</span> <span class="p">{</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_HASH</span><span class="p">);</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="mi">10240</span><span class="p">);</span>
+    <span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kt">pid_t</span><span class="p">);</span>
+    <span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="k">struct</span> <span class="n">event</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">execs</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">bpf_map_update_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">empty_event</span><span class="p">,</span> <span class="n">BPF_NOEXIST</span><span class="p">))</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</code></pre></div>
+
+<p>The <em>execs</em> is declared of type <code>BPF_MAP_TYPE_HASH</code> (a hash table).
+The key is a <code>pid_t</code>, and the value is struct <code>event</code>.
+<em>BPF_NOEXIST</em> flag specifies that the entry for key must not exist in the map.</p>
+<p>BPF supports the following map types:</p>
+<ul>
+<li><code>BPF_MAP_TYPE_HASH</code> is a hash table: key/value pairs</li>
+<li><code>BPF_MAP_TYPE_ARRAY</code> is an array of elements</li>
+<li><code>BPF_MAP_TYPE_PERF_EVENT_ARRAY</code> is an interface to the <code>perf_event</code> ring buffers
+  for emitting trace records to user space</li>
+<li><code>BPF_MAP_TYPE_PERCPU_HASH</code> is a faster hash table maintained on a per-CPU basis</li>
+<li><code>BPF_MAP_TYPE_STACK_TRACE</code> is a storage for stack traces, indexed by stack IDs</li>
+<li><code>BPF_MAP_TYPE_STACK</code> is a storage for stack traces</li>
+</ul>
+<p>There are three ways to output data from kernel to user:</p>
+<ul>
+<li><code>BPF_PERF_OUTPUT()</code> is a way to send per-event details to user space, via a custom struct you define.</li>
+<li>BPF maps using <code>bpf_perf_event_output()</code> (periodically read from user space)</li>
+<li><code>bpf_trace_printk()</code> writes to trace_pipe (debugging only).
+  I wasn't sure about <code>pid_t</code> size so I used <code>bpf_printk("the PID is %d", sizeof(pid));</code>
+  and printed the trace buffer as follows (see <a href="https://nakryiko.com/posts/bpf-tips-printk/">BPF tips &amp; tricks</a>).</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo cat /sys/kernel/debug/tracing/trace_pipe</span>
+<span class="go">&lt;...&gt;-487422  [001] .... 544705.474270: 0: the PID is 4</span>
+</code></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/apigate-ambassador.html"><h3 class="article-title">Ambassador as API Gateway</h3></a>
 <h6 class="subheader" title="2019-03-13T00:00:00+07:00">Wed 13 March 2019
 </h6>
@@ -60,308 +486,7 @@
 acts as a reverse proxy, routing API requests from clients to services.
 Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
 In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://getambassador.io/">Ambassador</a>.</p>
-<p>The demo is based on a dummy <a class="reference external" href="https://traveling.docs.apiary.io/">Traveling project</a>
-where we have services to rent a car and book a hotel.</p>
-<p>Firstly, we shall install Ambassador on <a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minikube</a>
-by following <a class="reference external" href="https://www.getambassador.io/user-guide/getting-started/">Ambassador user guide</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
-<span class="go">Starting local Kubernetes v1.13.2 cluster...</span>
-<span class="gp">$</span> kubectl apply -f https://www.getambassador.io/yaml/ambassador/ambassador-rbac.yaml
-</pre></div>
-<p>Next, create Kubernetes service for Ambassador deployment of type NodePort, so it's easily accessible outside of the cluster.
-It will be the entry point of our API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
-<span class="go">apiVersion: v1</span>
-<span class="go">kind: Service</span>
-<span class="go">metadata:</span>
-<span class="go">  name: ambassador</span>
-<span class="go">spec:</span>
-<span class="go">  selector:</span>
-<span class="go">    service: ambassador</span>
-<span class="go">  type: NodePort</span>
-<span class="go">  ports:</span>
-<span class="go">    - port: 80</span>
-<span class="gp">  #</span> Propagate the original <span class="nb">source</span> IP of the client.
-<span class="go">  externalTrafficPolicy: Local</span>
-<span class="go">&#39;</span>
-<span class="gp">$</span> <span class="nv">AMBASSADORURL</span><span class="o">=</span><span class="k">$(</span>minikube service --url ambassador<span class="k">)</span>
-</pre></div>
-<p>Note, there is a diagnostic web UI at <cite>$AMBASSADORURL/ambassador/v0/diag/</cite>.
-You should restrict access to it from your custom auth service.</p>
-<div class="section" id="travel-apps">
-<h2>Travel Apps</h2>
-<p>Let's deploy the travel apps on Kubernetes. For simplicity, you can use the images uploaded to Docker Hub.
-If you prefer to build Docker images yourself, make sure they are accessible from Minikube:
-configure Docker client to communicate with the Minikube Docker daemon.
-Note, you can restore your local Docker environment with <cite>eval $(minikube docker-env --unset)</cite> later on.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> git clone https://github.com/marselester/apigate.git
-<span class="gp">$</span> <span class="nb">cd</span> ./apigate/
-<span class="gp">$</span> <span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
-<span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-hotel:v1.0.0 --file<span class="o">=</span>docker/hotel.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service.yml
-</pre></div>
-<p>The hotel app should be running:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>hotel
-<span class="go">hotel-api-8d7d59b69-bcsvh</span>
-<span class="gp">$</span> kubectl port-forward hotel-api-8d7d59b69-bcsvh <span class="m">8000</span>
-<span class="gp">$</span> curl localhost:8000/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>Now, it's time to put the <cite>hotel</cite> Service behind the gateway by adding annotations to the service.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: hotel_mapping</span>
-      <span class="no">prefix: /v1/hotels</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: hotel</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service-gate.yml
-</pre></div>
-<p>By default, Ambassador would rewrite <cite>/v1/hotels</cite> prefix to <cite>/</cite>.
-With <cite>rewrite: &quot;&quot;</cite> directive we configure Ambassador to not change the prefix as
-it forwards a request to the <cite>hotel</cite> service.
-Let's confirm that hotel booking requests are routed to the hotel app:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>The car rental app is deployed similarly.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">car</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: car_mapping</span>
-      <span class="no">prefix: /v1/cars</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: car</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">car</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-car:v1.0.0 --file<span class="o">=</span>docker/car.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/car/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/car/service-gate.yml
-</pre></div>
-<p>You can see that the car booking is available at the gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$AMBASSADORURL</span>/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;9e0d65f5-9de2-4428-9bee-1f3967f05129&quot;,</span>
-<span class="go">    &quot;car_id&quot;: &quot;cfb6f7a5-4591-4f5c-8b17-9a1b10f98ada&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-</div>
-<div class="section" id="authentication-service">
-<h2>Authentication Service</h2>
-<p>API requests must be authenticated before reaching the Travel apps.
-This work is delegated to <cite>travelauth</cite> Service that performs HTTP Basic authentication
-and returns a username in <cite>X-Travel-User</cite> header if credentials matched.
-We shall start from deploying it on the cluster.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-auth:v1.0.0 --file<span class="o">=</span>docker/auth.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/service.yml
-</pre></div>
-<p>If the auth server is properly deployed, it will prompt for username/password.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>auth
-<span class="go">auth-api-556685f658-h9qb4</span>
-<span class="gp">$</span> kubectl port-forward auth-api-556685f658-h9qb4 <span class="m">8000</span>
-<span class="gp">$</span> curl -i -u bob:bob localhost:8000/v1/hotels
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">X-Travel-User: bob</span>
-</pre></div>
-<p>Let's tell Ambassador to
-<a class="reference external" href="https://www.getambassador.io/reference/services/auth-service/">forward all requests to the auth server</a>
-and copy <cite>X-Travel-User</cite> response header from the auth server to the routed request.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">travelauth</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: AuthService</span>
-      <span class="no">name: gate_auth</span>
-      <span class="no"># This is k8s service name; all API requests are sent there. For example,</span>
-      <span class="no"># API request /v1/hotels will be sent to http://travelauth:80/v1/hotels.</span>
-      <span class="no">auth_service: travelauth</span>
-      <span class="no">proto: http</span>
-      <span class="no"># The travelauth service adds a username into a header after successful authentication,</span>
-      <span class="no"># so all the other services know who the user is (ratelimit, hotel, car services).</span>
-      <span class="no">allowed_authorization_headers:</span>
-        <span class="no">- &quot;X-Travel-User&quot;</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">auth</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/service-auth.yml
-</pre></div>
-<p>With updated config Ambassador should enforce authentication on API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl -i <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">HTTP/1.1 401 Unauthorized</span>
-<span class="gp">$</span> curl -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-</div>
-<div class="section" id="rate-limiting-service">
-<h2>Rate Limiting Service</h2>
-<p>With Ambassador, individual requests can be annotated with metadata, called labels.
-These labels can then be passed to a third party rate limiting service through a gRPC interface
-which implements actual rate limit logic.
-Check out <a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Node.js</a> and
-<a class="reference external" href="https://blog.getambassador.io/designing-a-rate-limiting-service-for-ambassador-f460e9fabedb">Java</a> based examples.</p>
-<p>In order to build such service, it must support Envoy's <a class="reference external" href="https://github.com/datawire/ambassador/blob/master/ambassador/common/ratelimit/ratelimit.proto">ratelimit.proto</a> interface.
-The protocol buffer definition of RateLimitService service is described in <cite>./internal/pb/ratelimit.proto</cite>.
-You need to <a class="reference external" href="https://grpc.io/docs/quickstart/go.html">install</a> protoc compiler and protoc plugin for Go
-(beware of <a class="reference external" href="https://github.com/golang/protobuf/issues/763">ProtoPackageIsVersion3 issue</a>)
-to generate gRPC service code.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> brew install protobuf
-<span class="gp">$</span> go get -u github.com/golang/protobuf/protoc-gen-go
-<span class="gp">$</span> <span class="nb">cd</span> <span class="nv">$GOPATH</span>/src/github.com/golang/protobuf/protoc-gen-go
-<span class="gp">$</span> git checkout v1.2.0
-<span class="gp">$</span> go install
-</pre></div>
-<p>The arguments tell protoc to use <cite>ratelimit.proto</cite> definition,
-search for imports in <cite>./internal/pb/</cite> dir, generate Go code using gprc plugin,
-and place the result in <cite>./internal/pb/</cite> dir.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> protoc ratelimit.proto -I internal/pb/ --go_out<span class="o">=</span><span class="nv">plugins</span><span class="o">=</span>grpc:internal/pb/
-</pre></div>
-<p>We now have a newly generated gRPC server and client code in <cite>./internal/pb/ratelimit.pb.go</cite>.
-Our ratelimit server already implements <cite>RateLimitServiceServer</cite> interface.</p>
-<div class="highlight"><pre><span></span><span class="c1">// ShouldRateLimit must respond to the request with an OK or OVER_LIMIT code.</span>
-<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">)</span> <span class="nx">ShouldRateLimit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">req</span> <span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// Descriptors is a list of labels on which the rate limit service can base</span>
-    <span class="c1">// its decision to accept or reject the request.</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s: %+v&quot;</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">GetDomain</span><span class="p">(),</span> <span class="nx">req</span><span class="p">.</span><span class="nx">GetDescriptors</span><span class="p">())</span>
-
-    <span class="nx">resp</span> <span class="o">:=</span> <span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">{</span>
-        <span class="nx">OverallCode</span><span class="p">:</span> <span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse_OVER_LIMIT</span><span class="p">,</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">resp</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</pre></div>
-<p>Let's deploy it on the cluster and send a few requests using
-<a class="reference external" href="https://github.com/fullstorydev/grpcurl">grpcurl</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-ratelimit:v1.0.0 --file<span class="o">=</span>docker/ratelimit.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/service.yml
-<span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>ratelimit
-<span class="go">ratelimit-api-5554898589-4gmv5</span>
-<span class="gp">$</span> kubectl port-forward ratelimit-api-5554898589-4gmv5 <span class="m">5000</span>
-</pre></div>
-<p>As we can see the server exposes RateLimitService.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> grpcurl -plaintext localhost:5000 list
-<span class="go">grpc.reflection.v1alpha.ServerReflection</span>
-<span class="go">pb.lyft.ratelimit.RateLimitService</span>
-</pre></div>
-<p>Its ShouldRateLimit method should return <cite>OK</cite> or <cite>OVER_LIMIT</cite> reply.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> grpcurl -d <span class="s1">&#39;{&quot;domain&quot;:&quot;envoy&quot;}&#39;</span> -plaintext localhost:5000 pb.lyft.ratelimit.RateLimitService/ShouldRateLimit
-<span class="go">{</span>
-<span class="go">  &quot;overallCode&quot;: &quot;OVER_LIMIT&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>Now we shall introduce the ratelimit service to Ambassador.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">travelratelimit</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: RateLimitService</span>
-      <span class="no">name: gate_ratelimit</span>
-      <span class="no">service: travelratelimit</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ratelimit</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/service-rate.yml
-</pre></div>
-<p>Finally, I am going to add <cite>labels</cite> to attach rate limiting descriptors as shown in
-<a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Rate Limiting tutorial</a>.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: hotel_mapping</span>
-      <span class="no">prefix: /v1/hotels</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: hotel</span>
-      <span class="no">labels:</span>
-        <span class="no">ambassador:</span>
-          <span class="no">- request_label_group:</span>
-            <span class="no">- x-ambassador-test-allow:</span>
-                <span class="no">header: &quot;x-ambassador-test-allow&quot;</span>
-                <span class="no">omit_if_not_present: true</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service-rate.yml
-</pre></div>
-<p>If a request made to the hotel API has header <cite>X-Ambassador-Test-Allow</cite>,
-it should be eligible for rate limiting.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl -H <span class="s2">&quot;x-ambassador-test-allow: probably&quot;</span> -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels
-<span class="go">HTTP/1.1 200 OK</span>
-</pre></div>
-<p>Unfortunately I have not been able to make rate limiting work yet.
-Here is the corresponding <a class="reference external" href="https://github.com/datawire/ambassador/issues/1144">GitHub issue</a>.</p>
-</div>
-<p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+<p>The demo is based on a dummy …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/ambassador.html">ambassador </a>
@@ -373,11 +498,9 @@ Here is the corresponding <a class="reference external" href="https://github.com
 
 
 
-<p><a href="https://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/apigate-ambassador.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

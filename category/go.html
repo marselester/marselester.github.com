@@ -51,6 +51,432 @@
         
 
             <article>
+                <a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"><h3 class="article-title">BPF: Go frontend for execsnoop</h3></a>
+<h6 class="subheader" title="2021-10-26T00:00:00+07:00">Tue 26 October 2021
+</h6>
+
+
+<p>After reading Brendan Gregg's books about BPF I was excited to try and implement something in Go.
+At a first glance it turned out I would need to install LLVM, Clang, and kernel header dependencies to run a simple program.
+Fortunately <a href="https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html">BTF, CO-RE technologies</a>
+eliminate those dependencies though kernel &gt;=5.8 should be used.</p>
+<p>Since I don't know C, I resorted to <a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools">BCC libbpf-tools</a>,
+from which I picked a few BPF C programs (tcpconnect.bpf.c, execsnoop.bpf.c) to write Go frontends.
+Below I will be focusing on execsnoop,
+and you can find my experiments at <a href="https://github.com/marselester/libbpf-tools">github.com/marselester/libbpf-tools</a>.</p>
+<h2>Preparing the environment</h2>
+<p>First things first, I ran Ubuntu 21.04 in a virtual machine and installed Clang, Go.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ cat &gt; Vagrantfile &lt;&lt;CFG</span>
+<span class="go">Vagrant.configure(&quot;2&quot;) do |config|</span>
+<span class="go">    config.vm.box = &quot;ubuntu/hirsute64&quot;</span>
+<span class="go">end</span>
+<span class="go">CFG</span>
+<span class="go">﹪ vagrant up</span>
+<span class="go">﹪ vagrant ssh</span>
+<span class="go">﹩ sudo apt-get update</span>
+<span class="go">﹩ sudo apt-get install clang</span>
+<span class="go">﹩ sudo snap install go --classic</span>
+<span class="go">﹩ uname -nr</span>
+<span class="go">ubuntu-hirsute 5.11.0-37-generic</span>
+<span class="go">﹩ clang -v</span>
+<span class="go">Ubuntu clang version 12.0.0-3ubuntu1~21.04.2</span>
+</code></pre></div>
+
+<p>Then I made sure the execsnoop program from BCC toolkit showed new processes
+(it prints one line for every <code>execve</code> syscall),
+so I could compare its output later with the Go implementation.</p>
+<p>The ELF binary <code>execsnoop</code> was copied from a Docker container to the virtual machine as follows.
+In case you wanted to build the image yourself,
+here is a <a href="https://gist.github.com/marselester/ac8e4262742c90539c8c53f37d9a6965">Dockerfile</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ docker run --name libbpf marselester/libbpf-tools:latest</span>
+<span class="go">﹪ docker cp libbpf:/opt/execsnoop .</span>
+</code></pre></div>
+
+<p>The execsnoop captured <code>sshd</code> and <code>ls</code> processes, nice!</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo /vagrant/execsnoop</span>
+<span class="go">PCOMM            PID    PPID   RET ARGS</span>
+<span class="go">sshd             21254  832      0 /usr/sbin/sshd -D -R</span>
+<span class="go">ls               21361  21351    0 /usr/bin/ls --color=auto</span>
+</code></pre></div>
+
+<p>It can be useful to check for short-lived processes that consume CPU resources,
+e.g., slow or failing application/container startup.</p>
+<h2>Embedding BPF in Go</h2>
+<p>My search for a BPF Go library stopped at <a href="https://github.com/cilium/ebpf">github.com/cilium/ebpf</a>
+since it had several examples to build upon, and folks from Cilium were <a href="https://github.com/cilium/ebpf/issues/303">very helpful</a>.</p>
+<p>The repository also contains <a href="https://github.com/cilium/ebpf/tree/master/cmd/bpf2go">bpf2go</a> tool to compile a BPF C source file into BPF bytecode.
+It emits Go files containing compiled BPF for little and big endian systems.</p>
+<p>I copied <a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/execsnoop.bpf.c">execsnoop.bpf.c</a>,
+<a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/execsnoop.h">execsnoop.h</a> files from BCC toolkit
+and tried to generate Go files.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cd /vagrant/</span>
+<span class="go">﹩ mkdir -p cmd/execsnoop/bpf/</span>
+<span class="go">﹩ curl -o cmd/execsnoop/bpf/execsnoop.bpf.c https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.bpf.c</span>
+<span class="go">﹩ curl -o cmd/execsnoop/bpf/execsnoop.h https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.h</span>
+<span class="go">﹩ cat &gt; cmd/execsnoop/main.go &lt;&lt;&lt;&#39;&#39;&#39;</span>
+<span class="go">package main</span>
+
+<span class="go">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 ExecSnoop ./bpf/execsnoop.bpf.c -- -I../../headers</span>
+
+<span class="go">func main() {}</span>
+<span class="go">&#39;&#39;&#39;</span>
+<span class="go">﹩ go mod init execsnoop</span>
+<span class="go">﹩ go get github.com/cilium/ebpf/cmd/bpf2go</span>
+<span class="go">﹩ go generate ./cmd/execsnoop/</span>
+<span class="go">/vagrant/cmd/execsnoop/bpf/execsnoop.bpf.c:2:10: fatal error: &#39;vmlinux.h&#39; file not found</span>
+</code></pre></div>
+
+<p>Unfortunately that didn't work because the <code>vmlinux.h</code> header was missing.
+This file contains kernel's type definitions that can be generated from the installed kernel using bpftool tool.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo apt-get install linux-tools-$(uname -r) linux-tools-common</span>
+<span class="go">﹩ bpftool btf dump file /sys/kernel/btf/vmlinux format c &gt; ./headers/vmlinux.h</span>
+</code></pre></div>
+
+<p>There were three more header files missing that I copied from ubuntu-kernel and libbpf repositories.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ mkdir -p headers/bpf/</span>
+<span class="go">﹩ curl -o ./headers/bpf/bpf_helpers.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/hirsute/plain/tools/lib/bpf/bpf_helpers.h</span>
+<span class="go">﹩ curl -o ./headers/bpf/bpf_helper_defs.h https://raw.githubusercontent.com/libbpf/libbpf/master/src/bpf_helper_defs.h</span>
+<span class="go">﹩ curl -o ./headers/bpf/bpf_core_read.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/hirsute/plain/tools/lib/bpf/bpf_core_read.h</span>
+</code></pre></div>
+
+<p>Finally the Go files were generated and the BPF program was loaded into the kernel from an ELF.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ go generate ./cmd/execsnoop/</span>
+<span class="go">Compiled /vagrant/cmd/execsnoop/execsnoop_bpfel.o</span>
+<span class="go">Wrote /vagrant/cmd/execsnoop/execsnoop_bpfel.go</span>
+<span class="go">Compiled /vagrant/cmd/execsnoop/execsnoop_bpfeb.o</span>
+<span class="go">Wrote /vagrant/cmd/execsnoop/execsnoop_bpfeb.go</span>
+<span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
+</code></pre></div>
+
+<p>Note, bpf2go tool uses Clang to compile the BPF program:</p>
+<ul>
+<li><code>-cflags $BPF_CFLAGS</code> are flags passed to the compiler from the <code>$BPF_CFLAGS</code> env var,
+  for example, <code>BPF_CFLAGS='-D__TARGET_ARCH_x86' go generate</code> is expected in
+  <a href="https://elixir.bootlin.com/linux/latest/source/tools/lib/bpf/bpf_tracing.h#L5">bpf_tracing.h</a> header
+  (it is not used in execsnoop though)</li>
+<li><code>-cc clang-12</code> is a Clang binary name</li>
+<li><code>ExecSnoop</code> is a name used by a code generation</li>
+<li><code>./bpf/execsnoop.bpf.c</code> is a path to the BPF C file that is compiled</li>
+<li><code>-- -I../../headers</code> are compiler options that indicate where to find header files</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&quot;log&quot;</span>
+
+    <span class="s">&quot;golang.org/x/sys/unix&quot;</span>
+<span class="p">)</span>
+
+<span class="c1">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 ExecSnoop ./bpf/execsnoop.bpf.c -- -I../../headers</span>
+
+<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// Increase the resource limit of the current process to provide sufficient space</span>
+    <span class="c1">// for locking memory for the BPF maps.</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">Setrlimit</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIMIT_MEMLOCK</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">Rlimit</span><span class="p">{</span>
+        <span class="nx">Cur</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span>
+        <span class="nx">Max</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span>
+    <span class="p">});</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to set temporary RLIMIT_MEMLOCK: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Load the BPF program into the kernel from an ELF.</span>
+    <span class="c1">// ExecSnoopObjects contains all objects (BPF programs and maps) after they have been loaded into the kernel:</span>
+    <span class="c1">// TracepointSyscallsSysEnterExecve and TracepointSyscallsSysExitExecve BPF programs,</span>
+    <span class="c1">// Events and Execs BPF maps.</span>
+    <span class="nx">objs</span> <span class="o">:=</span> <span class="nx">ExecSnoopObjects</span><span class="p">{}</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">LoadExecSnoopObjects</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF programs and maps: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="k">defer</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2>Tracepoints</h2>
+<p>The BPF program is executed on events such as tracepoints.
+Tracepoint is a static instrumentation (hard-coded to the source code) of the Linux kernel,
+see <code>/sys/kernel/debug/tracing/events</code> to find available tracepoints.</p>
+<p>From looking at BPF C source file <code>execsnoop.bpf.c</code> we can see two tracepoints instrumented:
+the entry and the return of the <code>execve</code> syscall so that
+the process ID, command name, arguments, and the return value can be printed.</p>
+<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_enter_execve&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">tracepoint__syscalls__sys_enter_execve</span><span class="p">(</span><span class="k">struct</span> <span class="n">trace_event_raw_sys_enter</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_exit_execve&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">tracepoint__syscalls__sys_exit_execve</span><span class="p">(</span><span class="k">struct</span> <span class="n">trace_event_raw_sys_exit</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+</code></pre></div>
+
+<p><code>SEC</code> declares an ELF section named <code>tracepoint/syscalls/sys_enter_execve</code>, followed by a BPF program.
+A user-level loader may use this section header to determine where to attach a program.</p>
+<p><code>tracepoint__syscalls__sys_enter_execve</code> function is called for the tracepoint event.
+The struct <code>trace_event_raw_sys_enter</code> argument contains register state and BPF context.
+From the registers, function arguments <code>ctx-&gt;args</code> and return value <code>ctx-&gt;ret</code> can be read.</p>
+<p>On Go side I attached the BPF program to <code>syscalls/sys_enter_execve</code> tracepoint using <code>github.com/cilium/ebpf/link</code> package.
+The <code>link.Tracepoint()</code> function returns a link (it represents a program attached to a BPF hook)
+which is later used to detach the program.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">tpEnter</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span> <span class="s">&quot;sys_enter_execve&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysEnterExecve</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_enter_execve tracepoint: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">tpEnter</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+
+<span class="nx">tpExit</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span> <span class="s">&quot;sys_exit_execve&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysExitExecve</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_exit_execve tracepoint: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">tpExit</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>The <code>bpf_perf_event_output()</code> C function emits records to user space via a BPF map <code>events</code>
+that accesses perf per-CPU ring buffers.</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="p">{</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_PERF_EVENT_ARRAY</span><span class="p">);</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
+<span class="p">}</span> <span class="n">events</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+
+<span class="k">struct</span> <span class="n">event</span> <span class="n">e</span><span class="p">;</span>
+<span class="n">bpf_perf_event_output</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">events</span><span class="p">,</span> <span class="n">BPF_F_CURRENT_CPU</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">e</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="p">));</span>
+</code></pre></div>
+
+<p>In user space the events are read using <code>github.com/cilium/ebpf/perf</code> package.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Open a perf event reader from user space on the PERF_EVENT_ARRAY map</span>
+<span class="c1">// defined in the BPF C program.</span>
+<span class="nx">rd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopMaps</span><span class="p">.</span><span class="nx">Events</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Getpagesize</span><span class="p">())</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to create perf event reader: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="p">{</span>
+    <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">break</span>
+        <span class="p">}</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;received from perf ring buffer: %s&quot;</span><span class="p">,</span> <span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>In order to verify that the events are captured, I ran the Go program and <code>ls</code> in another terminal.
+Luckily it worked!</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
+<span class="go">received from perf ring buffer: ?????ls/usr/bin/ls--color=auto</span>
+</code></pre></div>
+
+<h2>Decoding events</h2>
+<p>I wanted to match the output of the original execsnoop program, for that I needed to decode <code>record.RawSample</code>
+which contains bytes of the <code>event</code> C struct into a Go struct.</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="p">{</span>
+    <span class="kt">pid_t</span> <span class="n">pid</span><span class="p">;</span>
+    <span class="kt">pid_t</span> <span class="n">ppid</span><span class="p">;</span>
+    <span class="kt">uid_t</span> <span class="n">uid</span><span class="p">;</span>
+    <span class="n">int32</span> <span class="n">retval</span><span class="p">;</span> <span class="c1">// it&#39;s int in https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.h</span>
+    <span class="n">int32</span> <span class="n">args_count</span><span class="p">;</span> <span class="c1">// int</span>
+    <span class="n">u32</span> <span class="n">args_size</span><span class="p">;</span> <span class="c1">// unsigned int</span>
+    <span class="kt">char</span> <span class="n">comm</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+    <span class="kt">char</span> <span class="n">args</span><span class="p">[</span><span class="mi">7680</span><span class="p">];</span>
+<span class="p">};</span>
+</code></pre></div>
+
+<p>Go <code>event</code> struct represents a perf event sent to user space from the BPF program running in the kernel.
+Note, that it should match the C event struct, and both C and Go structs must be aligned the same way.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span> <span class="nx">event</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// PID is the process ID.</span>
+    <span class="nx">PID</span> <span class="kt">int32</span>
+    <span class="c1">// PPID is the process ID of the parent of this process.</span>
+    <span class="nx">PPID</span> <span class="kt">int32</span>
+    <span class="c1">// UID is the process user ID, e.g., 1000.</span>
+    <span class="nx">UID</span> <span class="kt">uint32</span>
+    <span class="c1">// Retval is the return value of the execve().</span>
+    <span class="nx">Retval</span> <span class="kt">int32</span>
+    <span class="c1">// ArgsCount is a number of arguments.</span>
+    <span class="nx">ArgsCount</span> <span class="kt">int32</span>
+    <span class="c1">// ArgSize is a size of arguments in bytes.</span>
+    <span class="nx">ArgsSize</span> <span class="kt">uint32</span>
+    <span class="c1">// Comm is the parent process/command name, e.g., bash.</span>
+    <span class="nx">Comm</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The variable length <code>args</code> field is omitted on Go side and decoded manually,
+because I kept getting <code>failed to parse perf event: unexpected EOF error</code>.
+Perhaps the Go program got trailing garbage from the ring buffer which couldn't be unmarshalled.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// The data submitted via bpf_perf_event_output.</span>
+<span class="c1">// Due to a kernel bug, this can contain between 0 and 7 bytes of trailing</span>
+<span class="c1">// garbage from the ring depending on the input sample&#39;s length.</span>
+<span class="c1">// See https://pkg.go.dev/github.com/cilium/ebpf/perf#Record.</span>
+<span class="nx">RawSample</span> <span class="p">[]</span><span class="kt">byte</span>
+</code></pre></div>
+
+<p>Timo Beckers in Cilium's Slack channel recommended to check alignment and hand-write an unmarshaller.
+Here you can find my attempts to verify alignments <a href="https://github.com/marselester/libbpf-tools/pull/3">#3</a>
+with alignchecker program.</p>
+<blockquote>
+<p>Everything up until ArgsCount should be aligned on 8 bytes, but I'd expect the Go compiler to insert 4 bytes of padding between ArgsSize and Args, which would lead to an underrun on the C side. I've found hand-writing binary unmarshalers for these structs to be the most robust, but also the most annoying if your event format changes frequently.</p>
+<p>Cilium has a few alignchecker.go files if you're looking to dive deeper, we compare the DWARF info from the eBPF ELFs to Go struct fields annotated with align tags to make sure C and Go alignment corresponds</p>
+</blockquote>
+<p><code>binary.Read()</code> is used to read structured binary data from <code>record.RawSample</code> into the <code>event</code> struct.
+The remaining bytes belong to <code>args</code> field and just printed.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// eventSize is the event struct size in bytes, i.e., unsafe.Sizeof(e).</span>
+<span class="c1">// It&#39;s used to obtain the variable length args from the perf record.</span>
+<span class="kd">const</span> <span class="nx">eventSize</span> <span class="p">=</span> <span class="mi">40</span>
+
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%-16s %-6s %-6s %3s %s\n&quot;</span><span class="p">,</span> <span class="s">&quot;PCOMM&quot;</span><span class="p">,</span> <span class="s">&quot;PID&quot;</span><span class="p">,</span> <span class="s">&quot;PPID&quot;</span><span class="p">,</span> <span class="s">&quot;RET&quot;</span><span class="p">,</span> <span class="s">&quot;ARGS&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="p">{</span>
+    <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">break</span>
+        <span class="p">}</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;ring event perf buffer is full, dropped %d samples&quot;</span><span class="p">,</span> <span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span><span class="p">)</span>
+        <span class="k">continue</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">e</span> <span class="nx">event</span>
+    <span class="nx">err</span> <span class="p">=</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span>
+        <span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">),</span>
+        <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="nx">e</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to parse perf event: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">continue</span>
+    <span class="p">}</span>
+
+    <span class="nx">args</span> <span class="o">:=</span> <span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">[</span><span class="nx">eventSize</span><span class="p">:]</span>
+
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span>
+        <span class="s">&quot;%-16s %-6d %-6d %3d %s\n&quot;</span><span class="p">,</span>
+        <span class="nx">bytes</span><span class="p">.</span><span class="nx">TrimRight</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Comm</span><span class="p">[:],</span> <span class="s">&quot;\x00&quot;</span><span class="p">),</span>
+        <span class="nx">e</span><span class="p">.</span><span class="nx">PID</span><span class="p">,</span>
+        <span class="nx">e</span><span class="p">.</span><span class="nx">PPID</span><span class="p">,</span>
+        <span class="nx">e</span><span class="p">.</span><span class="nx">Retval</span><span class="p">,</span>
+        <span class="nx">strings</span><span class="p">.</span><span class="nx">ReplaceAll</span><span class="p">(</span>
+            <span class="nb">string</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">Trim</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="s">&quot;\x00&quot;</span><span class="p">)),</span>
+            <span class="s">&quot;\x00&quot;</span><span class="p">,</span>
+            <span class="s">&quot; &quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The resulting output of the Go execsnoop program is very close to the original 🎉.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
+<span class="go">PCOMM            PID    PPID   RET ARGS</span>
+<span class="go">ls               69672  60093    0 /usr/bin/ls --color=auto</span>
+<span class="go">sh               69783  69782    0 /bin/sh -c    cd / &amp;&amp; run-parts --report /etc/cron.hourly</span>
+<span class="go">run-parts        69784  69783    0 /usr/bin/run-parts --report /etc/cron.hourly</span>
+</code></pre></div>
+
+<p>You can find all the source code at
+<a href="https://github.com/marselester/libbpf-tools">github.com/marselester/libbpf-tools</a>.</p>
+<h2>Appendix</h2>
+<p><a href="https://www.brendangregg.com/bpf-performance-tools-book.html">BPF performance tools</a> book
+aided to navigate BPF C code.
+Here are a few notes that are relevant to execsnoop program.</p>
+<p>A BPF program has to use <a href="https://elixir.bootlin.com/linux/v5.11/source/include/uapi/linux/bpf.h#L712">helpers</a>
+because it can't access arbitrary memory (outside of BPF) and can't call arbitrary kernel functions.
+The <code>execsnoop.bpf.c</code> makes use of the following helpers.</p>
+<p><code>bpf_probe_read_user(dst, size, unsafe_ptr)</code> safely attempts to read <em>size</em> bytes from user space address
+<em>unsafe_ptr</em> and stores the data in <em>dst</em>.</p>
+<p><code>bpf_get_current_pid_tgid()</code> returns an unsigned 64-bit integer containing the current TGID (what user space calls the PID) in the upper bits
+and the current PID (what user space calls the kernel thread ID) in the lower bits.</p>
+<div class="highlight"><pre><span></span><code><span class="n">u64</span> <span class="n">id</span> <span class="o">=</span> <span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span>
+<span class="kt">pid_t</span> <span class="n">pid</span> <span class="o">=</span> <span class="p">(</span><span class="kt">pid_t</span><span class="p">)</span><span class="n">id</span><span class="p">;</span>
+<span class="kt">pid_t</span> <span class="n">tgid</span> <span class="o">=</span> <span class="n">id</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">;</span>
+<span class="n">e</span><span class="o">-&gt;</span><span class="n">pid</span> <span class="o">=</span> <span class="n">tgid</span><span class="p">;</span>
+</code></pre></div>
+
+<p><code>bpf_get_current_uid_gid()</code> returns a u64 integer containing the current GID in the upper bits
+and UID in the lower bits.</p>
+<div class="highlight"><pre><span></span><code><span class="kt">uid_t</span> <span class="n">uid</span> <span class="o">=</span> <span class="p">(</span><span class="n">u32</span><span class="p">)</span><span class="n">bpf_get_current_uid_gid</span><span class="p">();</span>
+</code></pre></div>
+
+<p><code>bpf_get_current_task()</code> returns a pointer to the current (on-CPU)
+<a href="https://elixir.bootlin.com/linux/v5.11/source/include/linux/sched.h#L649">task struct</a> (a process).
+This contains many details about the running process and links to other structs containing system state.</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">t</span><span class="p">;</span>
+<span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span><span class="o">*</span><span class="p">)</span><span class="n">bpf_get_current_task</span><span class="p">();</span>
+</code></pre></div>
+
+<p><code>bpf_get_current_comm(buf, buf_size)</code> copies the task name to the buffer.</p>
+<div class="highlight"><pre><span></span><code><span class="n">bpf_get_current_comm</span><span class="p">(</span><span class="o">&amp;</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">));</span>
+</code></pre></div>
+
+<p><code>bpf_perf_event_output(ctx, map, data, size)</code> writes data to the <code>perf_event</code> ring buffers;
+this is used for per-event output.</p>
+<p><code>bpf_map_lookup_elem(map, key)</code> finds a key in a map and returns its value (pointer).</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="o">*</span><span class="n">e</span><span class="p">;</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pid</span><span class="p">);</span>
+</code></pre></div>
+
+<p><code>bpf_map_update_elem(map, key, value, flags)</code> atomically updates the value of the entry selected by key.</p>
+<div class="highlight"><pre><span></span><code><span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">event</span> <span class="n">empty_event</span> <span class="o">=</span> <span class="p">{};</span>
+
+<span class="k">struct</span> <span class="p">{</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_HASH</span><span class="p">);</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="mi">10240</span><span class="p">);</span>
+    <span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kt">pid_t</span><span class="p">);</span>
+    <span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="k">struct</span> <span class="n">event</span><span class="p">);</span>
+<span class="p">}</span> <span class="n">execs</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">bpf_map_update_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">empty_event</span><span class="p">,</span> <span class="n">BPF_NOEXIST</span><span class="p">))</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</code></pre></div>
+
+<p>The <em>execs</em> is declared of type <code>BPF_MAP_TYPE_HASH</code> (a hash table).
+The key is a <code>pid_t</code>, and the value is struct <code>event</code>.
+<em>BPF_NOEXIST</em> flag specifies that the entry for key must not exist in the map.</p>
+<p>BPF supports the following map types:</p>
+<ul>
+<li><code>BPF_MAP_TYPE_HASH</code> is a hash table: key/value pairs</li>
+<li><code>BPF_MAP_TYPE_ARRAY</code> is an array of elements</li>
+<li><code>BPF_MAP_TYPE_PERF_EVENT_ARRAY</code> is an interface to the <code>perf_event</code> ring buffers
+  for emitting trace records to user space</li>
+<li><code>BPF_MAP_TYPE_PERCPU_HASH</code> is a faster hash table maintained on a per-CPU basis</li>
+<li><code>BPF_MAP_TYPE_STACK_TRACE</code> is a storage for stack traces, indexed by stack IDs</li>
+<li><code>BPF_MAP_TYPE_STACK</code> is a storage for stack traces</li>
+</ul>
+<p>There are three ways to output data from kernel to user:</p>
+<ul>
+<li><code>BPF_PERF_OUTPUT()</code> is a way to send per-event details to user space, via a custom struct you define.</li>
+<li>BPF maps using <code>bpf_perf_event_output()</code> (periodically read from user space)</li>
+<li><code>bpf_trace_printk()</code> writes to trace_pipe (debugging only).
+  I wasn't sure about <code>pid_t</code> size so I used <code>bpf_printk("the PID is %d", sizeof(pid));</code>
+  and printed the trace buffer as follows (see <a href="https://nakryiko.com/posts/bpf-tips-printk/">BPF tips &amp; tricks</a>).</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo cat /sys/kernel/debug/tracing/trace_pipe</span>
+<span class="go">&lt;...&gt;-487422  [001] .... 544705.474270: 0: the PID is 4</span>
+</code></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/how-to-structure-go-projects.html"><h3 class="article-title">How to Structure Go Projects</h3></a>
 <h6 class="subheader" title="2018-09-28T00:00:00+07:00">Fri 28 September 2018
 </h6>
@@ -59,206 +485,7 @@
 <p>I came to Go from Django where the framework defines project layout, thus I wanted to know
 how to structure my Go applications. After reading documentation and building a few Django projects,
 you get a clear mental picture, as most of the questions are already answered.
-That helps to keep the projects within a company consistent, so developers don't have to struggle
-when they land on a new codebase. I was looking for a similar framework approach in Go,
-but none of them felt right to me. For some reason the same concepts do not resonate with Go.
-I didn't have better ideas, so I watched a few videos from conferences.
-Here are the talks I found most helpful and I use them as guidelines:</p>
-<ul class="simple">
-<li>Ben Johnson's <a class="reference external" href="https://www.youtube.com/watch?v=LMSbsW1Xpwg">Structuring Applications for Growth</a></li>
-<li>Brian Ketelsen's <a class="reference external" href="https://www.youtube.com/watch?v=MzTcsI6tn-0">Write Code Like the Go Team</a>,
-<a class="reference external" href="https://talks.bjk.fyi/gcru18-best.html#/">slides</a></li>
-<li>Kat Zien's <a class="reference external" href="https://www.youtube.com/watch?v=oL6JBUk6tj0">How Do You Structure Your Go Apps</a></li>
-<li>Peter Bourgon's <a class="reference external" href="https://www.youtube.com/watch?v=LHe1Cb_Ud_M">Ways To Do Things</a>.
-I tried his ideas in <a class="reference external" href="https://github.com/marselester/rascaldb/blob/master/rascaldb.go">RascalDB 😜</a>
-to serialize concurrent DB actions.</li>
-</ul>
-<p>I encourage you to watch those talks and go over code examples they provided.</p>
-<p>The following is my takeaway which could be completely misleading and far from the original ideas
-(just in case, you don't have to apply all of them together).
-If you feel something doesn't bring enough value in your case, just skip it, trust your intuition.
-Development requires many iterations to bounce ideas until the result becomes good enough.</p>
-<div class="section" id="know-your-domain">
-<h2>Know Your Domain</h2>
-<p>I like to start a new project on A4 paper and dump everything I know in free form
-(what the problem are you facing, can you solve it without writing code,
-what are possible solutions (pros/cons), terminology, system requirements, API endpoints, sketches,
-doodles, whatever gets your train of thoughts moving). Paper helps to get away from constraints of computer,
-I can write and draw without any programs which would otherwise have taken time and stolen my brain cycles.
-Paper helps me to stay focused — nothing blinks, pops up or rings, there is no urge to multitask
-(check email/Slack, switch between editor and console as if there is something new).</p>
-<p>Once you wrote everything down, you might realize there is not enough information to make progress.
-So you can reach out to stake holders and get more insights using your notes.
-Don't forget to write new info as well. It might take a few iterations when you finally establish
-common terminology, refine the actual project's goal, and cut unnecessary features/requirements.</p>
-<p>Now you have a mental picture of the project with clear deliverables.
-Based on that I like to spend time to come up with a concise project/repository name which
-summarizes nicely the project's goal and spirit (thesaurus comes to the rescue).
-As a next step I usually create README file where insights from the paper are documented.
-This time you want everyone in the world to understand what you learned about the project.
-This helps you to iterate once more as you're documenting in README, and the end result
-can be shared with coworkers (they might not understand your handwriting and doodles).
-If they have questions, that means you have a room for improvement, since other people
-don't have a context you obtained. Take your time and write it down, this will ensure that
-you will be able to get help with the project much easier (when you're on vacation or
-have to hand over the code). With some practice you'll anticipate questions and
-provide answers in README, so it won't take as much time from your coworkers next time.
-Keeping in mind that you are ultimately solving problems for your customers and
-designing the system and writing code for your coworkers (not just for yourself)
-helps to rigorously document as you go. Or else prepare to answer the same questions
-over and over again. In order to get better at documenting, I recommend reading
-<a class="reference external" href="http://www.writethedocs.org/guide/writing/beginners-guide-to-docs/">A beginner’s guide to writing documentation</a>
-and <a class="reference external" href="http://www.writethedocs.org/guide/">Documentation Guide</a>.</p>
-<p>Let's say you're building an API client, then it makes sense to start from
-a usage example in the README, since most of the documentation work is done by API provider.
-How will people download your library? How will they import it, does the path look concise and clear?
-How will your end user configure a client? What use cases your users might have (custom API domain,
-timeouts, logging, instrumentation)? Think of a few workflows and see how would you handle errors.
-Best case scenario is using your own library to reveal pain points.
-Check out <a class="reference external" href="https://github.com/marselester/bitgo-v2">one of my attempts</a> to find a decent layout of
-an API library. The library has a configurable client (you can instantiate many of them, e.g., one per coin)
-which allows to use a custom logger, http.Client, etc. It also has embedded services — things that know
-how to speak with particular API endpoints to operate API resources.</p>
-</div>
-<div class="section" id="getting-to-the-point">
-<h2>Getting to the Point</h2>
-<p>As you can see from the talks the main theme in Go application structure is heavily
-influenced by Domain-Driven Design (DDD). Using the research done on your project,
-you shall write down entities (as Go structs) of the domain model and services (as Go interfaces)
-which perform operations over those entities.</p>
-<p>I should mention that for simplicity's sake in my projects I decided to combine DDD &quot;service&quot; and
-&quot;repository&quot; concepts under &quot;service&quot; term.</p>
-<p>Let's proceed with listing minimal set of operations over the key entities to keep the scope small.
-It helps to imagine that there are different service implementations,
-an entity can be stored anywhere, for example, in Postgres, Kafka, memory, Redis,
-JSON file, remote API. But keep in mind semantics that storage of choice provides:
-getting a list of entities from Kafka and Postgres are hard to abstract (streaming vs quering).
-Moreover, if you do so, you might create unnecessary constraints for yourself.
-In reality, it is very unlikely that a project will change storages often,
-since you've chosen them for a reason (the choice of the storage is influenced
-by a problem you're solving, its constraints and guarantees you need).
-Most likely you've already chosen the storages in advance, so make sure you
-don't fight with interfaces you defined in your domain model. If you know your services
-need to share the same SQL transaction, embrace it in interfaces, for instance:</p>
-<div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">PaymentService</span> <span class="kd">interface</span> <span class="p">{</span>
-  <span class="nx">CreatePayment</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">tx</span> <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">Tx</span><span class="p">,</span> <span class="o">*</span><span class="nx">Payment</span><span class="p">)</span> <span class="kt">error</span>
-<span class="p">}</span>
-</pre></div>
-<p>Do you put all operations (add/list) into one service interface? I don't know.
-You have to decide. If you add an entity to Postgres, you expect to list them
-from Postgres as well. From this perspective &quot;add&quot; and &quot;list&quot; operations should be
-under the same interface. If in-memory storage can't implement the service interface,
-perhaps you don't have to enforce operation under the same interface,
-then probably it's ok to split it.</p>
-<p>Ben Johnson defines entities in a single package where domain model is described — the package
-shouldn’t have third party dependencies. Whereas Kat Zien in her demo created a package per service:
-&quot;adder&quot; package that adds beers and reviews, &quot;lister&quot; service lists beers and reviews.
-Each package defines its own beer and review structs.</p>
-<p>In my projects I isolate services implementation in a single package.
-For example, if I stored beer reviews in Kafka, I would have a kafka package which exposes
-a client and beer/review services embedded in it. The same applies to postgres package — two services use
-the same db connection pool and beer/review entities might appear in the same db transaction.</p>
-<p>During coding I combine the service implementations into a program (some server or
-a ctl tool) kept in cmd directory. That helps me to validate design ideas and notice any awkward
-component integrations. Similar to service implementations, try to think where the input and
-output could be coming from/to: standard input/output, http, rpc, db.</p>
-</div>
-<div class="section" id="an-example">
-<h2>An Example</h2>
-<p>Now let's have a look at <a class="reference external" href="https://github.com/marselester/distributed-payment">distributed payment</a>
-demo project where I explored an idea of payment transaction
-without atomic commit across 3 Kafka partitions.</p>
-<p>The domain model is defined in the repository root (note, you can place your packages
-in &quot;internal&quot; directory, so you don't mix them up with unrelated files):</p>
-<ul class="simple">
-<li><cite>wallet.go</cite> has <cite>Transfer</cite>, <cite>Payment</cite> entities, and services <cite>TransferService</cite>, <cite>PaymentService</cite>
-which can create and list the entities. Since the project is based on Kafka,
-the interfaces reflect that (<cite>partition</cite>, <cite>offset</cite> params). The services accept <cite>context.Context</cite>
-as a first argument, because we should be able to tell implementations to cancel operation.
-<a class="reference external" href="https://github.com/opentracing/opentracing-go">OpenTracing</a> can leverage context as well.
-Pay attention to a pointer/value semantics (share or not) in the service interfaces.
-Since an entity in DDD terms has a unique identity, a pointer semantics was used,
-hence <cite>*Transfer</cite> is passed to <cite>CreateTransfer()</cite> and returned from <cite>FromOffset()</cite>. Have a look at
-<a class="reference external" href="https://www.ardanlabs.com/blog/2017/06/design-philosophy-on-data-and-semantics.html">Design Philosophy On Data And Semantics</a>
-for more insights.</li>
-<li><cite>error.go</cite> contains errors which are relevant to the whole domain model,
-<a class="reference external" href="https://middlemost.com/failure-is-your-domain/">Failure is your Domain</a>.
-On implementation level there could be their own specific errors, for example, HTTP API errors in
-<cite>rest/error.go</cite> define JSON and validation errors.</li>
-<li><cite>log.go</cite> borrows <cite>Logger</cite> interface from Go kit. Since logging is an integral part of the system,
-placing it nearby the domain model seems justified. There is
-<a class="reference external" href="https://github.com/go-commons/commons/issues/1">Standard logger interface</a> discussion
-where the consensus is to emit events instead of logging in the library.
-Best practices and examples of how to emit events is still an
-<a class="reference external" href="https://github.com/go-commons/event/issues/1">open topic</a> at the time of writing.</li>
-</ul>
-<p>Implementations of the services defined in <cite>wallet.go</cite> are isolated in packages
-by their dependency name, for example, kafka, rest, mock, rocksdb.</p>
-<p>Package kafka implements wallet services and provides the Client access to them.
-There were two design options: embed the services to the Client struct or
-inject a service into each other. The example below would allow to have
-a swappable <cite>PaymentService</cite> (&quot;pg&quot; refers to a Postgres implementation):</p>
-<div class="highlight"><pre><span></span><span class="nx">kafka</span><span class="p">.</span><span class="nx">TransferService</span><span class="p">.</span><span class="nx">PaymentService</span> <span class="p">=</span> <span class="nx">pg</span><span class="p">.</span><span class="nx">NewPaymentService</span><span class="p">()</span>
-</pre></div>
-<p>On the other hand, grouping services in the Client would let services maintain DB transactions
-by sharing the same <cite>*sql.DB</cite>. Here is <cite>pg.Client</cite> example:</p>
-<div class="highlight"><pre><span></span><span class="c1">// Client represents a client to the underlying PostgreSQL data store.</span>
-<span class="kd">type</span> <span class="nx">Client</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="nx">Transfer</span> <span class="o">*</span><span class="nx">TransferService</span>
-  <span class="nx">Payment</span>  <span class="o">*</span><span class="nx">PaymentService</span>
-
-  <span class="nx">logger</span> <span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span>
-
-  <span class="nx">db</span>        <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">DB</span>
-  <span class="nx">transferQ</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span>
-  <span class="nx">paymentQ</span>  <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span>
-<span class="p">}</span>
-</pre></div>
-<p>In <a class="reference external" href="https://github.com/marselester/distributed-signup/blob/master/pg/user_service.go">distributed-signup</a>
-project a Client concept is baked into <cite>UserService</cite>, because it was the only service that
-needed access to Postgres.</p>
-<div class="highlight"><pre><span></span><span class="c1">// UserService reprensets a service to store signed up users.</span>
-<span class="kd">type</span> <span class="nx">UserService</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="nx">config</span> <span class="nx">Config</span>
-
-  <span class="nx">pool</span> <span class="o">*</span><span class="nx">pgx</span><span class="p">.</span><span class="nx">ConnPool</span>
-<span class="p">}</span>
-</pre></div>
-<p>Package rest is responsible for translating incoming HTTP requests to wallet domain and
-then translating results from wallet model back to HTTP responses.
-The package doesn't implement <cite>TransferService</cite> per se, it uses one in its Server.
-The REST-style API server itself is put together in
-<a class="reference external" href="https://github.com/marselester/distributed-payment/blob/master/cmd/transfer-server/main.go">cmd/transfer-server</a>.</p>
-<div class="highlight"><pre><span></span><span class="c1">// Server represents an HTTP API handler for wallet services.</span>
-<span class="c1">// It wraps a TransferService so we can provide different</span>
-<span class="c1">// implementations, e.g., Kafka or a mock.</span>
-<span class="kd">type</span> <span class="nx">Server</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="o">*</span><span class="nx">chi</span><span class="p">.</span><span class="nx">Mux</span>
-  <span class="nx">logger</span>          <span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span>
-  <span class="nx">transferService</span> <span class="nx">wallet</span><span class="p">.</span><span class="nx">TransferService</span>
-  <span class="nx">wopts</span>           <span class="nx">walletOption</span>
-<span class="p">}</span>
-</pre></div>
-<p>Originally in <a class="reference external" href="https://medium.com/wtf-dial/wtf-dial-http-api-d8800ccd605f">WTF Dial: HTTP API</a>
-Ben Johnson explained how to implement API properly and isolate http dependencies in wtf/http package.</p>
-<p>Package mock provides mock services to facilitate testing. For example, for most cases
-we do not need Kafka implementation of a transfer service to be used in HTTP API testing.</p>
-<p>Package rocksdb implements user requests deduplication using RocksDB to
-memorise already processed request IDs. Requests deduplication is an integral part of
-a distributed system, hence the domain model must embrace it.</p>
-<p>Everything is connected in cmd directory. Note, that the domain package is used everywhere.</p>
-<ul class="simple">
-<li><cite>cmd/transfer-server</cite> is HTTP API server to create money transfers which are stored in Kafka.
-It delegates the actual hard work to kafka and rest packages.</li>
-<li><cite>cmd/paymentd</cite> program is responsible for creating incoming &amp; outgoing payment pairs based on
-money transfer requests stored in Kafka.</li>
-<li><cite>cmd/accountantd</cite> is the last program in the pipeline. It sequentially reads Kafka messages
-from <cite>wallet.payment</cite> topic, deduplicates messages by request ID, and applies the changes to
-the account balances. Deduplication is provided by rocksdb package mentioned above.</li>
-</ul>
-<p>To wrap up, that's all I managed to recall :) I look forward for more talks on structuring Go applications.</p>
-</div>
-<p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+That helps to keep …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/golang.html">golang </a>
@@ -268,10 +495,9 @@ the account balances. Deduplication is provided by rocksdb package mentioned abo
 
 
 
-<p><a href="https://marselester.com/how-to-structure-go-projects.html#disqus_thread">comments</a></p>            </article>
-
-
-
+<p><a href="https://marselester.com/how-to-structure-go-projects.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/how-to-structure-go-projects.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
 
             <!-- /#posts-list -->
 
