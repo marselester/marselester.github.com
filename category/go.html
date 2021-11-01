@@ -51,125 +51,103 @@
         
 
             <article>
-                <a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"><h3 class="article-title">BPF: Go frontend for execsnoop</h3></a>
-<h6 class="subheader" title="2021-10-26T00:00:00+07:00">Tue 26 October 2021
+                <a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html"><h3 class="article-title">BPF: Go frontend for tcpconnect</h3></a>
+<h6 class="subheader" title="2021-11-01T00:00:00+07:00">Mon 01 November 2021
 </h6>
 
 
-<p>After reading Brendan Gregg's books about BPF I was excited to try and implement something in Go.
-At a first glance it turned out I would need to install LLVM, Clang, and kernel header dependencies to run a simple program.
-Fortunately <a href="https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html">BTF, CO-RE technologies</a>
-eliminate those dependencies though kernel &gt;=5.8 should be used.</p>
-<p>Since I don't know C, I resorted to <a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools">BCC libbpf-tools</a>,
-from which I picked a few BPF C programs (tcpconnect.bpf.c, execsnoop.bpf.c) to write Go frontends.
-Below I will be focusing on execsnoop,
-and you can find my experiments at <a href="https://github.com/marselester/libbpf-tools">github.com/marselester/libbpf-tools</a>.</p>
-<h2>Preparing the environment</h2>
-<p>First things first, I ran Ubuntu 21.04 in a virtual machine and installed Clang, Go.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹪ cat &gt; Vagrantfile &lt;&lt;CFG</span>
-<span class="go">Vagrant.configure(&quot;2&quot;) do |config|</span>
-<span class="go">    config.vm.box = &quot;ubuntu/hirsute64&quot;</span>
-<span class="go">end</span>
-<span class="go">CFG</span>
-<span class="go">﹪ vagrant up</span>
-<span class="go">﹪ vagrant ssh</span>
-<span class="go">﹩ sudo apt-get update</span>
-<span class="go">﹩ sudo apt-get install clang</span>
-<span class="go">﹩ sudo snap install go --classic</span>
-<span class="go">﹩ uname -nr</span>
-<span class="go">ubuntu-hirsute 5.11.0-37-generic</span>
-<span class="go">﹩ clang -v</span>
-<span class="go">Ubuntu clang version 12.0.0-3ubuntu1~21.04.2</span>
-</code></pre></div>
-
-<p>Then I made sure the execsnoop program from BCC toolkit showed new processes
-(it prints one line for every <code>execve</code> syscall),
-so I could compare its output later with the Go implementation.</p>
-<p>The ELF binary <code>execsnoop</code> was copied from a Docker container to the virtual machine as follows.
-In case you wanted to build the image yourself,
-here is a <a href="https://gist.github.com/marselester/ac8e4262742c90539c8c53f37d9a6965">Dockerfile</a>.</p>
+<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">In the previos BPF post</a>
+I shared my experiment of writing Go frontend for execsnoop.
+Here I would like to focus on tcpconnect, a BCC tool to trace new TCP active connections.
+It is useful for determining who is connecting to whom.
+This works by tracing the <code>tcp_v4_connect()</code> and <code>tcp_v6_connect()</code> kernel functions.</p>
+<p>As before, I tried to make Go tcpconnect's output match the original program,
+so I copied the ELF binary <code>tcpconnect</code> from a Docker container to the virtual machine
+(Ubuntu 21.04 from the previos post).</p>
 <div class="highlight"><pre><span></span><code><span class="go">﹪ docker run --name libbpf marselester/libbpf-tools:latest</span>
-<span class="go">﹪ docker cp libbpf:/opt/execsnoop .</span>
+<span class="go">﹪ docker cp libbpf:/opt/tcpconnect .</span>
 </code></pre></div>
 
-<p>The execsnoop captured <code>sshd</code> and <code>ls</code> processes, nice!</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo /vagrant/execsnoop</span>
-<span class="go">PCOMM            PID    PPID   RET ARGS</span>
-<span class="go">sshd             21254  832      0 /usr/sbin/sshd -D -R</span>
-<span class="go">ls               21361  21351    0 /usr/bin/ls --color=auto</span>
+<p>The tcpconnect captured <code>curl example.com</code> running in another terminal:</p>
+<ul>
+<li>PID <em>93336</em> is the process ID that opened the connection</li>
+<li>COMM <em>curl</em> is the process name that opened the connection, e.g., via a <code>connect()</code> syscall</li>
+<li>IP <em>4</em> stands for IP v4 address protocol</li>
+<li>SADDR <em>10.0.2.15</em> is the source address</li>
+<li>DADDR <em>93.184.216.34</em> is the destination address</li>
+<li>DPORT <em>80</em> is the destination port</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo /vagrant/tcpconnect</span>
+<span class="go">PID    COMM         IP SADDR            DADDR            DPORT</span>
+<span class="go">93336  curl         4  10.0.2.15        93.184.216.34    80</span>
 </code></pre></div>
 
-<p>It can be useful to check for short-lived processes that consume CPU resources,
-e.g., slow or failing application/container startup.</p>
 <h2>Embedding BPF in Go</h2>
-<p>My search for a BPF Go library stopped at <a href="https://github.com/cilium/ebpf">github.com/cilium/ebpf</a>
-since it had several examples to build upon, and folks from Cilium were <a href="https://github.com/cilium/ebpf/issues/303">very helpful</a>.</p>
-<p>The repository also contains <a href="https://github.com/cilium/ebpf/tree/master/cmd/bpf2go">bpf2go</a> tool to compile a BPF C source file into BPF bytecode.
-It emits Go files containing compiled BPF for little and big endian systems.</p>
-<p>I copied <a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/execsnoop.bpf.c">execsnoop.bpf.c</a>,
-<a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/execsnoop.h">execsnoop.h</a> files from BCC toolkit
-and tried to generate Go files.</p>
+<p>The tcpconnect BPF program comprises of
+<a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/tcpconnect.bpf.c">tcpconnect.bpf.c</a>,
+<a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/tcpconnect.h">tcpconnect.h</a>,
+and <a href="https://github.com/iovisor/bcc/blob/master/libbpf-tools/maps.bpf.h">maps.bpf.h</a> files.
+Let's copy them from BCC toolkit and generate Go files.</p>
 <div class="highlight"><pre><span></span><code><span class="go">﹩ cd /vagrant/</span>
-<span class="go">﹩ mkdir -p cmd/execsnoop/bpf/</span>
-<span class="go">﹩ curl -o cmd/execsnoop/bpf/execsnoop.bpf.c https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.bpf.c</span>
-<span class="go">﹩ curl -o cmd/execsnoop/bpf/execsnoop.h https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.h</span>
-<span class="go">﹩ cat &gt; cmd/execsnoop/main.go &lt;&lt;&lt;&#39;&#39;&#39;</span>
+<span class="go">﹩ mkdir -p cmd/tcpconnect/bpf/</span>
+<span class="go">﹩ curl -o cmd/tcpconnect/bpf/tcpconnect.bpf.c https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/tcpconnect.bpf.c</span>
+<span class="go">﹩ curl -o cmd/tcpconnect/bpf/tcpconnect.h https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/tcpconnect.h</span>
+<span class="go">﹩ curl -o cmd/tcpconnect/bpf/maps.bpf.h https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/maps.bpf.h</span>
+<span class="go">﹩ cat &gt; cmd/tcpconnect/main.go &lt;&lt;&lt;&#39;&#39;&#39;</span>
 <span class="go">package main</span>
 
-<span class="go">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 ExecSnoop ./bpf/execsnoop.bpf.c -- -I../../headers</span>
+<span class="go">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 TCPConnect ./bpf/tcpconnect.bpf.c -- -I../../headers</span>
 
 <span class="go">func main() {}</span>
 <span class="go">&#39;&#39;&#39;</span>
-<span class="go">﹩ go mod init execsnoop</span>
-<span class="go">﹩ go get github.com/cilium/ebpf/cmd/bpf2go</span>
-<span class="go">﹩ go generate ./cmd/execsnoop/</span>
-<span class="go">/vagrant/cmd/execsnoop/bpf/execsnoop.bpf.c:2:10: fatal error: &#39;vmlinux.h&#39; file not found</span>
+<span class="go">﹩ go generate ./cmd/tcpconnect/</span>
+<span class="go">/vagrant/cmd/tcpconnect/bpf/tcpconnect.bpf.c:9:10: fatal error: &#39;bpf/bpf_tracing.h&#39; file not found</span>
 </code></pre></div>
 
-<p>Unfortunately that didn't work because the <code>vmlinux.h</code> header was missing.
-This file contains kernel's type definitions that can be generated from the installed kernel using bpftool tool.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo apt-get install linux-tools-$(uname -r) linux-tools-common</span>
-<span class="go">﹩ bpftool btf dump file /sys/kernel/btf/vmlinux format c &gt; ./headers/vmlinux.h</span>
+<p>Since <code>bpf_tracing.h</code> file is missing, let's get it from ubuntu-kernel repository
+and run <code>go generate</code> again,
+but this time with <code>BPF_CFLAGS='-D__TARGET_ARCH_x86'</code> env var (a compiler flag) because
+<a href="https://elixir.bootlin.com/linux/latest/source/tools/lib/bpf/bpf_tracing.h#L5">bpf_tracing.h</a> expects it.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ curl -o ./headers/bpf/bpf_tracing.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/hirsute/plain/tools/lib/bpf/bpf_tracing.h</span>
 </code></pre></div>
 
-<p>There were three more header files missing that I copied from ubuntu-kernel and libbpf repositories.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ mkdir -p headers/bpf/</span>
-<span class="go">﹩ curl -o ./headers/bpf/bpf_helpers.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/hirsute/plain/tools/lib/bpf/bpf_helpers.h</span>
-<span class="go">﹩ curl -o ./headers/bpf/bpf_helper_defs.h https://raw.githubusercontent.com/libbpf/libbpf/master/src/bpf_helper_defs.h</span>
-<span class="go">﹩ curl -o ./headers/bpf/bpf_core_read.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/hirsute/plain/tools/lib/bpf/bpf_core_read.h</span>
+<p>It worked out 😬.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ BPF_CFLAGS=&#39;-D__TARGET_ARCH_x86&#39; go generate ./cmd/tcpconnect/</span>
+<span class="go">Compiled /vagrant/cmd/tcpconnect/tcpconnect_bpfel.o</span>
+<span class="go">Wrote /vagrant/cmd/tcpconnect/tcpconnect_bpfel.go</span>
+<span class="go">Compiled /vagrant/cmd/tcpconnect/tcpconnect_bpfeb.o</span>
+<span class="go">Wrote /vagrant/cmd/tcpconnect/tcpconnect_bpfeb.go</span>
+<span class="go">﹩ sudo go run ./cmd/tcpconnect/</span>
 </code></pre></div>
 
-<p>Finally the Go files were generated and the BPF program was loaded into the kernel from an ELF.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ go generate ./cmd/execsnoop/</span>
-<span class="go">Compiled /vagrant/cmd/execsnoop/execsnoop_bpfel.o</span>
-<span class="go">Wrote /vagrant/cmd/execsnoop/execsnoop_bpfel.go</span>
-<span class="go">Compiled /vagrant/cmd/execsnoop/execsnoop_bpfeb.o</span>
-<span class="go">Wrote /vagrant/cmd/execsnoop/execsnoop_bpfeb.go</span>
-<span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
+<p>BPF programs loading looks very similar to Go execsnoop version,
+though instead of calling <code>LoadTCPConnectObjects()</code> the <code>LoadTCPConnect()</code> is called to
+parse an ELF file into <code>spec</code> struct (a collection of BPF maps and programs) and
+replace constants in the C program to filter connections by PID or UID.
+Here is how they are defined in <code>tcpconnect.bpf.c</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">const</span> <span class="k">volatile</span> <span class="kt">uid_t</span> <span class="n">filter_uid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+<span class="k">const</span> <span class="k">volatile</span> <span class="kt">pid_t</span> <span class="n">filter_pid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 </code></pre></div>
 
-<p>Note, bpf2go tool uses Clang to compile the BPF program:</p>
-<ul>
-<li><code>-cflags $BPF_CFLAGS</code> are flags passed to the compiler from the <code>$BPF_CFLAGS</code> env var,
-  for example, <code>BPF_CFLAGS='-D__TARGET_ARCH_x86' go generate</code> is expected in
-  <a href="https://elixir.bootlin.com/linux/latest/source/tools/lib/bpf/bpf_tracing.h#L5">bpf_tracing.h</a> header
-  (it is not used in execsnoop though)</li>
-<li><code>-cc clang-12</code> is a Clang binary name</li>
-<li><code>ExecSnoop</code> is a name used by a code generation</li>
-<li><code>./bpf/execsnoop.bpf.c</code> is a path to the BPF C file that is compiled</li>
-<li><code>-- -I../../headers</code> are compiler options that indicate where to find header files</li>
-</ul>
+<p>After the constants are rewritten, the BPF programs get loaded into the kernel with <code>spec.LoadAndAssign()</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&quot;flag&quot;</span>
     <span class="s">&quot;log&quot;</span>
 
     <span class="s">&quot;golang.org/x/sys/unix&quot;</span>
 <span class="p">)</span>
 
-<span class="c1">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 ExecSnoop ./bpf/execsnoop.bpf.c -- -I../../headers</span>
+<span class="c1">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 TCPConnect ./bpf/tcpconnect.bpf.c -- -I../../headers</span>
 
 <span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="p">(</span>
+        <span class="nx">filterUID</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">Int</span><span class="p">(</span><span class="s">&quot;uid&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;trace this UID only&quot;</span><span class="p">)</span>
+        <span class="nx">filterPID</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">Int</span><span class="p">(</span><span class="s">&quot;pid&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;trace this PID only&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="nx">flag</span><span class="p">.</span><span class="nx">Parse</span><span class="p">()</span>
+
     <span class="c1">// Increase the resource limit of the current process to provide sufficient space</span>
     <span class="c1">// for locking memory for the BPF maps.</span>
     <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">Setrlimit</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIMIT_MEMLOCK</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">Rlimit</span><span class="p">{</span>
@@ -180,12 +158,30 @@ This file contains kernel's type definitions that can be generated from the inst
         <span class="k">return</span>
     <span class="p">}</span>
 
+    <span class="c1">// Replace constants in the BPF C program to filter connections by PID or UID.</span>
+    <span class="nx">spec</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">LoadTCPConnect</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load collection spec: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">bpfConst</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{})</span>
+    <span class="k">if</span> <span class="o">*</span><span class="nx">filterUID</span> <span class="p">&gt;</span> <span class="o">-</span><span class="mi">1</span> <span class="p">{</span>
+        <span class="nx">bpfConst</span><span class="p">[</span><span class="s">&quot;filter_uid&quot;</span><span class="p">]</span> <span class="p">=</span> <span class="nb">uint32</span><span class="p">(</span><span class="o">*</span><span class="nx">filterUID</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="o">*</span><span class="nx">filterPID</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="nx">bpfConst</span><span class="p">[</span><span class="s">&quot;filter_pid&quot;</span><span class="p">]</span> <span class="p">=</span> <span class="nb">int32</span><span class="p">(</span><span class="o">*</span><span class="nx">filterPID</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">spec</span><span class="p">.</span><span class="nx">RewriteConstants</span><span class="p">(</span><span class="nx">bpfConst</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to rewrite BPF constants: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+
     <span class="c1">// Load the BPF program into the kernel from an ELF.</span>
-    <span class="c1">// ExecSnoopObjects contains all objects (BPF programs and maps) after they have been loaded into the kernel:</span>
-    <span class="c1">// TracepointSyscallsSysEnterExecve and TracepointSyscallsSysExitExecve BPF programs,</span>
-    <span class="c1">// Events and Execs BPF maps.</span>
-    <span class="nx">objs</span> <span class="o">:=</span> <span class="nx">ExecSnoopObjects</span><span class="p">{}</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">LoadExecSnoopObjects</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="c1">// TCPConnectObjects contains all objects (BPF programs and maps) after they have been loaded into the kernel:</span>
+    <span class="c1">// - TcpV4Connect, TcpV4ConnectRet, TcpV6Connect, TcpV6ConnectRet BPF programs,</span>
+    <span class="c1">// - Events, Ipv4Count, Ipv6Count, Sockets BPF maps.</span>
+    <span class="nx">objs</span> <span class="o">:=</span> <span class="nx">TCPConnectObjects</span><span class="p">{}</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">spec</span><span class="p">.</span><span class="nx">LoadAndAssign</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
         <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF programs and maps: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
         <span class="k">return</span>
     <span class="p">}</span>
@@ -193,41 +189,64 @@ This file contains kernel's type definitions that can be generated from the inst
 <span class="p">}</span>
 </code></pre></div>
 
-<h2>Tracepoints</h2>
-<p>The BPF program is executed on events such as tracepoints.
-Tracepoint is a static instrumentation (hard-coded to the source code) of the Linux kernel,
-see <code>/sys/kernel/debug/tracing/events</code> to find available tracepoints.</p>
-<p>From looking at BPF C source file <code>execsnoop.bpf.c</code> we can see two tracepoints instrumented:
-the entry and the return of the <code>execve</code> syscall so that
-the process ID, command name, arguments, and the return value can be printed.</p>
-<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_enter_execve&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">tracepoint__syscalls__sys_enter_execve</span><span class="p">(</span><span class="k">struct</span> <span class="n">trace_event_raw_sys_enter</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<h2>Kprobes</h2>
+<p>A BPF program is executed on events such as kprobes.
+Kprobes provide kernel dynamic instrumentation for any kernel function,
+and they can instrument instructions within functions.
+There is also an interface called kretprobes for instrumenting when functions return, and their return values.</p>
+<p>The <code>tcpconnect.bpf.c</code> lists four BPF programs that trace events related to creating TCP sessions:
+enter and exit of <code>tcp_v4_connect()</code> and <code>tcp_v6_connect()</code> kernel functions.</p>
+<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kprobe/tcp_v4_connect&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">BPF_KPROBE</span><span class="p">(</span><span class="n">tcp_v4_connect</span><span class="p">,</span> <span class="k">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">enter_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">sk</span><span class="p">);</span>
+<span class="p">}</span>
 
-<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_exit_execve&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">tracepoint__syscalls__sys_exit_execve</span><span class="p">(</span><span class="k">struct</span> <span class="n">trace_event_raw_sys_exit</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kretprobe/tcp_v4_connect&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">BPF_KRETPROBE</span><span class="p">(</span><span class="n">tcp_v4_connect_ret</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ret</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">exit_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">ret</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kprobe/tcp_v6_connect&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">BPF_KPROBE</span><span class="p">(</span><span class="n">tcp_v6_connect</span><span class="p">,</span> <span class="k">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">enter_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">sk</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kretprobe/tcp_v6_connect&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">BPF_KRETPROBE</span><span class="p">(</span><span class="n">tcp_v6_connect_ret</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ret</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">exit_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">ret</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+<span class="p">}</span>
 </code></pre></div>
 
-<p><code>SEC</code> declares an ELF section named <code>tracepoint/syscalls/sys_enter_execve</code>, followed by a BPF program.
-A user-level loader may use this section header to determine where to attach a program.</p>
-<p><code>tracepoint__syscalls__sys_enter_execve</code> function is called for the tracepoint event.
-The struct <code>trace_event_raw_sys_enter</code> argument contains register state and BPF context.
-From the registers, function arguments <code>ctx-&gt;args</code> and return value <code>ctx-&gt;ret</code> can be read.</p>
-<p>On Go side I attached the BPF program to <code>syscalls/sys_enter_execve</code> tracepoint using <code>github.com/cilium/ebpf/link</code> package.
-The <code>link.Tracepoint()</code> function returns a link (it represents a program attached to a BPF hook)
-which is later used to detach the program.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">tpEnter</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span> <span class="s">&quot;sys_enter_execve&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysEnterExecve</span><span class="p">)</span>
+<p>On Go side I attached the BPF programs to kprobes/kretprobes.
+The <code>link.Kprobe()</code>, <code>link.Kretprobe</code> functions return a link (it represents a program attached to a BPF hook)
+which is later used to detach a BPF program.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">tcpv4kp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Kprobe</span><span class="p">(</span><span class="s">&quot;tcp_v4_connect&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV4Connect</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_enter_execve tracepoint: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v4_connect kprobe: %s&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
     <span class="k">return</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">tpEnter</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<span class="k">defer</span> <span class="nx">tcpv4kp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
 
-<span class="nx">tpExit</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span> <span class="s">&quot;sys_exit_execve&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysExitExecve</span><span class="p">)</span>
+<span class="nx">tcpv4krp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Kretprobe</span><span class="p">(</span><span class="s">&quot;tcp_v4_connect&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV4ConnectRet</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_exit_execve tracepoint: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v4_connect kretprobe: %s&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
     <span class="k">return</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">tpExit</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<span class="k">defer</span> <span class="nx">tcpv4krp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+
+<span class="nx">tcpv6kp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Kprobe</span><span class="p">(</span><span class="s">&quot;tcp_v6_connect&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV6Connect</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v6_connect kprobe: %s&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">tcpv6kp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+
+<span class="nx">tcpv6krp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Kretprobe</span><span class="p">(</span><span class="s">&quot;tcp_v6_connect&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV6ConnectRet</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v6_connect kretprobe: %s&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="k">return</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">tcpv6krp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
 </code></pre></div>
 
 <p>The <code>bpf_perf_event_output()</code> C function emits records to user space via a BPF map <code>events</code>
@@ -238,14 +257,14 @@ that accesses perf per-CPU ring buffers.</p>
     <span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
 <span class="p">}</span> <span class="n">events</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
 
-<span class="k">struct</span> <span class="n">event</span> <span class="n">e</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">event</span> <span class="n">e</span> <span class="o">=</span> <span class="p">{};</span>
 <span class="n">bpf_perf_event_output</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">events</span><span class="p">,</span> <span class="n">BPF_F_CURRENT_CPU</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">e</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="p">));</span>
 </code></pre></div>
 
 <p>In user space the events are read using <code>github.com/cilium/ebpf/perf</code> package.</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// Open a perf event reader from user space on the PERF_EVENT_ARRAY map</span>
 <span class="c1">// defined in the BPF C program.</span>
-<span class="nx">rd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopMaps</span><span class="p">.</span><span class="nx">Events</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Getpagesize</span><span class="p">())</span>
+<span class="nx">rd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectMaps</span><span class="p">.</span><span class="nx">Events</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Getpagesize</span><span class="p">())</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
     <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to create perf event reader: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
     <span class="k">return</span>
@@ -264,71 +283,109 @@ that accesses perf per-CPU ring buffers.</p>
 <span class="p">}</span>
 </code></pre></div>
 
-<p>In order to verify that the events are captured, I ran the Go program and <code>ls</code> in another terminal.
-Luckily it worked!</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
-<span class="go">received from perf ring buffer: ?????ls/usr/bin/ls--color=auto</span>
+<p>Running <code>curl</code> shows that the TCP connect events are captured.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/tcpconnect/</span>
+<span class="go">received from perf ring buffer:</span>
+<span class="go">]??&quot;curl???0x??P</span>
 </code></pre></div>
 
 <h2>Decoding events</h2>
-<p>I wanted to match the output of the original execsnoop program, for that I needed to decode <code>record.RawSample</code>
-which contains bytes of the <code>event</code> C struct into a Go struct.</p>
+<p>Let's decode the events and print them as the original tcpconnect program does.
+As mentioned before, the <code>event</code> Go struct should match its C counterpart.</p>
 <div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="p">{</span>
-    <span class="kt">pid_t</span> <span class="n">pid</span><span class="p">;</span>
-    <span class="kt">pid_t</span> <span class="n">ppid</span><span class="p">;</span>
-    <span class="kt">uid_t</span> <span class="n">uid</span><span class="p">;</span>
-    <span class="n">int32</span> <span class="n">retval</span><span class="p">;</span> <span class="c1">// it&#39;s int in https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.h</span>
-    <span class="n">int32</span> <span class="n">args_count</span><span class="p">;</span> <span class="c1">// int</span>
-    <span class="n">u32</span> <span class="n">args_size</span><span class="p">;</span> <span class="c1">// unsigned int</span>
-    <span class="kt">char</span> <span class="n">comm</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
-    <span class="kt">char</span> <span class="n">args</span><span class="p">[</span><span class="mi">7680</span><span class="p">];</span>
+    <span class="k">union</span> <span class="p">{</span>
+        <span class="n">__u32</span> <span class="n">saddr_v4</span><span class="p">;</span>
+        <span class="n">__u8</span> <span class="n">saddr_v6</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+    <span class="p">};</span>
+    <span class="k">union</span> <span class="p">{</span>
+        <span class="n">__u32</span> <span class="n">daddr_v4</span><span class="p">;</span>
+        <span class="n">__u8</span> <span class="n">daddr_v6</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+    <span class="p">};</span>
+    <span class="kt">char</span> <span class="n">task</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
+    <span class="n">__u64</span> <span class="n">ts_us</span><span class="p">;</span>
+    <span class="n">__u32</span> <span class="n">af</span><span class="p">;</span> <span class="c1">// AF_INET or AF_INET6</span>
+    <span class="n">__u32</span> <span class="n">pid</span><span class="p">;</span>
+    <span class="n">__u32</span> <span class="n">uid</span><span class="p">;</span>
+    <span class="n">__u16</span> <span class="n">dport</span><span class="p">;</span>
 <span class="p">};</span>
 </code></pre></div>
 
-<p>Go <code>event</code> struct represents a perf event sent to user space from the BPF program running in the kernel.
-Note, that it should match the C event struct, and both C and Go structs must be aligned the same way.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">type</span> <span class="nx">event</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="c1">// PID is the process ID.</span>
-    <span class="nx">PID</span> <span class="kt">int32</span>
-    <span class="c1">// PPID is the process ID of the parent of this process.</span>
-    <span class="nx">PPID</span> <span class="kt">int32</span>
-    <span class="c1">// UID is the process user ID, e.g., 1000.</span>
-    <span class="nx">UID</span> <span class="kt">uint32</span>
-    <span class="c1">// Retval is the return value of the execve().</span>
-    <span class="nx">Retval</span> <span class="kt">int32</span>
-    <span class="c1">// ArgsCount is a number of arguments.</span>
-    <span class="nx">ArgsCount</span> <span class="kt">int32</span>
-    <span class="c1">// ArgSize is a size of arguments in bytes.</span>
-    <span class="nx">ArgsSize</span> <span class="kt">uint32</span>
-    <span class="c1">// Comm is the parent process/command name, e.g., bash.</span>
+<p>I wasn't sure how to represent <code>union { ... }</code> in Go, so allocating 16-byte slice worked well,
+since the union is only as big as necessary to hold its largest member (IPv6 address).</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// event represents a perf event sent to user space from the BPF program running in the kernel.</span>
+<span class="c1">// Note, that it must match the C event struct, and both C and Go structs must be aligned the same way.</span>
+<span class="kd">type</span> <span class="nx">event</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// SrcAddr is the source address.</span>
+    <span class="nx">SrcAddr</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
+    <span class="c1">// DstAddr is the destination address.</span>
+    <span class="nx">DstAddr</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
+    <span class="c1">// Comm is the process name that opened the connection.</span>
     <span class="nx">Comm</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
+    <span class="c1">// Timestamp is the timestamp in microseconds.</span>
+    <span class="nx">Timestamp</span> <span class="kt">uint64</span>
+    <span class="c1">// AddrFam is the address family, 2 is AF_INET (IPv4), 10 is AF_INET6 (IPv6).</span>
+    <span class="nx">AddrFam</span> <span class="kt">uint32</span>
+    <span class="c1">// PID is the process ID that opened the connection.</span>
+    <span class="nx">PID</span> <span class="kt">uint32</span>
+    <span class="c1">// UID is the process user ID.</span>
+    <span class="nx">UID</span> <span class="kt">uint32</span>
+    <span class="c1">// DstPort is the destination port (uint16 in C struct).</span>
+    <span class="c1">// Note, network byte order is big-endian.</span>
+    <span class="nx">DstPort</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="kt">byte</span>
 <span class="p">}</span>
 </code></pre></div>
 
-<p>The variable length <code>args</code> field is omitted on Go side and decoded manually,
-because I kept getting <code>failed to parse perf event: unexpected EOF error</code>.
-Perhaps the Go program got trailing garbage from the ring buffer which couldn't be unmarshalled.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// The data submitted via bpf_perf_event_output.</span>
-<span class="c1">// Due to a kernel bug, this can contain between 0 and 7 bytes of trailing</span>
-<span class="c1">// garbage from the ring depending on the input sample&#39;s length.</span>
-<span class="c1">// See https://pkg.go.dev/github.com/cilium/ebpf/perf#Record.</span>
-<span class="nx">RawSample</span> <span class="p">[]</span><span class="kt">byte</span>
+<p>The source and destination addresses were pretty-printed using <code>net.IP</code> type
+(either 4-byte (IPv4) or 16-byte (IPv6) slice) depending on the address family
+(<code>2</code> is IPv4, <code>10</code> is IPv6).</p>
+<p>The destination port (unsigned 16-bit integer in C struct) was translated with
+<code>binary.BigEndian.Uint16()</code> function because <code>DstPort</code> byte order is big-endian
+(most significant bits first).</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span> <span class="nx">printEvent</span><span class="p">(</span><span class="nx">w</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Writer</span><span class="p">,</span> <span class="nx">e</span> <span class="o">*</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="p">(</span>
+        <span class="nx">srcAddr</span><span class="p">,</span> <span class="nx">dstAddr</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span>
+        <span class="nx">ipVer</span>            <span class="kt">byte</span>
+    <span class="p">)</span>
+    <span class="k">switch</span> <span class="nx">e</span><span class="p">.</span><span class="nx">AddrFam</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="nx">srcAddr</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">SrcAddr</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
+        <span class="nx">dstAddr</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstAddr</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
+        <span class="nx">ipVer</span> <span class="p">=</span> <span class="mi">4</span>
+    <span class="k">case</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="nx">srcAddr</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">SrcAddr</span><span class="p">[:])</span>
+        <span class="nx">dstAddr</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstAddr</span><span class="p">[:])</span>
+        <span class="nx">ipVer</span> <span class="p">=</span> <span class="mi">6</span>
+    <span class="p">}</span>
+
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintf</span><span class="p">(</span>
+        <span class="nx">w</span><span class="p">,</span>
+        <span class="s">&quot;%-6d %-12s %-2d %-16s %-16s %d\n&quot;</span><span class="p">,</span>
+        <span class="nx">e</span><span class="p">.</span><span class="nx">PID</span><span class="p">,</span>
+        <span class="nx">bytes</span><span class="p">.</span><span class="nx">TrimRight</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Comm</span><span class="p">[:],</span> <span class="s">&quot;\x00&quot;</span><span class="p">),</span>
+        <span class="nx">ipVer</span><span class="p">,</span>
+        <span class="nx">srcAddr</span><span class="p">,</span>
+        <span class="nx">dstAddr</span><span class="p">,</span>
+        <span class="nx">binary</span><span class="p">.</span><span class="nx">BigEndian</span><span class="p">.</span><span class="nx">Uint16</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstPort</span><span class="p">[:]),</span>
+    <span class="p">)</span>
+<span class="p">}</span>
 </code></pre></div>
 
-<p>Timo Beckers in Cilium's Slack channel recommended to check alignment and hand-write an unmarshaller.
-Here you can find my attempts to verify alignments <a href="https://github.com/marselester/libbpf-tools/pull/3">#3</a>
-with alignchecker program.</p>
-<blockquote>
-<p>Everything up until ArgsCount should be aligned on 8 bytes, but I'd expect the Go compiler to insert 4 bytes of padding between ArgsSize and Args, which would lead to an underrun on the C side. I've found hand-writing binary unmarshalers for these structs to be the most robust, but also the most annoying if your event format changes frequently.</p>
-<p>Cilium has a few alignchecker.go files if you're looking to dive deeper, we compare the DWARF info from the eBPF ELFs to Go struct fields annotated with align tags to make sure C and Go alignment corresponds</p>
-</blockquote>
-<p><code>binary.Read()</code> is used to read structured binary data from <code>record.RawSample</code> into the <code>event</code> struct.
-The remaining bytes belong to <code>args</code> field and just printed.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// eventSize is the event struct size in bytes, i.e., unsafe.Sizeof(e).</span>
-<span class="c1">// It&#39;s used to obtain the variable length args from the perf record.</span>
-<span class="kd">const</span> <span class="nx">eventSize</span> <span class="p">=</span> <span class="mi">40</span>
+<p>Putting it all together we've got a Go frontend for tcpconnect with ability
+to filter connections by PID and UID 🎉.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/tcpconnect/</span>
+<span class="go">PID    COMM         IP SADDR            DADDR            DPORT</span>
+<span class="go">189217 curl         4  10.0.2.15        93.184.216.34    80</span>
+<span class="go">﹩ ./tcpconnect -h</span>
+<span class="go">Usage of tcpconnect:</span>
+<span class="go">  -pid int</span>
+<span class="go">        trace this PID only</span>
+<span class="go">  -uid int</span>
+<span class="go">        trace this UID only (default -1)</span>
+</code></pre></div>
 
-<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%-16s %-6s %-6s %3s %s\n&quot;</span><span class="p">,</span> <span class="s">&quot;PCOMM&quot;</span><span class="p">,</span> <span class="s">&quot;PID&quot;</span><span class="p">,</span> <span class="s">&quot;PPID&quot;</span><span class="p">,</span> <span class="s">&quot;RET&quot;</span><span class="p">,</span> <span class="s">&quot;ARGS&quot;</span><span class="p">)</span>
+<p>You can find all the source code at
+<a href="https://github.com/marselester/libbpf-tools">github.com/marselester/libbpf-tools</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%-6s %-12s %-2s %-16s %-16s %s\n&quot;</span><span class="p">,</span> <span class="s">&quot;PID&quot;</span><span class="p">,</span> <span class="s">&quot;COMM&quot;</span><span class="p">,</span> <span class="s">&quot;IP&quot;</span><span class="p">,</span> <span class="s">&quot;SADDR&quot;</span><span class="p">,</span> <span class="s">&quot;DADDR&quot;</span><span class="p">,</span> <span class="s">&quot;DPORT&quot;</span><span class="p">)</span>
 <span class="k">for</span> <span class="p">{</span>
     <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
     <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
@@ -350,114 +407,12 @@ The remaining bytes belong to <code>args</code> field and just printed.</p>
         <span class="o">&amp;</span><span class="nx">e</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to parse perf event: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to parse perf event: %#+v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
         <span class="k">continue</span>
     <span class="p">}</span>
 
-    <span class="nx">args</span> <span class="o">:=</span> <span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">[</span><span class="nx">eventSize</span><span class="p">:]</span>
-
-    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span>
-        <span class="s">&quot;%-16s %-6d %-6d %3d %s\n&quot;</span><span class="p">,</span>
-        <span class="nx">bytes</span><span class="p">.</span><span class="nx">TrimRight</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Comm</span><span class="p">[:],</span> <span class="s">&quot;\x00&quot;</span><span class="p">),</span>
-        <span class="nx">e</span><span class="p">.</span><span class="nx">PID</span><span class="p">,</span>
-        <span class="nx">e</span><span class="p">.</span><span class="nx">PPID</span><span class="p">,</span>
-        <span class="nx">e</span><span class="p">.</span><span class="nx">Retval</span><span class="p">,</span>
-        <span class="nx">strings</span><span class="p">.</span><span class="nx">ReplaceAll</span><span class="p">(</span>
-            <span class="nb">string</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">Trim</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="s">&quot;\x00&quot;</span><span class="p">)),</span>
-            <span class="s">&quot;\x00&quot;</span><span class="p">,</span>
-            <span class="s">&quot; &quot;</span><span class="p">,</span>
-        <span class="p">),</span>
-    <span class="p">)</span>
+    <span class="nx">printEvent</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">e</span><span class="p">)</span>
 <span class="p">}</span>
-</code></pre></div>
-
-<p>The resulting output of the Go execsnoop program is very close to the original 🎉.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/execsnoop/</span>
-<span class="go">PCOMM            PID    PPID   RET ARGS</span>
-<span class="go">ls               69672  60093    0 /usr/bin/ls --color=auto</span>
-<span class="go">sh               69783  69782    0 /bin/sh -c    cd / &amp;&amp; run-parts --report /etc/cron.hourly</span>
-<span class="go">run-parts        69784  69783    0 /usr/bin/run-parts --report /etc/cron.hourly</span>
-</code></pre></div>
-
-<p>You can find all the source code at
-<a href="https://github.com/marselester/libbpf-tools">github.com/marselester/libbpf-tools</a>.</p>
-<h2>Appendix</h2>
-<p><a href="https://www.brendangregg.com/bpf-performance-tools-book.html">BPF performance tools</a> book
-aided to navigate BPF C code.
-Here are a few notes that are relevant to execsnoop program.</p>
-<p>A BPF program has to use <a href="https://elixir.bootlin.com/linux/v5.11/source/include/uapi/linux/bpf.h#L712">helpers</a>
-because it can't access arbitrary memory (outside of BPF) and can't call arbitrary kernel functions.
-The <code>execsnoop.bpf.c</code> makes use of the following helpers.</p>
-<p><code>bpf_probe_read_user(dst, size, unsafe_ptr)</code> safely attempts to read <em>size</em> bytes from user space address
-<em>unsafe_ptr</em> and stores the data in <em>dst</em>.</p>
-<p><code>bpf_get_current_pid_tgid()</code> returns an unsigned 64-bit integer containing the current TGID (what user space calls the PID) in the upper bits
-and the current PID (what user space calls the kernel thread ID) in the lower bits.</p>
-<div class="highlight"><pre><span></span><code><span class="n">u64</span> <span class="n">id</span> <span class="o">=</span> <span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span>
-<span class="kt">pid_t</span> <span class="n">pid</span> <span class="o">=</span> <span class="p">(</span><span class="kt">pid_t</span><span class="p">)</span><span class="n">id</span><span class="p">;</span>
-<span class="kt">pid_t</span> <span class="n">tgid</span> <span class="o">=</span> <span class="n">id</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">;</span>
-<span class="n">e</span><span class="o">-&gt;</span><span class="n">pid</span> <span class="o">=</span> <span class="n">tgid</span><span class="p">;</span>
-</code></pre></div>
-
-<p><code>bpf_get_current_uid_gid()</code> returns a u64 integer containing the current GID in the upper bits
-and UID in the lower bits.</p>
-<div class="highlight"><pre><span></span><code><span class="kt">uid_t</span> <span class="n">uid</span> <span class="o">=</span> <span class="p">(</span><span class="n">u32</span><span class="p">)</span><span class="n">bpf_get_current_uid_gid</span><span class="p">();</span>
-</code></pre></div>
-
-<p><code>bpf_get_current_task()</code> returns a pointer to the current (on-CPU)
-<a href="https://elixir.bootlin.com/linux/v5.11/source/include/linux/sched.h#L649">task struct</a> (a process).
-This contains many details about the running process and links to other structs containing system state.</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">t</span><span class="p">;</span>
-<span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span><span class="o">*</span><span class="p">)</span><span class="n">bpf_get_current_task</span><span class="p">();</span>
-</code></pre></div>
-
-<p><code>bpf_get_current_comm(buf, buf_size)</code> copies the task name to the buffer.</p>
-<div class="highlight"><pre><span></span><code><span class="n">bpf_get_current_comm</span><span class="p">(</span><span class="o">&amp;</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">));</span>
-</code></pre></div>
-
-<p><code>bpf_perf_event_output(ctx, map, data, size)</code> writes data to the <code>perf_event</code> ring buffers;
-this is used for per-event output.</p>
-<p><code>bpf_map_lookup_elem(map, key)</code> finds a key in a map and returns its value (pointer).</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="o">*</span><span class="n">e</span><span class="p">;</span>
-<span class="n">e</span> <span class="o">=</span> <span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pid</span><span class="p">);</span>
-</code></pre></div>
-
-<p><code>bpf_map_update_elem(map, key, value, flags)</code> atomically updates the value of the entry selected by key.</p>
-<div class="highlight"><pre><span></span><code><span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">event</span> <span class="n">empty_event</span> <span class="o">=</span> <span class="p">{};</span>
-
-<span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_HASH</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="mi">10240</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kt">pid_t</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="k">struct</span> <span class="n">event</span><span class="p">);</span>
-<span class="p">}</span> <span class="n">execs</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
-
-<span class="k">if</span> <span class="p">(</span><span class="n">bpf_map_update_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">empty_event</span><span class="p">,</span> <span class="n">BPF_NOEXIST</span><span class="p">))</span>
-    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-</code></pre></div>
-
-<p>The <em>execs</em> is declared of type <code>BPF_MAP_TYPE_HASH</code> (a hash table).
-The key is a <code>pid_t</code>, and the value is struct <code>event</code>.
-<em>BPF_NOEXIST</em> flag specifies that the entry for key must not exist in the map.</p>
-<p>BPF supports the following map types:</p>
-<ul>
-<li><code>BPF_MAP_TYPE_HASH</code> is a hash table: key/value pairs</li>
-<li><code>BPF_MAP_TYPE_ARRAY</code> is an array of elements</li>
-<li><code>BPF_MAP_TYPE_PERF_EVENT_ARRAY</code> is an interface to the <code>perf_event</code> ring buffers
-  for emitting trace records to user space</li>
-<li><code>BPF_MAP_TYPE_PERCPU_HASH</code> is a faster hash table maintained on a per-CPU basis</li>
-<li><code>BPF_MAP_TYPE_STACK_TRACE</code> is a storage for stack traces, indexed by stack IDs</li>
-<li><code>BPF_MAP_TYPE_STACK</code> is a storage for stack traces</li>
-</ul>
-<p>There are three ways to output data from kernel to user:</p>
-<ul>
-<li><code>BPF_PERF_OUTPUT()</code> is a way to send per-event details to user space, via a custom struct you define.</li>
-<li>BPF maps using <code>bpf_perf_event_output()</code> (periodically read from user space)</li>
-<li><code>bpf_trace_printk()</code> writes to trace_pipe (debugging only).
-  I wasn't sure about <code>pid_t</code> size so I used <code>bpf_printk("the PID is %d", sizeof(pid));</code>
-  and printed the trace buffer as follows (see <a href="https://nakryiko.com/posts/bpf-tips-printk/">BPF tips &amp; tricks</a>).</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo cat /sys/kernel/debug/tracing/trace_pipe</span>
-<span class="go">&lt;...&gt;-487422  [001] .... 544705.474270: 0: the PID is 4</span>
 </code></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
@@ -467,11 +422,36 @@ The key is a <code>pid_t</code>, and the value is struct <code>event</code>.
 
 
 
-<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html#disqus_thread">comments</a></p>            </article>
+<p><a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html#disqus_thread">comments</a></p>            </article>
 
 
                 <hr  class="gradient"/>
 
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"><h3 class="article-title">BPF: Go frontend for execsnoop</h3></a>
+<h6 class="subheader" title="2021-10-26T00:00:00+07:00">Tue 26 October 2021
+</h6>
+
+
+<p>After reading Brendan Gregg's books about BPF I was excited to try and implement something in Go.
+At a first glance it turned out I would need to install LLVM, Clang, and kernel header dependencies to run a simple program.
+Fortunately <a href="https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html">BTF, CO-RE technologies</a>
+eliminate those dependencies though kernel &gt;=5 …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
 
         
 

@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - bpf</title>
+    <title>BPF: Go frontend for tcpconnect</title>
 
     <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html" rel="bookmark"
+        title="Permalink to BPF: Go frontend for tcpconnect">BPF: Go frontend for tcpconnect</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html"><h3 class="article-title">BPF: Go frontend for tcpconnect</h3></a>
 <h6 class="subheader" title="2021-11-01T00:00:00+07:00">Mon 01 November 2021
 </h6>
 
 
-<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">In the previos BPF post</a>
+    <p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">In the previos BPF post</a>
 I shared my experiment of writing Go frontend for execsnoop.
 Here I would like to focus on tcpconnect, a BCC tool to trace new TCP active connections.
 It is useful for determining who is connecting to whom.
@@ -413,7 +415,8 @@ to filter connections by PID and UID 🎉.</p>
 
     <span class="nx">printEvent</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">e</span><span class="p">)</span>
 <span class="p">}</span>
-</code></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+</code></pre></div>
+<p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/bpf.html">bpf </a>
@@ -422,39 +425,22 @@ to filter connections by PID and UID 🎉.</p>
 
 
 
-<p><a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "bpf-go-frontend-for-tcpconnect.html";
+        var disqus_url = "https://marselester.com/bpf-go-frontend-for-tcpconnect.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"><h3 class="article-title">BPF: Go frontend for execsnoop</h3></a>
-<h6 class="subheader" title="2021-10-26T00:00:00+07:00">Tue 26 October 2021
-</h6>
-
-
-<p>After reading Brendan Gregg's books about BPF I was excited to try and implement something in Go.
-At a first glance it turned out I would need to install LLVM, Clang, and kernel header dependencies to run a simple program.
-Fortunately <a href="https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html">BTF, CO-RE technologies</a>
-eliminate those dependencies though kernel &gt;=5 …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

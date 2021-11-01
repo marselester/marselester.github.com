@@ -4,7 +4,7 @@ About
 
 Hi, my name is Marsel.
 
-I am `a software developer <https://github.com/marselester>`_
+I am a `software developer <https://marselester.com/cv/>`_
 interested in databases and distributed systems biased towards Go and Python.
 
 In early 2020 I moved to Canada to explore a new continent.
