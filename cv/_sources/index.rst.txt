@@ -13,12 +13,14 @@ It is important for me to solve meaningful problems with high impact.
 - https://angel.co/u/marselester
 - https://twitter.com/marselester
 
-I prefer Go, Django, PostgreSQL, Kafka, Kubernetes.
+I prefer Go, PostgreSQL, Kafka, Kubernetes.
 
 Work Experience
 ---------------
 
-**Software Architect** at fintech startup Coins.ph_ 🚀
+**Site Reliability Engineer** at fintech startup Coins.ph_ 🚀
+February 2021 — present
+**Software Architect**
 August 2017 — September 2020
 **Senior Software Engineer**
 July 2014 — August 2017
@@ -43,6 +45,16 @@ July 2014 — August 2017
 - as a first remote developer helped to scale the engineering team which ended up working remotely;
 - fostered an engineering culture of service ownership;
 - been on-call to provide a quick incident response;
+
+To try something different I joined infrastructure team as an SRE
+
+- added horizontal/vertical pod autoscaling for 17 services which
+  increased resiliency of our services,
+  helped to **handle x2 traffic, reduced infrastructure costs by 20%**;
+- rewrote parts of 5 Django/Celery core services in Go to reduce memory (tens of gigabytes)
+  and CPU consumption in Kubernetes cluster;
+- improved internal tooling, e.g., wrote a Terraform plugin to rotate PostgreSQL roles,
+  implemented observability tool for Celery queues in Go;
 
 **Python Developer** contractor at icon fonts generator Fontastic_ (Webalys_) 🙂
 January 2014 — July 2014
