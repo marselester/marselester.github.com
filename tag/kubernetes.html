@@ -51,6 +51,179 @@
         
 
             <article>
+                <a href="https://marselester.com/bpf-go-program-in-kubernetes.html"><h3 class="article-title">BPF Go program in Kubernetes</h3></a>
+<h6 class="subheader" title="2021-11-17T00:00:00+07:00">Wed 17 November 2021
+</h6>
+
+
+<p>BPF opens a lot of possibilities of making observability tools running in Kubernetes.
+One can start with <a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools">BCC libbpf-tools</a> written in C,
+e.g., launch tcpconnlat program and process its stdout with another program to
+detect cases when it took too long to establish a TCP connection.
+For example, <code>curl http://example.com</code> took 47.8 milliseconds to establish a connection
+where source address is <code>10.0.2.15</code> and destination address is <code>93.184.216.34</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">PID    COMM         IP SADDR            DADDR            DPORT LAT(ms)</span>
+<span class="go">21500  curl         4  10.0.2.15        93.184.216.34    80    47.80</span>
+</code></pre></div>
+
+<p>Another option is to use Go version of
+<a href="https://github.com/marselester/libbpf-tools/blob/master/cmd/tcpconnlat/main.go">tcpconnlat</a>
+and modify it as you wish, e.g., write the events into Kafka for further analysis.</p>
+<p>I have already published a Docker image
+<a href="https://github.com/marselester/libbpf-tools/blob/master/Dockerfile">marselester/go-libbpf-tools</a>
+containing tcpconnlat and tried to run it on Mac, that didn't go well though.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ docker run --rm -it --privileged marselester/go-libbpf-tools:latest bash</span>
+<span class="go">root@552a159ce901:/opt/libbpf-tools＃ ./tcpconnlat</span>
+<span class="go">failed to load BPF programs and maps: field TcpRcvStateProcess: program tcp_rcv_state_process: CO-RE relocations: no BTF for kernel version 5.10.47-linuxkit: not supported</span>
+</code></pre></div>
+
+<p>Minikube with Virtualbox driver didn't help either because it uses an old kernel,
+hopefully it will be upgraded soon <a href="https://github.com/kubernetes/minikube/issues/10501">#10501</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ minikube start --driver=virtualbox</span>
+<span class="go">﹪ minikube ssh</span>
+<span class="go">﹩ uname -nr</span>
+<span class="go">Linux minikube 4.19.202</span>
+</code></pre></div>
+
+<p>Luckily there is another option called <a href="https://kubespray.io">Kubespray</a>.</p>
+<h2>Kubespray</h2>
+<p>Kubespray sets up a Kubernetes cluster of 3 nodes using Vagrant and Ansible.
+Clone the repository and install Python dependencies for provisioning tasks.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ git clone https://github.com/kubernetes-sigs/kubespray</span>
+<span class="go">﹪ cd ./kubespray/</span>
+<span class="go">﹪ virtualenv venv</span>
+<span class="go">﹪ source ./venv/bin/activate</span>
+<span class="gp gp-VirtualEnv">(venv)</span> <span class="go">﹪ pip install -r requirements.txt</span>
+</code></pre></div>
+
+<p>From looking at <a href="https://github.com/kubernetes-sigs/kubespray/blob/master/Vagrantfile">the Vagrantfile</a>
+we see that Kubespray supports Fedora Linux 34, so BTF and CO-RE technologies should be there.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ mkdir vagrant</span>
+<span class="go">﹪ echo &#39;$os = &quot;fedora34&quot;&#39; &gt; ./vagrant/config.rb</span>
+<span class="go">﹪ vagrant up</span>
+<span class="go">﹪ export KUBECONFIG=$(pwd)/.vagrant/provisioners/ansible/inventory/artifacts/admin.conf</span>
+<span class="go">﹪ kubectl get nodes</span>
+<span class="go">NAME    STATUS   ROLES                  AGE     VERSION</span>
+<span class="go">k8s-1   Ready    control-plane,master   8m20s   v1.22.3</span>
+<span class="go">k8s-2   Ready    control-plane,master   7m56s   v1.22.3</span>
+<span class="go">k8s-3   Ready    &lt;none&gt;                 6m58s   v1.22.3</span>
+<span class="go">﹪ vagrant ssh k8s-1</span>
+<span class="go">﹩ uname -nr</span>
+<span class="go">k8s-1 5.11.12-300.fc34.x86_64</span>
+</code></pre></div>
+
+<p>See <a href="https://github.com/kubernetes-sigs/kubespray/blob/master/docs/vagrant.md">vagrant.md</a>
+if the cluster wasn't provisioned.</p>
+<h2>DaemonSet</h2>
+<p>An observability tool should run on each node,
+and a <a href="https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/">DaemonSet</a>
+ensures that all nodes run a copy of a pod.
+Let's try to launch tcpconnlat on all 3 nodes.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ kubectl apply -f - &lt;&lt;&lt;&#39;</span>
+<span class="go">apiVersion: apps/v1</span>
+<span class="go">kind: DaemonSet</span>
+<span class="go">metadata:</span>
+<span class="go">  name: tcpconnlat-daemon</span>
+<span class="go">spec:</span>
+<span class="go">  selector:</span>
+<span class="go">    matchLabels:</span>
+<span class="go">      app: tcpconnlat</span>
+<span class="go">  template:</span>
+<span class="go">    metadata:</span>
+<span class="go">      labels:</span>
+<span class="go">        app: tcpconnlat</span>
+<span class="go">    spec:</span>
+<span class="go">      containers:</span>
+<span class="go">        - name: libbpf-tools</span>
+<span class="go">          image: marselester/go-libbpf-tools:latest</span>
+<span class="go">          command:</span>
+<span class="go">            - /opt/libbpf-tools/tcpconnlat</span>
+<span class="go">&#39;</span>
+</code></pre></div>
+
+<p>Unfortunately pods have crashed because the containers didn't have privileged mode.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ kubectl get pods</span>
+<span class="go">NAME                      READY   STATUS             RESTARTS        AGE</span>
+<span class="go">tcpconnlat-daemon-646h2   0/1     CrashLoopBackOff   5 (2m9s ago)    5m13s</span>
+<span class="go">tcpconnlat-daemon-hwnzt   0/1     CrashLoopBackOff   5 (118s ago)    5m13s</span>
+<span class="go">tcpconnlat-daemon-tmn6r   0/1     CrashLoopBackOff   5 (2m14s ago)   5m13s</span>
+<span class="go">﹪ kubectl logs -f tcpconnlat-daemon-646h2</span>
+<span class="go">failed to set temporary RLIMIT_MEMLOCK: operation not permitted</span>
+</code></pre></div>
+
+<p>Let's enable it.</p>
+<blockquote>
+<p>By default a container is not allowed to access any devices on the host,
+but a "privileged" container is given access to all devices on the host.
+This allows the container nearly all the same access as processes running on the host.</p>
+<p>https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privileged</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ kubectl apply -f - &lt;&lt;&lt;&#39;</span>
+<span class="go">apiVersion: apps/v1</span>
+<span class="go">kind: DaemonSet</span>
+<span class="go">metadata:</span>
+<span class="go">  name: tcpconnlat-daemon</span>
+<span class="go">spec:</span>
+<span class="go">  selector:</span>
+<span class="go">    matchLabels:</span>
+<span class="go">      app: tcpconnlat</span>
+<span class="go">  template:</span>
+<span class="go">    metadata:</span>
+<span class="go">      labels:</span>
+<span class="go">        app: tcpconnlat</span>
+<span class="go">    spec:</span>
+<span class="go">      containers:</span>
+<span class="go">        - name: libbpf-tools</span>
+<span class="go">          image: marselester/go-libbpf-tools:latest</span>
+<span class="go">          command:</span>
+<span class="go">            - /opt/libbpf-tools/tcpconnlat</span>
+<span class="go">          securityContext:</span>
+<span class="go">            privileged: true</span>
+<span class="go">&#39;</span>
+</code></pre></div>
+
+<p>It works! 👇</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹪ kubectl get pods</span>
+<span class="go">NAME                      READY   STATUS    RESTARTS   AGE</span>
+<span class="go">tcpconnlat-daemon-9sgc5   1/1     Running   0          18s</span>
+<span class="go">tcpconnlat-daemon-lrvh5   1/1     Running   0          18s</span>
+<span class="go">tcpconnlat-daemon-th9k4   1/1     Running   0          18s</span>
+<span class="go">﹪ kubectl logs -f tcpconnlat-daemon-9sgc5</span>
+<span class="go">PID    COMM         IP SADDR            DADDR            DPORT LAT(ms)</span>
+<span class="go">5955   coredns      4  127.0.0.1        127.0.0.1        8080  0.02</span>
+<span class="go">703    kubelet      4  172.18.8.101     172.18.8.101     6443  0.04</span>
+<span class="go">703    kubelet      4  10.233.64.1      10.233.64.4      8181  0.07</span>
+<span class="go">703    kubelet      4  169.254.25.10    169.254.25.10    9254  0.03</span>
+<span class="go">703    kubelet      4  10.233.64.1      10.233.64.5      8080  0.03</span>
+<span class="go">5537   node-cache   4  169.254.25.10    169.254.25.10    9254  0.06</span>
+<span class="go">4204   etcd         4  172.18.8.101     172.18.8.103     2380  0.22</span>
+<span class="go">4204   etcd         4  172.18.8.101     172.18.8.102     2380  0.21</span>
+</code></pre></div>
+
+<p>I also tried to run execsnoop and tcpconnect, but alas they crashed with the corresponding errors.</p>
+<div class="highlight"><pre><span></span><code><span class="go">failed to attach the BPF program to sys_enter_execve tracepoint: trace event syscalls/sys_enter_execve: file does not exist</span>
+
+<span class="go">failed to load BPF programs and maps: field TcpV4ConnectRet: program tcp_v4_connect_ret: load program: permission denied: trace type programs with run-time allocated hash maps are unsafe. Switch to preallocated hash maps.</span>
+</code></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/bpf-go-program-in-kubernetes.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/apigate-ambassador.html"><h3 class="article-title">Ambassador as API Gateway</h3></a>
 <h6 class="subheader" title="2019-03-13T00:00:00+07:00">Wed 13 March 2019
 </h6>
@@ -60,308 +233,7 @@
 acts as a reverse proxy, routing API requests from clients to services.
 Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
 In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://getambassador.io/">Ambassador</a>.</p>
-<p>The demo is based on a dummy <a class="reference external" href="https://traveling.docs.apiary.io/">Traveling project</a>
-where we have services to rent a car and book a hotel.</p>
-<p>Firstly, we shall install Ambassador on <a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minikube</a>
-by following <a class="reference external" href="https://www.getambassador.io/user-guide/getting-started/">Ambassador user guide</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
-<span class="go">Starting local Kubernetes v1.13.2 cluster...</span>
-<span class="gp">$</span> kubectl apply -f https://www.getambassador.io/yaml/ambassador/ambassador-rbac.yaml
-</pre></div>
-<p>Next, create Kubernetes service for Ambassador deployment of type NodePort, so it's easily accessible outside of the cluster.
-It will be the entry point of our API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
-<span class="go">apiVersion: v1</span>
-<span class="go">kind: Service</span>
-<span class="go">metadata:</span>
-<span class="go">  name: ambassador</span>
-<span class="go">spec:</span>
-<span class="go">  selector:</span>
-<span class="go">    service: ambassador</span>
-<span class="go">  type: NodePort</span>
-<span class="go">  ports:</span>
-<span class="go">    - port: 80</span>
-<span class="gp">  #</span> Propagate the original <span class="nb">source</span> IP of the client.
-<span class="go">  externalTrafficPolicy: Local</span>
-<span class="go">&#39;</span>
-<span class="gp">$</span> <span class="nv">AMBASSADORURL</span><span class="o">=</span><span class="k">$(</span>minikube service --url ambassador<span class="k">)</span>
-</pre></div>
-<p>Note, there is a diagnostic web UI at <cite>$AMBASSADORURL/ambassador/v0/diag/</cite>.
-You should restrict access to it from your custom auth service.</p>
-<div class="section" id="travel-apps">
-<h2>Travel Apps</h2>
-<p>Let's deploy the travel apps on Kubernetes. For simplicity, you can use the images uploaded to Docker Hub.
-If you prefer to build Docker images yourself, make sure they are accessible from Minikube:
-configure Docker client to communicate with the Minikube Docker daemon.
-Note, you can restore your local Docker environment with <cite>eval $(minikube docker-env --unset)</cite> later on.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> git clone https://github.com/marselester/apigate.git
-<span class="gp">$</span> <span class="nb">cd</span> ./apigate/
-<span class="gp">$</span> <span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
-<span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-hotel:v1.0.0 --file<span class="o">=</span>docker/hotel.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service.yml
-</pre></div>
-<p>The hotel app should be running:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>hotel
-<span class="go">hotel-api-8d7d59b69-bcsvh</span>
-<span class="gp">$</span> kubectl port-forward hotel-api-8d7d59b69-bcsvh <span class="m">8000</span>
-<span class="gp">$</span> curl localhost:8000/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>Now, it's time to put the <cite>hotel</cite> Service behind the gateway by adding annotations to the service.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: hotel_mapping</span>
-      <span class="no">prefix: /v1/hotels</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: hotel</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service-gate.yml
-</pre></div>
-<p>By default, Ambassador would rewrite <cite>/v1/hotels</cite> prefix to <cite>/</cite>.
-With <cite>rewrite: &quot;&quot;</cite> directive we configure Ambassador to not change the prefix as
-it forwards a request to the <cite>hotel</cite> service.
-Let's confirm that hotel booking requests are routed to the hotel app:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>The car rental app is deployed similarly.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">car</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: car_mapping</span>
-      <span class="no">prefix: /v1/cars</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: car</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">car</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-car:v1.0.0 --file<span class="o">=</span>docker/car.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/car/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/car/service-gate.yml
-</pre></div>
-<p>You can see that the car booking is available at the gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$AMBASSADORURL</span>/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;9e0d65f5-9de2-4428-9bee-1f3967f05129&quot;,</span>
-<span class="go">    &quot;car_id&quot;: &quot;cfb6f7a5-4591-4f5c-8b17-9a1b10f98ada&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-</div>
-<div class="section" id="authentication-service">
-<h2>Authentication Service</h2>
-<p>API requests must be authenticated before reaching the Travel apps.
-This work is delegated to <cite>travelauth</cite> Service that performs HTTP Basic authentication
-and returns a username in <cite>X-Travel-User</cite> header if credentials matched.
-We shall start from deploying it on the cluster.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-auth:v1.0.0 --file<span class="o">=</span>docker/auth.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/service.yml
-</pre></div>
-<p>If the auth server is properly deployed, it will prompt for username/password.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>auth
-<span class="go">auth-api-556685f658-h9qb4</span>
-<span class="gp">$</span> kubectl port-forward auth-api-556685f658-h9qb4 <span class="m">8000</span>
-<span class="gp">$</span> curl -i -u bob:bob localhost:8000/v1/hotels
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">X-Travel-User: bob</span>
-</pre></div>
-<p>Let's tell Ambassador to
-<a class="reference external" href="https://www.getambassador.io/reference/services/auth-service/">forward all requests to the auth server</a>
-and copy <cite>X-Travel-User</cite> response header from the auth server to the routed request.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">travelauth</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: AuthService</span>
-      <span class="no">name: gate_auth</span>
-      <span class="no"># This is k8s service name; all API requests are sent there. For example,</span>
-      <span class="no"># API request /v1/hotels will be sent to http://travelauth:80/v1/hotels.</span>
-      <span class="no">auth_service: travelauth</span>
-      <span class="no">proto: http</span>
-      <span class="no"># The travelauth service adds a username into a header after successful authentication,</span>
-      <span class="no"># so all the other services know who the user is (ratelimit, hotel, car services).</span>
-      <span class="no">allowed_authorization_headers:</span>
-        <span class="no">- &quot;X-Travel-User&quot;</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">auth</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/service-auth.yml
-</pre></div>
-<p>With updated config Ambassador should enforce authentication on API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl -i <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">HTTP/1.1 401 Unauthorized</span>
-<span class="gp">$</span> curl -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-</div>
-<div class="section" id="rate-limiting-service">
-<h2>Rate Limiting Service</h2>
-<p>With Ambassador, individual requests can be annotated with metadata, called labels.
-These labels can then be passed to a third party rate limiting service through a gRPC interface
-which implements actual rate limit logic.
-Check out <a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Node.js</a> and
-<a class="reference external" href="https://blog.getambassador.io/designing-a-rate-limiting-service-for-ambassador-f460e9fabedb">Java</a> based examples.</p>
-<p>In order to build such service, it must support Envoy's <a class="reference external" href="https://github.com/datawire/ambassador/blob/master/ambassador/common/ratelimit/ratelimit.proto">ratelimit.proto</a> interface.
-The protocol buffer definition of RateLimitService service is described in <cite>./internal/pb/ratelimit.proto</cite>.
-You need to <a class="reference external" href="https://grpc.io/docs/quickstart/go.html">install</a> protoc compiler and protoc plugin for Go
-(beware of <a class="reference external" href="https://github.com/golang/protobuf/issues/763">ProtoPackageIsVersion3 issue</a>)
-to generate gRPC service code.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> brew install protobuf
-<span class="gp">$</span> go get -u github.com/golang/protobuf/protoc-gen-go
-<span class="gp">$</span> <span class="nb">cd</span> <span class="nv">$GOPATH</span>/src/github.com/golang/protobuf/protoc-gen-go
-<span class="gp">$</span> git checkout v1.2.0
-<span class="gp">$</span> go install
-</pre></div>
-<p>The arguments tell protoc to use <cite>ratelimit.proto</cite> definition,
-search for imports in <cite>./internal/pb/</cite> dir, generate Go code using gprc plugin,
-and place the result in <cite>./internal/pb/</cite> dir.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> protoc ratelimit.proto -I internal/pb/ --go_out<span class="o">=</span><span class="nv">plugins</span><span class="o">=</span>grpc:internal/pb/
-</pre></div>
-<p>We now have a newly generated gRPC server and client code in <cite>./internal/pb/ratelimit.pb.go</cite>.
-Our ratelimit server already implements <cite>RateLimitServiceServer</cite> interface.</p>
-<div class="highlight"><pre><span></span><span class="c1">// ShouldRateLimit must respond to the request with an OK or OVER_LIMIT code.</span>
-<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">)</span> <span class="nx">ShouldRateLimit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">req</span> <span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// Descriptors is a list of labels on which the rate limit service can base</span>
-    <span class="c1">// its decision to accept or reject the request.</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s: %+v&quot;</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">GetDomain</span><span class="p">(),</span> <span class="nx">req</span><span class="p">.</span><span class="nx">GetDescriptors</span><span class="p">())</span>
-
-    <span class="nx">resp</span> <span class="o">:=</span> <span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">{</span>
-        <span class="nx">OverallCode</span><span class="p">:</span> <span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse_OVER_LIMIT</span><span class="p">,</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">resp</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</pre></div>
-<p>Let's deploy it on the cluster and send a few requests using
-<a class="reference external" href="https://github.com/fullstorydev/grpcurl">grpcurl</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-ratelimit:v1.0.0 --file<span class="o">=</span>docker/ratelimit.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/service.yml
-<span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>ratelimit
-<span class="go">ratelimit-api-5554898589-4gmv5</span>
-<span class="gp">$</span> kubectl port-forward ratelimit-api-5554898589-4gmv5 <span class="m">5000</span>
-</pre></div>
-<p>As we can see the server exposes RateLimitService.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> grpcurl -plaintext localhost:5000 list
-<span class="go">grpc.reflection.v1alpha.ServerReflection</span>
-<span class="go">pb.lyft.ratelimit.RateLimitService</span>
-</pre></div>
-<p>Its ShouldRateLimit method should return <cite>OK</cite> or <cite>OVER_LIMIT</cite> reply.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> grpcurl -d <span class="s1">&#39;{&quot;domain&quot;:&quot;envoy&quot;}&#39;</span> -plaintext localhost:5000 pb.lyft.ratelimit.RateLimitService/ShouldRateLimit
-<span class="go">{</span>
-<span class="go">  &quot;overallCode&quot;: &quot;OVER_LIMIT&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>Now we shall introduce the ratelimit service to Ambassador.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">travelratelimit</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: RateLimitService</span>
-      <span class="no">name: gate_ratelimit</span>
-      <span class="no">service: travelratelimit</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ratelimit</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/service-rate.yml
-</pre></div>
-<p>Finally, I am going to add <cite>labels</cite> to attach rate limiting descriptors as shown in
-<a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Rate Limiting tutorial</a>.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: hotel_mapping</span>
-      <span class="no">prefix: /v1/hotels</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: hotel</span>
-      <span class="no">labels:</span>
-        <span class="no">ambassador:</span>
-          <span class="no">- request_label_group:</span>
-            <span class="no">- x-ambassador-test-allow:</span>
-                <span class="no">header: &quot;x-ambassador-test-allow&quot;</span>
-                <span class="no">omit_if_not_present: true</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service-rate.yml
-</pre></div>
-<p>If a request made to the hotel API has header <cite>X-Ambassador-Test-Allow</cite>,
-it should be eligible for rate limiting.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl -H <span class="s2">&quot;x-ambassador-test-allow: probably&quot;</span> -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels
-<span class="go">HTTP/1.1 200 OK</span>
-</pre></div>
-<p>Unfortunately I have not been able to make rate limiting work yet.
-Here is the corresponding <a class="reference external" href="https://github.com/datawire/ambassador/issues/1144">GitHub issue</a>.</p>
-</div>
-<p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+<p>The demo is based on a dummy …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/ambassador.html">ambassador </a>
@@ -373,11 +245,9 @@ Here is the corresponding <a class="reference external" href="https://github.com
 
 
 
-<p><a href="https://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/apigate-ambassador.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

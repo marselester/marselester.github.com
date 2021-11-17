@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"><channel><title>marselester's blog - Marsel Mavletkulov</title><link>https://marselester.com/</link><description></description><lastBuildDate>Mon, 01 Nov 2021 00:00:00 +0700</lastBuildDate><item><title>BPF: Go frontend for tcpconnect</title><link>https://marselester.com/bpf-go-frontend-for-tcpconnect.html</link><description>&lt;p&gt;&lt;a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"&gt;In the previos BPF post&lt;/a&gt;
+<rss version="2.0"><channel><title>marselester's blog - Marsel Mavletkulov</title><link>https://marselester.com/</link><description></description><lastBuildDate>Wed, 17 Nov 2021 00:00:00 +0700</lastBuildDate><item><title>BPF Go program in Kubernetes</title><link>https://marselester.com/bpf-go-program-in-kubernetes.html</link><description>&lt;p&gt;BPF opens a lot of possibilities of making observability tools running in Kubernetes.
+One can start with &lt;a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools"&gt;BCC libbpf-tools&lt;/a&gt; written in C,
+e.g., launch tcpconnlat program and process its stdout with another program to
+detect cases when it took too long to establish a TCP connection.
+For example, &lt;code&gt;curl …&lt;/code&gt;&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Wed, 17 Nov 2021 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2021-11-17:/bpf-go-program-in-kubernetes.html</guid><category>bpf</category><category>golang</category><category>kubernetes</category></item><item><title>BPF: Go frontend for tcpconnect</title><link>https://marselester.com/bpf-go-frontend-for-tcpconnect.html</link><description>&lt;p&gt;&lt;a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"&gt;In the previos BPF post&lt;/a&gt;
 I shared my experiment of writing Go frontend for execsnoop.
 Here I would like to focus on tcpconnect, a BCC tool to trace new TCP active connections.
 It is useful for determining who is connecting to whom.
