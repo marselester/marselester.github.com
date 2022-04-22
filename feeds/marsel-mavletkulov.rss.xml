@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"><channel><title>marselester's blog - Marsel Mavletkulov</title><link>https://marselester.com/</link><description></description><lastBuildDate>Wed, 17 Nov 2021 00:00:00 +0700</lastBuildDate><item><title>BPF Go program in Kubernetes</title><link>https://marselester.com/bpf-go-program-in-kubernetes.html</link><description>&lt;p&gt;BPF opens a lot of possibilities of making observability tools running in Kubernetes.
+<rss version="2.0"><channel><title>marselester's blog - Marsel Mavletkulov</title><link>https://marselester.com/</link><description></description><lastBuildDate>Fri, 22 Apr 2022 00:00:00 +0700</lastBuildDate><item><title>Continuous profiling in Go</title><link>https://marselester.com/continuous-profiling-in-go.html</link><description>&lt;p&gt;In this post I explore possibilities of continuous profiling of Go programs
+using Parca and also peek under the hood of its BPF agent.
+You can find the results of my experiments in
+&lt;a href="https://github.com/marselester/diy-parca-agent"&gt;github.com/marselester/diy-parca-agent&lt;/a&gt;.&lt;/p&gt;
+&lt;h2&gt;Ad hoc profiling&lt;/h2&gt;
+&lt;p&gt;I was looking for a way to profile Go programs …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel Mavletkulov</dc:creator><pubDate>Fri, 22 Apr 2022 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2022-04-22:/continuous-profiling-in-go.html</guid><category>bpf</category><category>golang</category><category>monitoring</category></item><item><title>BPF Go program in Kubernetes</title><link>https://marselester.com/bpf-go-program-in-kubernetes.html</link><description>&lt;p&gt;BPF opens a lot of possibilities of making observability tools running in Kubernetes.
 One can start with &lt;a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools"&gt;BCC libbpf-tools&lt;/a&gt; written in C,
 e.g., launch tcpconnlat program and process its stdout with another program to
 detect cases when it took too long to establish a TCP connection.
