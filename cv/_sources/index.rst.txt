@@ -1,12 +1,12 @@
 :orphan:
 
-================================
-Marsel Mavletkulov: Go developer
-================================
+==================
+Marsel Mavletkulov
+==================
 
 I find professional satisfaction in building reliable services, reasoning about their boundaries,
 writing documentation and clear code.
-It is important for me to solve meaningful problems with high impact.
+I would like to learn more about systems performance, databases and distributed systems.
 
 - https://github.com/marselester
 - https://marselester.com
@@ -25,7 +25,7 @@ August 2017 — September 2020
 **Senior Software Engineer**
 July 2014 — August 2017
 
-- built a wallet service (Django, PostgreSQL) which helped the company to grow from thousands to over **10 millions** of customers;
+- built a wallet service (Django, PostgreSQL) which helped the company to grow from thousands to over **15 millions** of customers;
 - designed a new ledger (Go, PostgreSQL, Kafka) to solve scalability issues and led the team focused on its delivery;
 - ran an architecture guild meetings, gave talks about architecture,
   `Kafka <https://go-talks.appspot.com/github.com/marselester/kafka-for-gophers/kafka.slide>`_,
@@ -38,7 +38,7 @@ July 2014 — August 2017
 - introduced ELK, Prometheus, Jaeger to help developers with troubleshooting;
 - decoupled and redesigned the core services from Flask monolith to scale them independently, e.g.,
   currency quotes service, account management service (sign up/in, TFA);
-- helped with Go adoption (no web or `testing frameworks`_, no ORMs):
+- helped with Go adoption (no ORM, web or testing frameworks):
   common `project structure <https://marselester.com/how-to-structure-go-projects.html>`_
   leveraging Go kit components (JSON/gRPC transports, telemetry, rate limiter, circuit breaker);
 - improved code quality, architecture and advocated for both (conventions/proposals gardening similar to Go proposals);
@@ -54,9 +54,11 @@ To try something different I joined infrastructure team as an SRE
 - rewrote parts of 5 Django/Celery core services in Go to reduce memory (tens of gigabytes)
   and CPU consumption in Kubernetes cluster;
 - improved internal tooling, e.g., wrote a Terraform plugin to rotate PostgreSQL roles,
-  implemented observability tool for Celery queues in Go;
+  implemented observability tool for Celery queues in Go,
+  a dynamic service configuration based AWS SSM and Kafka,
+  introduced `continuous profiling <https://marselester.com/continuous-profiling-in-go.html>`_;
 
-**Python Developer** contractor at icon fonts generator Fontastic_ (Webalys_) 🙂
+**Python Developer** contractor at icon fonts generator Fontastic_ (Webalys_) 🤌
 January 2014 — July 2014
 
 - improved project monetization with SVG sprite hosting and billing, e.g., implemented
@@ -89,7 +91,6 @@ Ufa State Aviation Technical University, graduating in 2012 with
 Master's degree in Computer Science.
 
 .. _Coins.ph: https://coins.ph
-.. _testing frameworks: https://golang.org/doc/faq#testing_framework
 .. _Fontastic: http://fontastic.me
 .. _Webalys: http://www.webalys.com
 .. _Uploadcare: https://uploadcare.com
@@ -98,4 +99,4 @@ Master's degree in Computer Science.
 .. _FanGid.com: http://fangid.com
 
 .. image:: _static/talk.jpg
-   :alt: Marsel Mavletkulov: Go developer
+   :alt: Marsel Mavletkulov

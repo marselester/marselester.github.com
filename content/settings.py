@@ -13,7 +13,7 @@ TWITTER_USERNAME = 'marselester'
 
 SOCIAL = (
     ('GitHub', 'https://github.com/marselester'),
-    (u'Instagram 📷', '{}/instagram/index.html'.format(SITEURL)),
+    (u'Instagram 📷', 'https://www.instagram.com/marselester/'),
     ('Twitter', 'http://twitter.com/marselester'),
     ('Medium', 'https://medium.com/@marselester/'),
 )
