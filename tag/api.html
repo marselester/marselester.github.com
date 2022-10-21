@@ -88,14 +88,14 @@ you can dispatch requests by Werkzeug's <tt class="docutils literal">DispatcherM
 <span class="p">})</span>
 </pre></div>
 <p>Dispatcher in work:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gunicorn messaging_api:app
+<div class="highlight"><pre><span></span><span class="gp">$ </span>gunicorn messaging_api:app
 </pre></div>
 <p>Let's request the same API resource from different WSGI applications:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl http://127.0.0.1:8000/v1/messages/1
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl http://127.0.0.1:8000/v1/messages/1
 <span class="go">{</span>
 <span class="go">  &quot;content&quot;: &quot;hi world from V1&quot;</span>
 <span class="go">}</span>
-<span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/1
+<span class="gp">$ </span>curl http://127.0.0.1:8000/v2/messages/1
 <span class="go">{</span>
 <span class="go">  &quot;content&quot;: &quot;hi world from V2&quot;</span>
 <span class="go">}</span>
@@ -110,7 +110,7 @@ Certain message's <tt class="docutils literal">/messages/1</tt> URL must not con
 in order to look like UNIX file path.</p>
 <p>Resources usually have relationships and they might be expressed in URLs,
 e.g., get messages from account which id is <tt class="docutils literal">1</tt>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl https://api.example.com/v1/accounts/1/messages/
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl https://api.example.com/v1/accounts/1/messages/
 </pre></div>
 </div>
 <div class="section" id="representation">
@@ -123,7 +123,7 @@ dictionary response. Views can return dict and it will be represented
 based on <strong>Accept</strong> header. When <tt class="docutils literal">ResponsiveFlask.make_response()</tt> receives
 dictionary it creates real response object using appropriate formatter.
 Formatter is picked by mimetype.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/1 -i -H <span class="s1">&#39;Accept: application/json&#39;</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl http://127.0.0.1:8000/v2/messages/1 -i -H <span class="s1">&#39;Accept: application/json&#39;</span>
 <span class="go">HTTP/1.1 200 OK</span>
 <span class="go">Server: gunicorn/18.0</span>
 <span class="go">Date: Tue, 10 Dec 2013 07:52:31 GMT</span>
@@ -141,7 +141,7 @@ Formatter is picked by mimetype.</p>
 <p>Flask shows error pages by default with basic description in
 <strong>text/html</strong> format. It would be better if error representation depends
 on <strong>Accept</strong> header. <tt class="docutils literal">ResponsiveFlask</tt> class concerns about it.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl http://127.0.0.1:8000/v2/messages/666 -i
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl http://127.0.0.1:8000/v2/messages/666 -i
 <span class="go">HTTP/1.1 404 NOT FOUND</span>
 <span class="go">Server: gunicorn/18.0</span>
 <span class="go">Date: Fri, 03 Jan 2014 05:16:03 GMT</span>

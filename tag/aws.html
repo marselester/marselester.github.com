@@ -59,14 +59,14 @@
 <p><a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minukube</a> is an easy way to run Kubernetes locally.
 When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
 we can configure our Docker client to communicate with the Minikube Docker daemon.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
+<div class="highlight"><pre><span></span><span class="gp">$ </span>minikube start
 <span class="go">Starting local Kubernetes cluster...</span>
 <span class="go">Kubectl is now configured to use the cluster.</span>
-<span class="gp">$</span> <span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
-<span class="gp">$</span> docker build -t fizz/bazz:latest .
+<span class="gp">$ </span><span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
+<span class="gp">$ </span>docker build -t fizz/bazz:latest .
 </pre></div>
 <p>What if we need to create a Kubernetes Deployment which pulls a Docker image from AWS ECR?</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
 <span class="go">apiVersion: extensions/v1beta1</span>
 <span class="go">kind: Deployment</span>
 <span class="go">metadata:</span>
@@ -86,7 +86,7 @@ we can configure our Docker client to communicate with the Minikube Docker daemo
 <p>Kubernetes will fail to get the image due to authentication error (no credentials).
 One of the solutions is to use <a class="reference external" href="http://kubernetes.io/docs/user-guide/images/#specifying-imagepullsecrets-on-a-pod">imagePullSecrets</a>.
 The following command creates a secret for use with a Docker registry.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create secret docker-registry my-docker-credentials <span class="se">\</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create secret docker-registry my-docker-credentials <span class="se">\</span>
     --docker-server<span class="o">=</span>DOCKER_REGISTRY_SERVER <span class="se">\</span>
     --docker-username<span class="o">=</span>DOCKER_USER <span class="se">\</span>
     --docker-password<span class="o">=</span>DOCKER_PASSWORD <span class="se">\</span>
@@ -95,20 +95,20 @@ The following command creates a secret for use with a Docker registry.</p>
 <p>Firstly, let's obtain <strong>DOCKER_USER</strong> and <strong>DOCKER_PASSWORD</strong>.
 For that, we'll need <strong>awscli</strong> Python library and environment variables
 <strong>AWS_ACCESS_KEY_ID</strong> and <strong>AWS_SECRET_ACCESS_KEY</strong> set up.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> pip install awscli
-<span class="gp">$</span> <span class="nb">export</span> <span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="s1">&#39;AKIAI44QH8DHBEXAMPLE&#39;</span>
-<span class="gp">$</span> <span class="nb">export</span> <span class="nv">AWS_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="s1">&#39;je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY&#39;</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>pip install awscli
+<span class="gp">$ </span><span class="nb">export</span> <span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span><span class="s1">&#39;AKIAI44QH8DHBEXAMPLE&#39;</span>
+<span class="gp">$ </span><span class="nb">export</span> <span class="nv">AWS_SECRET_ACCESS_KEY</span><span class="o">=</span><span class="s1">&#39;je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY&#39;</span>
 </pre></div>
 <p>Log in to Amazon ECR registry.
 This aws command will display <strong>$ docker login</strong> command. From its output we conclude that
 <strong>DOCKER_USER</strong> is <strong>AWS</strong>, <strong>DOCKER_PASSWORD</strong> is <strong>SomeVeryLongToken</strong> and <strong>DOCKER_REGISTRY_SERVER</strong>
 is <strong>https://4338991606.dkr.ecr.eu-west-1.amazonaws.com</strong> respectively.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> aws ecr get-login --region eu-west-1
+<div class="highlight"><pre><span></span><span class="gp">$ </span>aws ecr get-login --region eu-west-1
 <span class="go">docker login -u AWS -p SomeVeryLongToken -e none https://4338991606.dkr.ecr.eu-west-1.amazonaws.com</span>
 </pre></div>
 <p>Now it is time to create a docker-registry secret and update the Deployment manifest.
 Note that we've added <strong>imagePullSecrets</strong> which references our private registry.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
 <span class="go">apiVersion: extensions/v1beta1</span>
 <span class="go">kind: Deployment</span>
 <span class="go">metadata:</span>

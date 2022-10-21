@@ -130,22 +130,22 @@ Here is what I found so far:</p>
 I experimented with Parca more because I stumbled on it earlier.
 So here is how Parca Server configuration looked like
 when I set it up to collect profiles every minute from the Bookstore service.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">debug_info</span><span class="p">:</span>
-  <span class="nt">bucket</span><span class="p">:</span>
-    <span class="nt">type</span><span class="p">:</span> <span class="s">&quot;FILESYSTEM&quot;</span>
-    <span class="nt">config</span><span class="p">:</span>
-      <span class="nt">directory</span><span class="p">:</span> <span class="s">&quot;./tmp&quot;</span>
-  <span class="nt">cache</span><span class="p">:</span>
-    <span class="nt">type</span><span class="p">:</span> <span class="s">&quot;FILESYSTEM&quot;</span>
-    <span class="nt">config</span><span class="p">:</span>
-      <span class="nt">directory</span><span class="p">:</span> <span class="s">&quot;./tmp&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="nt">debug_info</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">bucket</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;FILESYSTEM&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./tmp&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="nt">cache</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;FILESYSTEM&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./tmp&quot;</span><span class="w"></span>
 
-<span class="nt">scrape_configs</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="nt">job_name</span><span class="p">:</span> <span class="s">&quot;bookstore&quot;</span>
-    <span class="nt">scrape_interval</span><span class="p">:</span> <span class="s">&quot;1m&quot;</span>
-    <span class="nt">scrape_timeout</span><span class="p">:</span> <span class="s">&quot;15s&quot;</span>
-    <span class="nt">static_configs</span><span class="p">:</span>
-      <span class="p p-Indicator">-</span> <span class="nt">targets</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="s">&#39;bookstore.default:6060&#39;</span> <span class="p p-Indicator">]</span>
+<span class="nt">scrape_configs</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bookstore&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">scrape_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1m&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">scrape_timeout</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;15s&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">static_configs</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">targets</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="s">&#39;bookstore.default:6060&#39;</span><span class="w"> </span><span class="p p-Indicator">]</span><span class="w"></span>
 </code></pre></div>
 
 <p>Note, the config above is part of
@@ -168,45 +168,45 @@ The call creates a file descriptor that allows measuring performance information
 It instructs the kernel to call the BPF program 100 times per second.</p>
 <p>Here I annotated
 <a href="https://github.com/parca-dev/parca-agent/blob/1e935f4d5f7b4484f6cf3d4ee26340f3718ff37d/pkg/profiler/profiler.go#L270">github.com/parca-dev/parca-agent/pkg/profiler/profiler.go</a> code around the syscall.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// To discover cgroups to profile in Kubernetes,</span>
-<span class="c1">// Parca Agent first discovers all pods running on the node it is on,</span>
-<span class="c1">// then discovers the primary PID of the cgroup using Kubernetes CRI (container runtime interface).</span>
-<span class="c1">// For profiling purposes a perf_event cgroup is required, which is read from /proc/PID/cgroup.</span>
-<span class="nx">cgroup</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-<span class="c1">// The pid and cpu arguments allow specifying which process and CPU to monitor.</span>
-<span class="nx">pid</span> <span class="o">:=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">cgroup</span><span class="p">.</span><span class="nx">Fd</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// To discover cgroups to profile in Kubernetes,</span><span class="w"></span>
+<span class="c1">// Parca Agent first discovers all pods running on the node it is on,</span><span class="w"></span>
+<span class="c1">// then discovers the primary PID of the cgroup using Kubernetes CRI (container runtime interface).</span><span class="w"></span>
+<span class="c1">// For profiling purposes a perf_event cgroup is required, which is read from /proc/PID/cgroup.</span><span class="w"></span>
+<span class="nx">cgroup</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="w"></span>
+<span class="c1">// The pid and cpu arguments allow specifying which process and CPU to monitor.</span><span class="w"></span>
+<span class="nx">pid</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="nx">cgroup</span><span class="p">.</span><span class="nx">Fd</span><span class="p">())</span><span class="w"></span>
 
-<span class="k">for</span> <span class="nx">cpu</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">cpu</span> <span class="p">&lt;</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">NumCPU</span><span class="p">();</span> <span class="nx">cpu</span><span class="o">++</span> <span class="p">{</span>
-    <span class="nx">fd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventOpen</span><span class="p">(</span>
-        <span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventAttr</span><span class="p">{</span>
-            <span class="c1">// PERF_TYPE_SOFTWARE event type indicates that</span>
-            <span class="c1">// we are measuring software events provided by the kernel.</span>
-            <span class="nx">Type</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_TYPE_SOFTWARE</span><span class="p">,</span>
-            <span class="c1">// Config is a Type-specific configuration.</span>
-            <span class="c1">// PERF_COUNT_SW_CPU_CLOCK reports the CPU clock, a high-resolution per-CPU timer.</span>
-            <span class="nx">Config</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_COUNT_SW_CPU_CLOCK</span><span class="p">,</span>
-            <span class="c1">// Size of attribute structure for forward/backward compatibility.</span>
-            <span class="nx">Size</span><span class="p">:</span> <span class="nb">uint32</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Sizeof</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventAttr</span><span class="p">{})),</span>
-            <span class="c1">// Sample could mean sampling period (expressed as the number of occurrences of an event)</span>
-            <span class="c1">// or frequency (the average rate of samples per second).</span>
-            <span class="c1">// See https://perf.wiki.kernel.org/index.php/Tutorial#Period_and_rate.</span>
-            <span class="c1">// In order to use frequency PerfBitFreq flag is set below.</span>
-            <span class="c1">// The kernel will adjust the sampling period to try and achieve the desired rate.</span>
-            <span class="nx">Sample</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
-            <span class="nx">Bits</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PerfBitDisabled</span> <span class="p">|</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PerfBitFreq</span><span class="p">,</span>
-        <span class="p">},</span>
-        <span class="nx">pid</span><span class="p">,</span>
-        <span class="nx">cpu</span><span class="p">,</span>
-        <span class="c1">// This argument allows event groups to be created.</span>
-        <span class="c1">// A single event on its own is created with groupFd = -1</span>
-        <span class="c1">// and is considered to be a group with only 1 member.</span>
-        <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-        <span class="c1">// PERF_FLAG_PID_CGROUP flag activates per-container system-wide monitoring.</span>
-        <span class="c1">// In this mode, the event is measured only if the thread running on the monitored CPU</span>
-        <span class="c1">// belongs to the designated container (cgroup).</span>
-        <span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_FLAG_PID_CGROUP</span><span class="p">,</span>
-    <span class="p">)</span>
-<span class="p">}</span>
+<span class="k">for</span><span class="w"> </span><span class="nx">cpu</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">cpu</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">runtime</span><span class="p">.</span><span class="nx">NumCPU</span><span class="p">();</span><span class="w"> </span><span class="nx">cpu</span><span class="o">++</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">fd</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventOpen</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventAttr</span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// PERF_TYPE_SOFTWARE event type indicates that</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// we are measuring software events provided by the kernel.</span><span class="w"></span>
+<span class="w">            </span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_TYPE_SOFTWARE</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// Config is a Type-specific configuration.</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// PERF_COUNT_SW_CPU_CLOCK reports the CPU clock, a high-resolution per-CPU timer.</span><span class="w"></span>
+<span class="w">            </span><span class="nx">Config</span><span class="p">:</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_COUNT_SW_CPU_CLOCK</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// Size of attribute structure for forward/backward compatibility.</span><span class="w"></span>
+<span class="w">            </span><span class="nx">Size</span><span class="p">:</span><span class="w"> </span><span class="nb">uint32</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Sizeof</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventAttr</span><span class="p">{})),</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// Sample could mean sampling period (expressed as the number of occurrences of an event)</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// or frequency (the average rate of samples per second).</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// See https://perf.wiki.kernel.org/index.php/Tutorial#Period_and_rate.</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// In order to use frequency PerfBitFreq flag is set below.</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// The kernel will adjust the sampling period to try and achieve the desired rate.</span><span class="w"></span>
+<span class="w">            </span><span class="nx">Sample</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nx">Bits</span><span class="p">:</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfBitDisabled</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfBitFreq</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="nx">pid</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">cpu</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// This argument allows event groups to be created.</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// A single event on its own is created with groupFd = -1</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// and is considered to be a group with only 1 member.</span><span class="w"></span>
+<span class="w">        </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// PERF_FLAG_PID_CGROUP flag activates per-container system-wide monitoring.</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// In this mode, the event is measured only if the thread running on the monitored CPU</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// belongs to the designated container (cgroup).</span><span class="w"></span>
+<span class="w">        </span><span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_FLAG_PID_CGROUP</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <h3>BPF C code</h3>
@@ -215,16 +215,16 @@ It instructs the kernel to call the BPF program 100 times per second.</p>
 we can see the BPF program <code>do_sample</code>.
 As mentioned above it's executed 100 times per second.
 Each time it captures stack traces of the thread that is currently running on CPU.</p>
-<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;perf_event&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">do_sample</span><span class="p">(</span><span class="k">struct</span> <span class="n">bpf_perf_event_data</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;perf_event&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">do_sample</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">bpf_perf_event_data</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p><code>SEC("perf_event")</code> denotes <code>BPF_PROG_TYPE_PERF_EVENT</code> BPF program type
 which specifies the type of events that the BPF program attaches to (perf_events),
 and the arguments for the events.</p>
-<div class="highlight"><pre><span></span><code><span class="n">u64</span> <span class="n">id</span> <span class="o">=</span> <span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span>
-<span class="n">u32</span> <span class="n">tgid</span> <span class="o">=</span> <span class="n">id</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">;</span>
-<span class="n">u32</span> <span class="n">pid</span> <span class="o">=</span> <span class="n">id</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="n">u64</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span><span class="w"></span>
+<span class="n">u32</span><span class="w"> </span><span class="n">tgid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w"></span>
+<span class="n">u32</span><span class="w"> </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">id</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 
 <p><a href="https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/bpf.h#L1777">bpf_get_current_pid_tgid()</a>
@@ -236,32 +236,32 @@ the current PID (what user space calls the kernel thread ID) in the lower bits.<
 <span class="c1">// Max depth of each stack trace to track.</span>
 <span class="cp">#define MAX_STACK_DEPTH 127</span>
 <span class="c1">// Stack trace value is 1 big byte array of the stack addresses.</span>
-<span class="k">typedef</span> <span class="n">__u64</span> <span class="n">stack_trace_type</span><span class="p">[</span><span class="n">MAX_STACK_DEPTH</span><span class="p">];</span>
+<span class="k">typedef</span><span class="w"> </span><span class="n">__u64</span><span class="w"> </span><span class="n">stack_trace_type</span><span class="p">[</span><span class="n">MAX_STACK_DEPTH</span><span class="p">];</span><span class="w"></span>
 
 <span class="c1">// The stack_traces map holds an array of memory addresses,</span>
 <span class="c1">// e.g., stack_traces[1253] = [0xdeadbeef, 0x123abcde]</span>
 <span class="c1">// where 1253 is a stack ID.</span>
-<span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_STACK_TRACE</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="n">MAX_STACK_ADDRESSES</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">u32</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">stack_trace_type</span><span class="p">);</span>
-<span class="p">}</span> <span class="n">stack_traces</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+<span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_STACK_TRACE</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span><span class="w"> </span><span class="n">MAX_STACK_ADDRESSES</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">u32</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">stack_trace_type</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="n">stack_traces</span><span class="w"> </span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span><span class="w"></span>
 
-<span class="k">struct</span> <span class="n">stack_count_key_t</span> <span class="p">{</span>
-    <span class="n">u32</span> <span class="n">pid</span><span class="p">;</span>
-    <span class="n">int32</span> <span class="n">user_stack_id</span><span class="p">;</span>
-    <span class="n">int32</span> <span class="n">kernel_stack_id</span><span class="p">;</span>
-<span class="p">};</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">stack_count_key_t</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">u32</span><span class="w"> </span><span class="n">pid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">int32</span><span class="w"> </span><span class="n">user_stack_id</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">int32</span><span class="w"> </span><span class="n">kernel_stack_id</span><span class="p">;</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 
 <span class="c1">// The counts map keeps track of how many times a stack trace has been seen,</span>
 <span class="c1">// e.g., counts[{10342, 1253, 0234}] = 45 times.</span>
-<span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_HASH</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="mi">10240</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="k">struct</span> <span class="n">stack_count_key_t</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">u64</span><span class="p">);</span>
-<span class="p">}</span> <span class="n">counts</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+<span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_HASH</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span><span class="w"> </span><span class="mi">10240</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">stack_count_key_t</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">u64</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="n">counts</span><span class="w"> </span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span><span class="w"></span>
 </code></pre></div>
 
 <p>The BPF program records stack traces in special <code>stack_traces</code> BPF map
@@ -308,21 +308,21 @@ The map value is an array of memory addresses that represent the code executed.<
 <a href="https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/bpf.h#L2080">bpf_get_stackid()</a>
 and <code>bpf_map_lookup_or_try_init()</code> functions.</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// Create a key for &quot;counts&quot; map.</span>
-<span class="k">struct</span> <span class="n">stack_count_key_t</span> <span class="n">key</span> <span class="o">=</span> <span class="p">{.</span><span class="n">pid</span> <span class="o">=</span> <span class="n">tgid</span><span class="p">};</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">stack_count_key_t</span><span class="w"> </span><span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{.</span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tgid</span><span class="p">};</span><span class="w"></span>
 <span class="c1">// Read user-space stack ID and insert memory addresses into stack_traces map.</span>
 <span class="c1">// The positive or null stack id is returned on success,</span>
 <span class="c1">// or a negative error in case of failure.</span>
-<span class="n">key</span><span class="p">.</span><span class="n">user_stack_id</span> <span class="o">=</span> <span class="n">bpf_get_stackid</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stack_traces</span><span class="p">,</span> <span class="n">BPF_F_USER_STACK</span><span class="p">);</span>
+<span class="n">key</span><span class="p">.</span><span class="n">user_stack_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_get_stackid</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">stack_traces</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_F_USER_STACK</span><span class="p">);</span><span class="w"></span>
 <span class="c1">// Read kernel-space stack ID and insert memory addresses into stack_traces map.</span>
-<span class="n">key</span><span class="p">.</span><span class="n">kernel_stack_id</span> <span class="o">=</span> <span class="n">bpf_get_stackid</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stack_traces</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="n">key</span><span class="p">.</span><span class="n">kernel_stack_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_get_stackid</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">stack_traces</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
 
-<span class="n">u64</span> <span class="n">zero</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-<span class="n">u64</span> <span class="o">*</span><span class="n">seen</span><span class="p">;</span>
-<span class="n">seen</span> <span class="o">=</span> <span class="n">bpf_map_lookup_or_try_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counts</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">key</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">zero</span><span class="p">);</span>
-<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">seen</span><span class="p">)</span>
-    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">u64</span><span class="w"> </span><span class="n">zero</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="n">seen</span><span class="p">;</span><span class="w"></span>
+<span class="n">seen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_map_lookup_or_try_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counts</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">zero</span><span class="p">);</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">seen</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
 <span class="c1">// Atomically increments the seen counter.</span>
-<span class="n">__sync_fetch_and_add</span><span class="p">(</span><span class="n">seen</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">__sync_fetch_and_add</span><span class="p">(</span><span class="n">seen</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
 </code></pre></div>
 
 <p>On Go side the BPF maps are read every 10 seconds,
@@ -393,12 +393,12 @@ from parca-agent repository and tried to generate Go files using bpf2go tool.</p
 
 <p>Next step was to see whether <code>DoSample</code> BPF program is loaded into the kernel from an ELF.
 <code>ParcaAgentObjects{}</code> contains all objects (BPF program and BPF maps) after they have been loaded into the kernel.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">objs</span> <span class="o">:=</span> <span class="nx">ParcaAgentObjects</span><span class="p">{}</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">LoadParcaAgentObjects</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF program and maps: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><span class="nx">objs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">ParcaAgentObjects</span><span class="p">{}</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">LoadParcaAgentObjects</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF program and maps: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 </code></pre></div>
 
 <p>It worked, no errors were printed.</p>
@@ -430,23 +430,23 @@ how to achieve the same thing:</p>
 <p>Those steps worked as well.
 I was hopeful to see whether stack traces were collected,
 so I periodically printed the content of <code>Counts</code> BPF map.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">type</span> <span class="nx">stackCountKey</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">PID</span>           <span class="kt">uint32</span>
-    <span class="nx">UserStackID</span>   <span class="kt">int32</span>
-    <span class="nx">KernelStackID</span> <span class="kt">int32</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">stackCountKey</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">PID</span><span class="w">           </span><span class="kt">uint32</span><span class="w"></span>
+<span class="w">    </span><span class="nx">UserStackID</span><span class="w">   </span><span class="kt">int32</span><span class="w"></span>
+<span class="w">    </span><span class="nx">KernelStackID</span><span class="w"> </span><span class="kt">int32</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="p">(</span>
-    <span class="nx">key</span>   <span class="nx">stackCountKey</span>
-    <span class="nx">value</span> <span class="kt">uint64</span>
-<span class="p">)</span>
-<span class="nx">it</span> <span class="o">:=</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ParcaAgentMaps</span><span class="p">.</span><span class="nx">Counts</span><span class="p">.</span><span class="nx">Iterate</span><span class="p">()</span>
-<span class="k">for</span> <span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">key</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%+v seen %d times\n&quot;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">it</span><span class="p">.</span><span class="nx">Err</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from Counts map: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
+<span class="kd">var</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="nx">key</span><span class="w">   </span><span class="nx">stackCountKey</span><span class="w"></span>
+<span class="w">    </span><span class="nx">value</span><span class="w"> </span><span class="kt">uint64</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="nx">it</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">ParcaAgentMaps</span><span class="p">.</span><span class="nx">Counts</span><span class="p">.</span><span class="nx">Iterate</span><span class="p">()</span><span class="w"></span>
+<span class="k">for</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%+v seen %d times\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">key</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span><span class="nx">Err</span><span class="p">();</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from Counts map: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p>The easiest way to reliably get stack traces was to run <code>top</code> in another terminal.
@@ -463,6 +463,8 @@ I made the profiler focus on its PID 15958 and it worked 🎉.</p>
 <p>The end of my post is an disappointing anticlimax because
 I haven't looked yet at how to show the actual stack traces.
 I will update <a href="https://github.com/marselester/diy-parca-agent">the repository</a> when I have time.</p>
+<p>Update: finally I figured out how to show stack traces, see
+<a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">DIY CPU profiler: from BPF maps to pprof</a> post.</p>
 <p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 

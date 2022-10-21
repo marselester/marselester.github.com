@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - bpf</title>
+    <title>DIY CPU profiler: from BPF maps to pprof</title>
 
     <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html" rel="bookmark"
+        title="Permalink to DIY CPU profiler: from BPF maps to pprof">DIY CPU profiler: from BPF maps to pprof</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"><h3 class="article-title">DIY CPU profiler: from BPF maps to pprof</h3></a>
 <h6 class="subheader" title="2022-10-20T00:00:00+07:00">Thu 20 October 2022
 </h6>
 
 
-<p><a href="https://marselester.com/continuous-profiling-in-go.html">In previous post</a>
+    <p><a href="https://marselester.com/continuous-profiling-in-go.html">In previous post</a>
 I had a DIY BPF profiler printing stack trace IDs of a given process,
 though they were not very helpful.</p>
 <div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler/ -pid 15958</span>
@@ -419,7 +421,8 @@ so there will be enough CPU samples.</p>
 <p>After ten seconds the profiler will terminate leaving you with <code>cpu.pprof</code> file.
 You can inspect it with <code>go tool pprof cpu.pprof</code> command.</p>
 <p>Exploring Parca Agent's internals and reconstructing it in the simplest form
-helped me demystify some of aspects of BPF CPU profilers.</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+helped me demystify some of aspects of BPF CPU profilers.</p>
+<p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/bpf.html">bpf </a>
@@ -429,120 +432,22 @@ helped me demystify some of aspects of BPF CPU profilers.</p><p class="subheader
 
 
 
-<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "diy-cpu-profiler-from-bpf-maps-to-pprof.html";
+        var disqus_url = "https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/continuous-profiling-in-go.html"><h3 class="article-title">Continuous profiling in Go</h3></a>
-<h6 class="subheader" title="2022-04-22T00:00:00+07:00">Fri 22 April 2022
-</h6>
-
-
-<p>In this post I explore possibilities of continuous profiling of Go programs
-using Parca and also peek under the hood of its BPF agent.
-You can find the results of my experiments in
-<a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
-<h2>Ad hoc profiling</h2>
-<p>I was looking for a way to profile Go programs …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/continuous-profiling-in-go.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/continuous-profiling-in-go.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/bpf-go-program-in-kubernetes.html"><h3 class="article-title">BPF Go program in Kubernetes</h3></a>
-<h6 class="subheader" title="2021-11-17T00:00:00+07:00">Wed 17 November 2021
-</h6>
-
-
-<p>BPF opens a lot of possibilities of making observability tools running in Kubernetes.
-One can start with <a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools">BCC libbpf-tools</a> written in C,
-e.g., launch tcpconnlat program and process its stdout with another program to
-detect cases when it took too long to establish a TCP connection.
-For example, <code>curl …</code></p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/bpf-go-program-in-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-program-in-kubernetes.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html"><h3 class="article-title">BPF: Go frontend for tcpconnect</h3></a>
-<h6 class="subheader" title="2021-11-01T00:00:00+07:00">Mon 01 November 2021
-</h6>
-
-
-<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">In the previos BPF post</a>
-I shared my experiment of writing Go frontend for execsnoop.
-Here I would like to focus on tcpconnect, a BCC tool to trace new TCP active connections.
-It is useful for determining who is connecting to whom.
-This works by tracing the <code>tcp_v4_connect()</code> and <code>tcp_v6_connect …</code></p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"><h3 class="article-title">BPF: Go frontend for execsnoop</h3></a>
-<h6 class="subheader" title="2021-10-26T00:00:00+07:00">Tue 26 October 2021
-</h6>
-
-
-<p>After reading Brendan Gregg's books about BPF I was excited to try and implement something in Go.
-At a first glance it turned out I would need to install LLVM, Clang, and kernel header dependencies to run a simple program.
-Fortunately <a href="https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html">BTF, CO-RE technologies</a>
-eliminate those dependencies though kernel &gt;=5 …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

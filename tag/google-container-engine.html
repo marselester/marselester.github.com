@@ -61,78 +61,78 @@ Let's set it up on Kubernetes and test how it works by scraping HTTP request met
 from <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes">hello web application</a>
 which also runs in the same cluster.</p>
 <p>First of all, we need Kubernetes cluster running. It's easy to bootstrap one via <a class="reference external" href="https://console.cloud.google.com">Google Container Engine</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud container clusters create my-k8
+<div class="highlight"><pre><span></span><span class="gp">$ </span>gcloud container clusters create my-k8
 </pre></div>
 <p>The command above might complain that zone is not currently set.
 Choose the one you like and try to create a cluster again.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud compute zones list
-<span class="gp">$</span> gcloud config <span class="nb">set</span> compute/zone asia-east1-b
+<div class="highlight"><pre><span></span><span class="gp">$ </span>gcloud compute zones list
+<span class="gp">$ </span>gcloud config <span class="nb">set</span> compute/zone asia-east1-b
 </pre></div>
 <p>You should now have a Kubernetes cluster.
 If there are any issues, check out <a class="reference external" href="https://www.udacity.com/course/scalable-microservices-with-kubernetes--ud615">Udacity course</a> which helped me run Kubernetes in GKE.</p>
 <div class="section" id="first-start">
 <h2>First Start</h2>
 <p>Prometheus is available as Docker image and can be run locally quickly.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker run -p <span class="m">9090</span>:9090 prom/prometheus:v1.2.1
+<div class="highlight"><pre><span></span><span class="gp">$ </span>docker run -p <span class="m">9090</span>:9090 prom/prometheus:v1.2.1
 </pre></div>
 <p>When a container is started, the Prometheus expression browser should be accessible on <cite>http://localhost:9090</cite>.
 Now let's achieve the same results with Kubernetes.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl run prometheus-deployment --image<span class="o">=</span>prom/prometheus:v1.2.1 --port<span class="o">=</span><span class="m">9090</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl run prometheus-deployment --image<span class="o">=</span>prom/prometheus:v1.2.1 --port<span class="o">=</span><span class="m">9090</span>
 </pre></div>
 <p>The command above created <a class="reference external" href="http://kubernetes.io/docs/user-guide/deployments/">Kubernetes Deployment</a>
 that runs <cite>prometheus</cite> Docker image.</p>
 <p>By default deployed applications are visible only inside the Kubernetes cluster.
 To see whether Prometheus started up, we can run a proxy between terminal and Kubernetes cluster.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl proxy
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl proxy
 <span class="go">Starting to serve on 127.0.0.1:8001</span>
 </pre></div>
 <p>In another cloud shell, we can call Kubernetes API.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl get pods
 <span class="go">NAME                                     READY     STATUS    RESTARTS   AGE</span>
 <span class="go">prometheus-deployment-2234044252-of29y   1/1       Running   0          8m</span>
 
-<span class="gp">$</span> curl http://127.0.0.1:8001/api/v1/proxy/namespaces/default/pods/prometheus-deployment-2234044252-of29y:9090/metrics
+<span class="gp">$ </span>curl http://127.0.0.1:8001/api/v1/proxy/namespaces/default/pods/prometheus-deployment-2234044252-of29y:9090/metrics
 </pre></div>
 <p>Another option is to run a port forwarding:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl port-forward prometheus-deployment-2234044252-of29y <span class="m">8080</span>:9090
-<span class="gp">$</span> curl http://127.0.0.1:8080/metrics
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl port-forward prometheus-deployment-2234044252-of29y <span class="m">8080</span>:9090
+<span class="gp">$ </span>curl http://127.0.0.1:8080/metrics
 </pre></div>
 <p>Check Prometheus container logs:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl logs -f po/prometheus-deployment-2234044252-of29y
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl logs -f po/prometheus-deployment-2234044252-of29y
 <span class="go">time=&quot;2016-10-29T05:02:38Z&quot; level=info msg=&quot;Starting prometheus (version=1.2.1, branch=master, revision=dd66f2e94b2b662804b9aa1b6a50587b990ba8b7)&quot; source=&quot;main.go:75&quot;</span>
 </pre></div>
 <p>And finally we can run a shell inside the Pod's container and have a look at Prometheus config file.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl <span class="nb">exec</span> prometheus-deployment-2234044252-of29y -it /bin/sh
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl <span class="nb">exec</span> prometheus-deployment-2234044252-of29y -it /bin/sh
 <span class="go">root$ cat /etc/prometheus/prometheus.yml</span>
 </pre></div>
 <p>Its advisable to describe Deployments in configuration files,
 so we can have a better visibility and version control over our cluster.
 The following Deployment manifest is similar to what we achieved with <cite>kubectl run</cite> command.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">extensions/v1beta1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Deployment</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-deployment</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">replicas</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span> <span class="c1"># tells deployment to run 1 pod matching the template below</span>
-  <span class="nt">template</span><span class="p">:</span> <span class="c1"># crete pods using pod definition in this template</span>
-    <span class="nt">metadata</span><span class="p">:</span>
-      <span class="nt">labels</span><span class="p">:</span> <span class="c1"># these key value pairs will be attached to pods</span>
-        <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-server</span>
-    <span class="nt">spec</span><span class="p">:</span>
-      <span class="nt">containers</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus</span>
-          <span class="nt">image</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prom/prometheus:v1.2.1</span>
-          <span class="nt">ports</span><span class="p">:</span>
-            <span class="p p-Indicator">-</span> <span class="nt">containerPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">9090</span> <span class="c1"># port we open in the container</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">extensions/v1beta1</span><span class="w"></span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span><span class="w"></span>
+<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prometheus-deployment</span><span class="w"></span>
+<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span><span class="w"> </span><span class="c1"># tells deployment to run 1 pod matching the template below</span><span class="w"></span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="c1"># crete pods using pod definition in this template</span><span class="w"></span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="c1"># these key value pairs will be attached to pods</span><span class="w"></span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prometheus-server</span><span class="w"></span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prometheus</span><span class="w"></span>
+<span class="w">          </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prom/prometheus:v1.2.1</span><span class="w"></span>
+<span class="w">          </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9090</span><span class="w"> </span><span class="c1"># port we open in the container</span><span class="w"></span>
 </pre></div>
 <p>Let's delete <cite>prometheus-deployment</cite> we created via <cite>kubectl run</cite> command</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl delete deployment prometheus-deployment
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl delete deployment prometheus-deployment
 </pre></div>
 <p>and re-create the Deployment from a file (it is available in git repository):</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> git clone https://github.com/marselester/prometheus-on-kubernetes.git
-<span class="gp">$</span> <span class="nb">cd</span> ./prometheus-on-kubernetes/
-<span class="gp">$</span> kubectl create -f kube/prometheus/deployment-v1.yml
-<span class="gp">$</span> kubectl get deployments
+<div class="highlight"><pre><span></span><span class="gp">$ </span>git clone https://github.com/marselester/prometheus-on-kubernetes.git
+<span class="gp">$ </span><span class="nb">cd</span> ./prometheus-on-kubernetes/
+<span class="gp">$ </span>kubectl create -f kube/prometheus/deployment-v1.yml
+<span class="gp">$ </span>kubectl get deployments
 <span class="go">NAME                    DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE</span>
 <span class="go">prometheus-deployment   1         1         1            0           40s</span>
 </pre></div>
@@ -141,44 +141,44 @@ The following Deployment manifest is similar to what we achieved with <cite>kube
 <h2>Prometheus Service</h2>
 <p>We have a Prometheus Pod running.
 Now we need <a class="reference external" href="http://kubernetes.io/docs/user-guide/services/">Kubernetes Service</a> to let external clients access it.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl expose deployment prometheus-deployment --type<span class="o">=</span>NodePort --name<span class="o">=</span>prometheus-service
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl expose deployment prometheus-deployment --type<span class="o">=</span>NodePort --name<span class="o">=</span>prometheus-service
 </pre></div>
 <p>The assigned port can be found in <cite>NodePort</cite> output of Service description:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl describe service prometheus-service
-<span class="gp">#</span> ...
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl describe service prometheus-service
+<span class="gp"># </span>...
 <span class="go">NodePort:               &lt;unset&gt; 32514/TCP</span>
-<span class="gp">#</span> ...
+<span class="gp"># </span>...
 </pre></div>
 <p>We have exposed the Service on an external port <cite>32514</cite> on all nodes in our cluster.
 Now create a firewall rule to allow external traffic.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud compute firewall-rules create prometheus-nodeport --allow<span class="o">=</span>tcp:32514
+<div class="highlight"><pre><span></span><span class="gp">$ </span>gcloud compute firewall-rules create prometheus-nodeport --allow<span class="o">=</span>tcp:32514
 </pre></div>
 <p>Let's use one of the external IPs from our Kubernetes cluster instances to see Prometheus expression browser.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud compute instances list
+<div class="highlight"><pre><span></span><span class="gp">$ </span>gcloud compute instances list
 </pre></div>
 <p>You should be able to access Prometheus on <cite>http://&lt;EXTERNAL_IP&gt;:32514</cite>.
 Let's delete the Service and create it via Service config file.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl delete service prometheus-service
-<span class="gp">$</span> kubectl create -f kube/prometheus/service-v1.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl delete service prometheus-service
+<span class="gp">$ </span>kubectl create -f kube/prometheus/service-v1.yml
 </pre></div>
 <p>Since the Prometheus Pod exposes <cite>9090</cite> port and has <cite>app: prometheus-server</cite> label,
 our config should be as following:</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-service</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span> <span class="c1"># exposes any pods with the following labels as a service</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">prometheus-server</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span> <span class="c1"># this Service&#39;s port (cluster-internal IP clusterIP)</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">9090</span> <span class="c1"># pods expose this port</span>
-      <span class="c1"># Kubernetes master will allocate a port from a flag-configured range (default: 30000-32767),</span>
-      <span class="c1"># or we can set a specific port number (in our case).</span>
-      <span class="c1"># Each node will proxy 32514 port (the same port number on every node) into this service.</span>
-      <span class="c1"># Note that this Service will be visible as both NodeIP:nodePort and clusterIp:port</span>
-      <span class="nt">nodePort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">32514</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
+<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prometheus-service</span><span class="w"></span>
+<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"> </span><span class="c1"># exposes any pods with the following labels as a service</span><span class="w"></span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prometheus-server</span><span class="w"></span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
+<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"> </span><span class="c1"># this Service&#39;s port (cluster-internal IP clusterIP)</span><span class="w"></span>
+<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9090</span><span class="w"> </span><span class="c1"># pods expose this port</span><span class="w"></span>
+<span class="w">      </span><span class="c1"># Kubernetes master will allocate a port from a flag-configured range (default: 30000-32767),</span><span class="w"></span>
+<span class="w">      </span><span class="c1"># or we can set a specific port number (in our case).</span><span class="w"></span>
+<span class="w">      </span><span class="c1"># Each node will proxy 32514 port (the same port number on every node) into this service.</span><span class="w"></span>
+<span class="w">      </span><span class="c1"># Note that this Service will be visible as both NodeIP:nodePort and clusterIp:port</span><span class="w"></span>
+<span class="w">      </span><span class="nt">nodePort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">32514</span><span class="w"></span>
 </pre></div>
 </div>
 <div class="section" id="prometheus-config">
@@ -188,16 +188,16 @@ For sure we will need to update it so Prometheus can collect metrics from our ex
 Let's take the default config as a starting point and store it in
 <a class="reference external" href="http://kubernetes.io/docs/user-guide/configmap/">Kubernetes ConfigMap</a>.
 The config can be copied from the running container or from the git repository.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl <span class="nb">exec</span> prometheus-deployment-2234044252-of29y -it cat /etc/prometheus/prometheus.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl <span class="nb">exec</span> prometheus-deployment-2234044252-of29y -it cat /etc/prometheus/prometheus.yml
 </pre></div>
 <p>Next we need to create a ConfigMap entry for the <cite>prometheus.yml</cite> file:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf --from-file<span class="o">=</span>prometheus.yml<span class="o">=</span>kube/prometheus/config-v1.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create configmap prometheus-server-conf --from-file<span class="o">=</span>prometheus.yml<span class="o">=</span>kube/prometheus/config-v1.yml
 </pre></div>
 <p>Now let's mount <cite>prometheus-server-conf</cite> ConfigMap volume to our Prometheus Pod</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f kube/prometheus/deployment-v2.yaml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f kube/prometheus/deployment-v2.yaml
 </pre></div>
 <p>and store metrics in emptyDir volume, so we don't lose them when a container in the Pod crashes.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f kube/prometheus/deployment-v3.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f kube/prometheus/deployment-v3.yml
 </pre></div>
 </div>
 <div class="section" id="sending-app-metrics">
@@ -214,64 +214,64 @@ http_requests_total{code=&quot;200&quot;,method=&quot;get&quot;} 2384
 </pre></div>
 <p>But it's much easier to use a library
 (see <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes/blob/master/hello-app/v2/main.go">hello-app/v2</a>).</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="s">&quot;github.com/prometheus/client_golang/prometheus/promhttp&quot;</span>
-<span class="c1">// ...</span>
-<span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/metrics&quot;</span><span class="p">,</span> <span class="nx">promhttp</span><span class="p">.</span><span class="nx">Handler</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/prometheus/client_golang/prometheus/promhttp&quot;</span><span class="w"></span>
+<span class="c1">// ...</span><span class="w"></span>
+<span class="nx">http</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="s">&quot;/metrics&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">promhttp</span><span class="p">.</span><span class="nx">Handler</span><span class="p">())</span><span class="w"></span>
 </pre></div>
 <p>Now the app has <cite>/metrics</cite> endpoint with Go runtime metrics (number of goroutines, GC statistics).</p>
 <p>Our app exposes an important endpoint <cite>/hello</cite>.</p>
-<div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">helloHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">status</span> <span class="o">:=</span> <span class="nx">doSomeWork</span><span class="p">()</span>
-    <span class="nx">w</span><span class="p">.</span><span class="nx">WriteHeader</span><span class="p">(</span><span class="nx">status</span><span class="p">)</span>
-    <span class="nx">w</span><span class="p">.</span><span class="nx">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;Hello, World!\n&quot;</span><span class="p">))</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nx">helloHandler</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">status</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">doSomeWork</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">WriteHeader</span><span class="p">(</span><span class="nx">status</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;Hello, World!\n&quot;</span><span class="p">))</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 <p>Let's instrument <cite>helloHandler()</cite> to count HTTP requests and their durations.
 First, we need to define metrics.</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="s">&quot;github.com/prometheus/client_golang/prometheus&quot;</span>
+<div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="s">&quot;github.com/prometheus/client_golang/prometheus&quot;</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="p">(</span>
-    <span class="c1">// How often our /hello request durations fall into one of the defined buckets.</span>
-    <span class="c1">// We can use default buckets or set ones we are interested in.</span>
-    <span class="nx">duration</span> <span class="p">=</span> <span class="nx">prometheus</span><span class="p">.</span><span class="nx">NewHistogram</span><span class="p">(</span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">HistogramOpts</span><span class="p">{</span>
-        <span class="nx">Name</span><span class="p">:</span>    <span class="s">&quot;hello_request_duration_seconds&quot;</span><span class="p">,</span>
-        <span class="nx">Help</span><span class="p">:</span>    <span class="s">&quot;Histogram of the /hello request duration.&quot;</span><span class="p">,</span>
-        <span class="nx">Buckets</span><span class="p">:</span> <span class="p">[]</span><span class="kt">float64</span><span class="p">{</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.025</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">},</span>
-    <span class="p">})</span>
-    <span class="c1">// Counter vector to which we can attach labels. That creates many key-value</span>
-    <span class="c1">// label combinations. So in our case we count requests by status code separetly.</span>
-    <span class="nx">counter</span> <span class="p">=</span> <span class="nx">prometheus</span><span class="p">.</span><span class="nx">NewCounterVec</span><span class="p">(</span>
-        <span class="nx">prometheus</span><span class="p">.</span><span class="nx">CounterOpts</span><span class="p">{</span>
-            <span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;hello_requests_total&quot;</span><span class="p">,</span>
-            <span class="nx">Help</span><span class="p">:</span> <span class="s">&quot;Total number of /hello requests.&quot;</span><span class="p">,</span>
-        <span class="p">},</span>
-        <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;status&quot;</span><span class="p">},</span>
-    <span class="p">)</span>
-<span class="p">)</span>
+<span class="kd">var</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// How often our /hello request durations fall into one of the defined buckets.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// We can use default buckets or set ones we are interested in.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">duration</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">NewHistogram</span><span class="p">(</span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">HistogramOpts</span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Name</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;hello_request_duration_seconds&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Help</span><span class="p">:</span><span class="w">    </span><span class="s">&quot;Histogram of the /hello request duration.&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Buckets</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">float64</span><span class="p">{</span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mf">0.025</span><span class="p">,</span><span class="w"> </span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.25</span><span class="p">,</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mf">2.5</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="p">})</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Counter vector to which we can attach labels. That creates many key-value</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// label combinations. So in our case we count requests by status code separetly.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">counter</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">NewCounterVec</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">CounterOpts</span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nx">Name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;hello_requests_total&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nx">Help</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Total number of /hello requests.&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;status&quot;</span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="p">)</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
 
-<span class="c1">// init registers Prometheus metrics.</span>
-<span class="kd">func</span> <span class="nx">init</span><span class="p">()</span> <span class="p">{</span>
-    <span class="nx">prometheus</span><span class="p">.</span><span class="nx">MustRegister</span><span class="p">(</span><span class="nx">duration</span><span class="p">)</span>
-    <span class="nx">prometheus</span><span class="p">.</span><span class="nx">MustRegister</span><span class="p">(</span><span class="nx">counter</span><span class="p">)</span>
-<span class="p">}</span>
+<span class="c1">// init registers Prometheus metrics.</span><span class="w"></span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">init</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">MustRegister</span><span class="p">(</span><span class="nx">duration</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">MustRegister</span><span class="p">(</span><span class="nx">counter</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 <p>Second, measure a request duration in seconds and increase the counter in the <cite>helloHandler()</cite> function.</p>
-<div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">helloHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="nx">status</span> <span class="kt">int</span>
+<div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nx">helloHandler</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">status</span><span class="w"> </span><span class="kt">int</span><span class="w"></span>
 
-    <span class="k">defer</span> <span class="kd">func</span><span class="p">(</span><span class="nx">begun</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">duration</span><span class="p">.</span><span class="nx">Observe</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Since</span><span class="p">(</span><span class="nx">begun</span><span class="p">).</span><span class="nx">Seconds</span><span class="p">())</span>
+<span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">begun</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">duration</span><span class="p">.</span><span class="nx">Observe</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Since</span><span class="p">(</span><span class="nx">begun</span><span class="p">).</span><span class="nx">Seconds</span><span class="p">())</span><span class="w"></span>
 
-        <span class="c1">// hello_requests_total{status=&quot;200&quot;} 2385</span>
-        <span class="nx">counter</span><span class="p">.</span><span class="nx">With</span><span class="p">(</span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">Labels</span><span class="p">{</span>
-            <span class="s">&quot;status&quot;</span><span class="p">:</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprint</span><span class="p">(</span><span class="nx">status</span><span class="p">),</span>
-        <span class="p">}).</span><span class="nx">Inc</span><span class="p">()</span>
-    <span class="p">}(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">())</span>
+<span class="w">        </span><span class="c1">// hello_requests_total{status=&quot;200&quot;} 2385</span><span class="w"></span>
+<span class="w">        </span><span class="nx">counter</span><span class="p">.</span><span class="nx">With</span><span class="p">(</span><span class="nx">prometheus</span><span class="p">.</span><span class="nx">Labels</span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="s">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprint</span><span class="p">(</span><span class="nx">status</span><span class="p">),</span><span class="w"></span>
+<span class="w">        </span><span class="p">}).</span><span class="nx">Inc</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">}(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">())</span><span class="w"></span>
 
-    <span class="nx">status</span> <span class="p">=</span> <span class="nx">doSomeWork</span><span class="p">()</span>
-    <span class="nx">w</span><span class="p">.</span><span class="nx">WriteHeader</span><span class="p">(</span><span class="nx">status</span><span class="p">)</span>
-    <span class="nx">w</span><span class="p">.</span><span class="nx">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;Hello, World!\n&quot;</span><span class="p">))</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="nx">status</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">doSomeWork</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">WriteHeader</span><span class="p">(</span><span class="nx">status</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">w</span><span class="p">.</span><span class="nx">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;Hello, World!\n&quot;</span><span class="p">))</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 <p><a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes/blob/master/hello-app/v3/main.go">hello-app/v3</a>
 is used in further examples.</p>
@@ -280,14 +280,14 @@ is used in further examples.</p>
 <h2>Hello App Demo</h2>
 <p>Next step is to run the web app in Kubernetes.
 A Docker image of the <cite>hello-app/v3</cite> is available on Docker Hub.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f kube/hello/deployment-v1.yml
-<span class="gp">$</span> kubectl port-forward hello-deployment-1471727270-eaknp <span class="m">8000</span>:8000
-<span class="gp">$</span> curl localhost:8000/hello
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f kube/hello/deployment-v1.yml
+<span class="gp">$ </span>kubectl port-forward hello-deployment-1471727270-eaknp <span class="m">8000</span>:8000
+<span class="gp">$ </span>curl localhost:8000/hello
 <span class="go">Hello, World!</span>
-<span class="gp">$</span> curl localhost:8000/metrics
+<span class="gp">$ </span>curl localhost:8000/metrics
 <span class="go">...</span>
-<span class="gp">#</span> HELP hello_request_duration_seconds Histogram of the /hello request duration.
-<span class="gp">#</span> TYPE hello_request_duration_seconds histogram
+<span class="gp"># </span>HELP hello_request_duration_seconds Histogram of the /hello request duration.
+<span class="gp"># </span>TYPE hello_request_duration_seconds histogram
 <span class="go">hello_request_duration_seconds_bucket{le=&quot;0.01&quot;} 0</span>
 <span class="go">hello_request_duration_seconds_bucket{le=&quot;0.025&quot;} 0</span>
 <span class="go">hello_request_duration_seconds_bucket{le=&quot;0.05&quot;} 0</span>
@@ -301,52 +301,52 @@ A Docker image of the <cite>hello-app/v3</cite> is available on Docker Hub.</p>
 <span class="go">hello_request_duration_seconds_bucket{le=&quot;+Inf&quot;} 1</span>
 <span class="go">hello_request_duration_seconds_sum 0.083953974</span>
 <span class="go">hello_request_duration_seconds_count 1</span>
-<span class="gp">#</span> HELP hello_requests_total Total number of /hello requests.
-<span class="gp">#</span> TYPE hello_requests_total counter
+<span class="gp"># </span>HELP hello_requests_total Total number of /hello requests.
+<span class="gp"># </span>TYPE hello_requests_total counter
 <span class="go">hello_requests_total{status=&quot;500&quot;} 1</span>
 </pre></div>
 <p>The Service creation is similar to what we have already done before.
 We use <cite>32515</cite> NodePort here.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f kube/hello/service-v1.yml
-<span class="gp">$</span> gcloud compute firewall-rules create hello-nodeport --allow<span class="o">=</span>tcp:32515
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f kube/hello/service-v1.yml
+<span class="gp">$ </span>gcloud compute firewall-rules create hello-nodeport --allow<span class="o">=</span>tcp:32515
 </pre></div>
 <p>Now it is possible to see the app's metrics from Internet.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl http://&lt;EXTERNAL_IP&gt;:32515/metrics
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl http://&lt;EXTERNAL_IP&gt;:32515/metrics
 </pre></div>
 </div>
 <div class="section" id="hello-prometheus">
 <h2>Hello Prometheus</h2>
 <p>Since the web app is run on Kubernetes, we can configure Prometheus
 to scrape metrics from <cite>/metrics</cite> HTTP endpoint of hello-app Pods.</p>
-<div class="highlight"><pre><span></span><span class="nt">global</span><span class="p">:</span>
-  <span class="nt">scrape_interval</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5s</span>
-  <span class="nt">evaluation_interval</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5s</span>
+<div class="highlight"><pre><span></span><span class="nt">global</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">scrape_interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span><span class="w"></span>
+<span class="w">  </span><span class="nt">evaluation_interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span><span class="w"></span>
 
-<span class="nt">scrape_configs</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="nt">job_name</span><span class="p">:</span> <span class="s">&#39;prometheus&#39;</span>
-    <span class="nt">static_configs</span><span class="p">:</span>
-      <span class="p p-Indicator">-</span> <span class="nt">targets</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;localhost:9090&#39;</span><span class="p p-Indicator">]</span>
+<span class="nt">scrape_configs</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;prometheus&#39;</span><span class="w"></span>
+<span class="w">    </span><span class="nt">static_configs</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">targets</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;localhost:9090&#39;</span><span class="p p-Indicator">]</span><span class="w"></span>
 
-  <span class="p p-Indicator">-</span> <span class="nt">job_name</span><span class="p">:</span> <span class="s">&#39;hello&#39;</span>
-    <span class="c1"># The information to access the Kubernetes API to discover targets.</span>
-    <span class="nt">kubernetes_sd_configs</span><span class="p">:</span>
-      <span class="p p-Indicator">-</span> <span class="nt">api_servers</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="s">&#39;https://kubernetes.default.svc&#39;</span>
-        <span class="c1"># Prometheus assumes it is being run inside a Kubernetes pod.</span>
-        <span class="nt">in_cluster</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
-        <span class="c1"># Only pods should be discovered.</span>
-        <span class="nt">role</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">pod</span>
-    <span class="c1"># Prometheus collects metrics from pods with &quot;app: hello-server&quot; label.</span>
-    <span class="c1"># Prometheus gets &#39;hello_requests_total{status=&quot;500&quot;} 1&#39;</span>
-    <span class="c1"># from hello:8000/metrics and adds &quot;job&quot; and &quot;instance&quot; labels, so it becomes</span>
-    <span class="c1"># &#39;hello_requests_total{instance=&quot;10.16.0.10:8000&quot;,job=&quot;hello&quot;,status=&quot;500&quot;} 1&#39;.</span>
-    <span class="nt">relabel_configs</span><span class="p">:</span>
-      <span class="p p-Indicator">-</span> <span class="nt">source_labels</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">__meta_kubernetes_pod_label_app</span><span class="p p-Indicator">]</span>
-        <span class="nt">regex</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hello-server</span>
-        <span class="nt">action</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">keep</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;hello&#39;</span><span class="w"></span>
+<span class="w">    </span><span class="c1"># The information to access the Kubernetes API to discover targets.</span><span class="w"></span>
+<span class="w">    </span><span class="nt">kubernetes_sd_configs</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">api_servers</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&#39;https://kubernetes.default.svc&#39;</span><span class="w"></span>
+<span class="w">        </span><span class="c1"># Prometheus assumes it is being run inside a Kubernetes pod.</span><span class="w"></span>
+<span class="w">        </span><span class="nt">in_cluster</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"></span>
+<span class="w">        </span><span class="c1"># Only pods should be discovered.</span><span class="w"></span>
+<span class="w">        </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pod</span><span class="w"></span>
+<span class="w">    </span><span class="c1"># Prometheus collects metrics from pods with &quot;app: hello-server&quot; label.</span><span class="w"></span>
+<span class="w">    </span><span class="c1"># Prometheus gets &#39;hello_requests_total{status=&quot;500&quot;} 1&#39;</span><span class="w"></span>
+<span class="w">    </span><span class="c1"># from hello:8000/metrics and adds &quot;job&quot; and &quot;instance&quot; labels, so it becomes</span><span class="w"></span>
+<span class="w">    </span><span class="c1"># &#39;hello_requests_total{instance=&quot;10.16.0.10:8000&quot;,job=&quot;hello&quot;,status=&quot;500&quot;} 1&#39;.</span><span class="w"></span>
+<span class="w">    </span><span class="nt">relabel_configs</span><span class="p">:</span><span class="w"></span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_labels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">__meta_kubernetes_pod_label_app</span><span class="p p-Indicator">]</span><span class="w"></span>
+<span class="w">        </span><span class="nt">regex</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hello-server</span><span class="w"></span>
+<span class="w">        </span><span class="nt">action</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">keep</span><span class="w"></span>
 </pre></div>
 <p>Update a ConfigMap of Prometheus config and re-create a Prometheus Pod so it picks up changes.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf <span class="se">\</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create configmap prometheus-server-conf <span class="se">\</span>
     --from-file<span class="o">=</span>prometheus.yml<span class="o">=</span>kube/prometheus/config-v2.yaml <span class="se">\</span>
     -o yaml <span class="se">\</span>
     --dry-run <span class="p">|</span> kubectl replace -f -

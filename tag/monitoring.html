@@ -51,220 +51,79 @@
         
 
             <article>
-                <a href="https://marselester.com/continuous-profiling-in-go.html"><h3 class="article-title">Continuous profiling in Go</h3></a>
-<h6 class="subheader" title="2022-04-22T00:00:00+07:00">Fri 22 April 2022
+                <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"><h3 class="article-title">DIY CPU profiler: from BPF maps to pprof</h3></a>
+<h6 class="subheader" title="2022-10-20T00:00:00+07:00">Thu 20 October 2022
 </h6>
 
 
-<p>In this post I explore possibilities of continuous profiling of Go programs
-using Parca and also peek under the hood of its BPF agent.
+<p><a href="https://marselester.com/continuous-profiling-in-go.html">In previous post</a>
+I had a DIY BPF profiler printing stack trace IDs of a given process,
+though they were not very helpful.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler/ -pid 15958</span>
+<span class="go">Waiting for stack traces...</span>
+<span class="go">{PID:15958 UserStackID:132 KernelStackID:114} seen 1 times</span>
+</code></pre></div>
+
+<p>Let's try to show more useful information this time,
+i.e., sampled memory addresses.
 You can find the results of my experiments in
 <a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
-<h2>Ad hoc profiling</h2>
-<p>I was looking for a way to profile Go programs running in Kubernetes
-to see where a program spends its CPU time (which functions consume most CPU)
-or where memory allocations happen.
-Allocations in a frequently called function could cause GC pressure
-which in turn could cause latency spikes in HTTP requests.</p>
-<p>Latency of the Bookstore service is taken seriously,
-so its API server already had <code>import _ "net/http/pprof"</code> to enable profiling with <code>go tool pprof</code> program.
-In order to get access to the HTTP server running in the pod
-a port forwarder could be used.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ kubectl get pods -A | grep bookstore</span>
-<span class="go">default                  bookstore-574897d6-e18e</span>
-<span class="go">﹩ kubectl port-forward -n default bookstore-574897d6-e18e 6060 &amp;</span>
-<span class="go">Forwarding from 127.0.0.1:6060 -&gt; 6060</span>
-<span class="go">Forwarding from [::1]:6060 -&gt; 6060</span>
-<span class="go">﹩ fg 1</span>
+<h2>Reading addresses from BPF maps</h2>
+<p>I continued to explore
+<a href="https://github.com/parca-dev/parca-agent/blob/1e935f4d5f7b4484f6cf3d4ee26340f3718ff37d/pkg/profiler/profiler.go#L336">github.com/parca-dev/parca-agent/pkg/profiler/profiler.go</a>
+and found the place where stack trace samples are read from the BPF maps — <code>profileLoop()</code> method.
+Here is its simplified version.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Always needs to be sync with MAX_STACK_DEPTH in parca-agent.bpf.c.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">stackDepth</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">127</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Twice the stack depth because we have a User and a potential Kernel stack.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">doubleStackDepth</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">254</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+
+<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">CgroupProfiler</span><span class="p">)</span><span class="w"> </span><span class="nx">profileLoop</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">captureTime</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">it</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">counts</span><span class="p">.</span><span class="nx">Iterator</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Note, pid, userStackID, and kernelStackID are read from it.Key().</span><span class="w"></span>
+<span class="w">        </span><span class="nx">stack</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[</span><span class="nx">doubleStackDepth</span><span class="p">]</span><span class="kt">uint64</span><span class="p">{}</span><span class="w"></span>
+
+<span class="w">        </span><span class="c1">// Collect user-space stack trace samples.</span><span class="w"></span>
+<span class="w">        </span><span class="nx">stackBytes</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">stackTraces</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">(</span><span class="w"></span>
+<span class="w">            </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">userStackID</span><span class="p">),</span><span class="w"></span>
+<span class="w">        </span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">stackBytes</span><span class="p">),</span><span class="w"> </span><span class="nx">byteOrder</span><span class="p">,</span><span class="w"> </span><span class="nx">stack</span><span class="p">[:</span><span class="nx">stackDepth</span><span class="p">])</span><span class="w"></span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">stack</span><span class="p">[:</span><span class="nx">stackDepth</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mapping</span><span class="p">.</span><span class="nx">PIDAddrMapping</span><span class="p">(</span><span class="nx">pid</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">        </span><span class="c1">// Collect kernel-space stack trace samples.</span><span class="w"></span>
+<span class="w">        </span><span class="nx">stackBytes</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">stackTraces</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">(</span><span class="w"></span>
+<span class="w">            </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">kernelStackID</span><span class="p">),</span><span class="w"></span>
+<span class="w">        </span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">stackBytes</span><span class="p">),</span><span class="w"> </span><span class="nx">byteOrder</span><span class="p">,</span><span class="w"> </span><span class="nx">stack</span><span class="p">[</span><span class="nx">stackDepth</span><span class="p">:])</span><span class="w"></span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">stack</span><span class="p">[</span><span class="nx">stackDepth</span><span class="p">:]</span><span class="w"> </span><span class="p">{}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
-<p>The following URLs under <code>/debug/pprof/</code> provide profiling data.</p>
-<div class="highlight"><pre><span></span><code><span class="go">＃ 30-second CPU profile.</span>
-<span class="go">﹩ curl http://0.0.0.0:6060/debug/pprof/profile --output ./cpu.pprof</span>
-<span class="go">＃ Heap allocations profile since the process started</span>
-<span class="go">＃ including garbage-collected bytes (useful when optimising code).</span>
-<span class="go">﹩ curl http://0.0.0.0:6060/debug/pprof/allocs --output ./heap-all.pprof</span>
-<span class="go">＃ Heap allocations of live objects (useful when looking for memory leaks).</span>
-<span class="go">﹩ curl http://0.0.0.0:6060/debug/pprof/heap --output ./heap-live.pprof</span>
-</code></pre></div>
-
-<p>In order to inspect the heap profile <code>heap-all.pprof</code>
-I would need to compile the API <code>server</code> program and fix the search path for source files:</p>
-<ul>
-<li><code>source_path</code> is an absolute path to your source code (the Bookstore's git repository),
-  e.g., on Mac it could be <code>/Users/bob/code/bookstore/</code>.</li>
-<li><code>trim_path</code> is a path the profile expects the code to be at, e.g.,
-  <code>/opt/bookstore/</code> because the binary was compiled in Docker by CI/CD</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ GOOS=linux go build ./cmd/server/</span>
-<span class="go">﹩ go tool pprof -source_path=&quot;$(pwd)&quot; -trim_path=/opt/bookstore/ ./server ./heap-all.pprof</span>
-<span class="go">﹪ web</span>
-<span class="go">﹪ top10 -cum</span>
-</code></pre></div>
-
-<p>The <code>web</code> command opens an allocation graph of function calls.
-The <code>top10 -cum</code> command shows top ten functions by allocations in that function
-or a function it called (cumulative) down the stack:</p>
-<ul>
-<li><code>flat</code> is a memory allocated by that function and is held by it</li>
-<li><code>cum</code> is a memory allocated by that function or a function it called down the stack.
-  When <code>flat</code> and <code>cum</code> numbers match,
-  this might indicate the allocated memory is retained.</li>
-</ul>
-<h2>Continuous profiling</h2>
-<p>I could be lucky and discover some obvious problem,
-though most likely by the time the profiles are collected it is already too late
-because a Kubernetes pod in question is already gone.</p>
-<p>A continuous profiler could have collected the data
-when a problem was occuring on production,
-so I was curious to see what open source tooling is available.
-Here is what I found so far:</p>
-<ul>
-<li><a href="https://www.parca.dev/">Parca</a></li>
-<li><a href="https://pyroscope.io/">Pyroscope</a></li>
-<li><a href="https://github.com/profefe/profefe">profefe</a></li>
-</ul>
-<p>All of them are capable, moreover Parca and Pyroscope have BPF agents.
-I experimented with Parca more because I stumbled on it earlier.
-So here is how Parca Server configuration looked like
-when I set it up to collect profiles every minute from the Bookstore service.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">debug_info</span><span class="p">:</span>
-  <span class="nt">bucket</span><span class="p">:</span>
-    <span class="nt">type</span><span class="p">:</span> <span class="s">&quot;FILESYSTEM&quot;</span>
-    <span class="nt">config</span><span class="p">:</span>
-      <span class="nt">directory</span><span class="p">:</span> <span class="s">&quot;./tmp&quot;</span>
-  <span class="nt">cache</span><span class="p">:</span>
-    <span class="nt">type</span><span class="p">:</span> <span class="s">&quot;FILESYSTEM&quot;</span>
-    <span class="nt">config</span><span class="p">:</span>
-      <span class="nt">directory</span><span class="p">:</span> <span class="s">&quot;./tmp&quot;</span>
-
-<span class="nt">scrape_configs</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="nt">job_name</span><span class="p">:</span> <span class="s">&quot;bookstore&quot;</span>
-    <span class="nt">scrape_interval</span><span class="p">:</span> <span class="s">&quot;1m&quot;</span>
-    <span class="nt">scrape_timeout</span><span class="p">:</span> <span class="s">&quot;15s&quot;</span>
-    <span class="nt">static_configs</span><span class="p">:</span>
-      <span class="p p-Indicator">-</span> <span class="nt">targets</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="s">&#39;bookstore.default:6060&#39;</span> <span class="p p-Indicator">]</span>
-</code></pre></div>
-
-<p>Note, the config above is part of
-<a href="https://github.com/parca-dev/parca/releases/download/v0.10.0/kubernetes-manifest.yaml">kubernetes-manifest.yaml</a>.
-Check out <a href="https://www.parca.dev/docs/kubernetes">Parca tutorial</a> to learn more.</p>
-<h2>BPF profiling agent</h2>
-<p>The cool things about BPF profiling agents are that they incur low overhead,
-can capture user/kernel-space stack traces, and don't need much configuration
-because they discover containers on the Kubernetes node where an agent is running.</p>
-<p>A quick summary about BPF.
-In the kernel, a BPF program is executed on each event.
-The event types could be kprobes, uprobes, tracepoints, sockets, perf_events.
-It can use BPF helpers to fetch kernel state, and BPF maps for storage.
-In user space BPF maps or a perf buffer are periodically read and some output (summary) is shown to a user.</p>
-<p>I was curious how Parca Agent was implemented.
-According to its <a href="https://github.com/parca-dev/parca-agent/blob/main/docs/design.md">design doc</a>
-it attaches the BPF program to a Linux cgroup using
-<a href="https://man7.org/linux/man-pages/man2/perf_event_open.2.html">perf_event_open()</a> system call.
-The call creates a file descriptor that allows measuring performance information.
-It instructs the kernel to call the BPF program 100 times per second.</p>
-<p>Here I annotated
-<a href="https://github.com/parca-dev/parca-agent/blob/1e935f4d5f7b4484f6cf3d4ee26340f3718ff37d/pkg/profiler/profiler.go#L270">github.com/parca-dev/parca-agent/pkg/profiler/profiler.go</a> code around the syscall.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// To discover cgroups to profile in Kubernetes,</span>
-<span class="c1">// Parca Agent first discovers all pods running on the node it is on,</span>
-<span class="c1">// then discovers the primary PID of the cgroup using Kubernetes CRI (container runtime interface).</span>
-<span class="c1">// For profiling purposes a perf_event cgroup is required, which is read from /proc/PID/cgroup.</span>
-<span class="nx">cgroup</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-<span class="c1">// The pid and cpu arguments allow specifying which process and CPU to monitor.</span>
-<span class="nx">pid</span> <span class="o">:=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">cgroup</span><span class="p">.</span><span class="nx">Fd</span><span class="p">())</span>
-
-<span class="k">for</span> <span class="nx">cpu</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">cpu</span> <span class="p">&lt;</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">NumCPU</span><span class="p">();</span> <span class="nx">cpu</span><span class="o">++</span> <span class="p">{</span>
-    <span class="nx">fd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventOpen</span><span class="p">(</span>
-        <span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventAttr</span><span class="p">{</span>
-            <span class="c1">// PERF_TYPE_SOFTWARE event type indicates that</span>
-            <span class="c1">// we are measuring software events provided by the kernel.</span>
-            <span class="nx">Type</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_TYPE_SOFTWARE</span><span class="p">,</span>
-            <span class="c1">// Config is a Type-specific configuration.</span>
-            <span class="c1">// PERF_COUNT_SW_CPU_CLOCK reports the CPU clock, a high-resolution per-CPU timer.</span>
-            <span class="nx">Config</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_COUNT_SW_CPU_CLOCK</span><span class="p">,</span>
-            <span class="c1">// Size of attribute structure for forward/backward compatibility.</span>
-            <span class="nx">Size</span><span class="p">:</span> <span class="nb">uint32</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Sizeof</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">PerfEventAttr</span><span class="p">{})),</span>
-            <span class="c1">// Sample could mean sampling period (expressed as the number of occurrences of an event)</span>
-            <span class="c1">// or frequency (the average rate of samples per second).</span>
-            <span class="c1">// See https://perf.wiki.kernel.org/index.php/Tutorial#Period_and_rate.</span>
-            <span class="c1">// In order to use frequency PerfBitFreq flag is set below.</span>
-            <span class="c1">// The kernel will adjust the sampling period to try and achieve the desired rate.</span>
-            <span class="nx">Sample</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
-            <span class="nx">Bits</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PerfBitDisabled</span> <span class="p">|</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">PerfBitFreq</span><span class="p">,</span>
-        <span class="p">},</span>
-        <span class="nx">pid</span><span class="p">,</span>
-        <span class="nx">cpu</span><span class="p">,</span>
-        <span class="c1">// This argument allows event groups to be created.</span>
-        <span class="c1">// A single event on its own is created with groupFd = -1</span>
-        <span class="c1">// and is considered to be a group with only 1 member.</span>
-        <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-        <span class="c1">// PERF_FLAG_PID_CGROUP flag activates per-container system-wide monitoring.</span>
-        <span class="c1">// In this mode, the event is measured only if the thread running on the monitored CPU</span>
-        <span class="c1">// belongs to the designated container (cgroup).</span>
-        <span class="nx">unix</span><span class="p">.</span><span class="nx">PERF_FLAG_PID_CGROUP</span><span class="p">,</span>
-    <span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<h3>BPF C code</h3>
-<p>From looking at BPF C code
-<a href="https://github.com/parca-dev/parca-agent/blob/31253527651ebebb74c6200eb68fe9251479ed6b/parca-agent.bpf.c">parca-agent.bpf.c</a>
-we can see the BPF program <code>do_sample</code>.
-As mentioned above it's executed 100 times per second.
-Each time it captures stack traces of the thread that is currently running on CPU.</p>
-<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;perf_event&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">do_sample</span><span class="p">(</span><span class="k">struct</span> <span class="n">bpf_perf_event_data</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
-</code></pre></div>
-
-<p><code>SEC("perf_event")</code> denotes <code>BPF_PROG_TYPE_PERF_EVENT</code> BPF program type
-which specifies the type of events that the BPF program attaches to (perf_events),
-and the arguments for the events.</p>
-<div class="highlight"><pre><span></span><code><span class="n">u64</span> <span class="n">id</span> <span class="o">=</span> <span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span>
-<span class="n">u32</span> <span class="n">tgid</span> <span class="o">=</span> <span class="n">id</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">;</span>
-<span class="n">u32</span> <span class="n">pid</span> <span class="o">=</span> <span class="n">id</span><span class="p">;</span>
-</code></pre></div>
-
-<p><a href="https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/bpf.h#L1777">bpf_get_current_pid_tgid()</a>
-BPF helper returns an unsigned 64-bit integer containing
-the current TGID (what user space calls the PID) in the upper bits and
-the current PID (what user space calls the kernel thread ID) in the lower bits.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Max amount of different stack trace addresses to buffer in the map.</span>
-<span class="cp">#define MAX_STACK_ADDRESSES 1024</span>
-<span class="c1">// Max depth of each stack trace to track.</span>
-<span class="cp">#define MAX_STACK_DEPTH 127</span>
-<span class="c1">// Stack trace value is 1 big byte array of the stack addresses.</span>
-<span class="k">typedef</span> <span class="n">__u64</span> <span class="n">stack_trace_type</span><span class="p">[</span><span class="n">MAX_STACK_DEPTH</span><span class="p">];</span>
-
-<span class="c1">// The stack_traces map holds an array of memory addresses,</span>
-<span class="c1">// e.g., stack_traces[1253] = [0xdeadbeef, 0x123abcde]</span>
-<span class="c1">// where 1253 is a stack ID.</span>
-<span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_STACK_TRACE</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="n">MAX_STACK_ADDRESSES</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">u32</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">stack_trace_type</span><span class="p">);</span>
-<span class="p">}</span> <span class="n">stack_traces</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
-
-<span class="k">struct</span> <span class="n">stack_count_key_t</span> <span class="p">{</span>
-    <span class="n">u32</span> <span class="n">pid</span><span class="p">;</span>
-    <span class="n">int32</span> <span class="n">user_stack_id</span><span class="p">;</span>
-    <span class="n">int32</span> <span class="n">kernel_stack_id</span><span class="p">;</span>
-<span class="p">};</span>
-
-<span class="c1">// The counts map keeps track of how many times a stack trace has been seen,</span>
-<span class="c1">// e.g., counts[{10342, 1253, 0234}] = 45 times.</span>
-<span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_HASH</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="mi">10240</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="k">struct</span> <span class="n">stack_count_key_t</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">u64</span><span class="p">);</span>
-<span class="p">}</span> <span class="n">counts</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
-</code></pre></div>
-
-<p>The BPF program records stack traces in special <code>stack_traces</code> BPF map
-which is indexed by stack IDs.
-The map value is an array of memory addresses that represent the code executed.</p>
+<p>From looking at it I can tell that PID, user-space stack ID, and kernel-space stack ID are read
+from the <code>counts</code> BPF map on each iteration.</p>
+<table>
+<thead>
+<tr>
+<th>{ pid; userStackID; kernelStackID }</th>
+<th>seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>{ 10342; 1253; 0234 }</td>
+<td>45</td>
+</tr>
+</tbody>
+</table>
+<p>A stack ID allows to fetch a stack trace
+(an array of memory addresses that represent the code executed during profiling)
+from the <code>stack_traces</code> BPF map.</p>
 <table>
 <thead>
 <tr>
@@ -283,184 +142,284 @@ The map value is an array of memory addresses that represent the code executed.<
 </tr>
 </tbody>
 </table>
-<p>The <code>counts</code> BPF map keeps track of how many times a stack trace has been seen:</p>
-<ul>
-<li>its key is a triple of PID, user-space stack ID, and kernel-space stack ID, see <code>struct stack_count_key_t { ... }</code></li>
-<li>its value is the amount of times that stack trace has been observed</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th>stack_count_key_t</th>
-<th>seen</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>{ 10342; 1253; 0234 }</td>
-<td>45</td>
-</tr>
-</tbody>
-</table>
-<p>The maps are populated using
-<a href="https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/bpf.h#L2080">bpf_get_stackid()</a>
-and <code>bpf_map_lookup_or_try_init()</code> functions.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Create a key for &quot;counts&quot; map.</span>
-<span class="k">struct</span> <span class="n">stack_count_key_t</span> <span class="n">key</span> <span class="o">=</span> <span class="p">{.</span><span class="n">pid</span> <span class="o">=</span> <span class="n">tgid</span><span class="p">};</span>
-<span class="c1">// Read user-space stack ID and insert memory addresses into stack_traces map.</span>
-<span class="c1">// The positive or null stack id is returned on success,</span>
-<span class="c1">// or a negative error in case of failure.</span>
-<span class="n">key</span><span class="p">.</span><span class="n">user_stack_id</span> <span class="o">=</span> <span class="n">bpf_get_stackid</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stack_traces</span><span class="p">,</span> <span class="n">BPF_F_USER_STACK</span><span class="p">);</span>
-<span class="c1">// Read kernel-space stack ID and insert memory addresses into stack_traces map.</span>
-<span class="n">key</span><span class="p">.</span><span class="n">kernel_stack_id</span> <span class="o">=</span> <span class="n">bpf_get_stackid</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stack_traces</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<p>A user-space stack trace indexed by <code>userStackID=1253</code> is placed
+in the beginning of the <code>stack [254]uint64</code> array.
+The <code>kernelStackID=0234</code> kernel-space stack trace is placed in the middle of the array.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// User-space stack trace is limited by stackDepth=127.</span><span class="w"></span>
+<span class="nx">stack</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xdeadbeef</span><span class="w"></span>
+<span class="nx">stack</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x123abcde</span><span class="w"></span>
+<span class="nx">stack</span><span class="p">[</span><span class="mi">126</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">...</span><span class="w"></span>
 
-<span class="n">u64</span> <span class="n">zero</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-<span class="n">u64</span> <span class="o">*</span><span class="n">seen</span><span class="p">;</span>
-<span class="n">seen</span> <span class="o">=</span> <span class="n">bpf_map_lookup_or_try_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counts</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">key</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">zero</span><span class="p">);</span>
-<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">seen</span><span class="p">)</span>
-    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-<span class="c1">// Atomically increments the seen counter.</span>
-<span class="n">__sync_fetch_and_add</span><span class="p">(</span><span class="n">seen</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="c1">// Kernel-space stack trace is limited by doubleStackDepth=254.</span><span class="w"></span>
+<span class="nx">stack</span><span class="p">[</span><span class="mi">127</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x597be95a</span><span class="w"></span>
+<span class="nx">stack</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xae5ee03</span><span class="w"></span>
+<span class="nx">stack</span><span class="p">[</span><span class="mi">253</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">...</span><span class="w"></span>
 </code></pre></div>
 
-<p>On Go side the BPF maps are read every 10 seconds,
-get processed, and then purged to reset for the next iteration.</p>
-<h3>DIY profiler</h3>
-<p>Parca Agent relies on <a href="https://github.com/aquasecurity/libbpfgo">cgo bindings for libbpf</a> from Aqua Security.
-I wanted to make something similar using
-<a href="https://github.com/cilium/ebpf">github.com/cilium/ebpf</a> which doesn't need cgo.</p>
-<p>In order to prepare the environment I ran Ubuntu 21.10 in a virtual machine and installed Clang with Go.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹪ cat &gt; Vagrantfile &lt;&lt;CFG</span>
-<span class="go">Vagrant.configure(&quot;2&quot;) do |config|</span>
-<span class="go">    config.vm.box = &quot;ubuntu/impish64&quot;</span>
-<span class="go">end</span>
-<span class="go">CFG</span>
-<span class="go">﹪ vagrant up</span>
-<span class="go">﹪ vagrant ssh</span>
-<span class="go">﹩ sudo apt-get update</span>
-<span class="go">﹩ sudo apt-get install clang</span>
-<span class="go">﹩ sudo snap install go --classic</span>
-<span class="go">﹩ uname -nr</span>
-<span class="go">ubuntu-impish 5.13.0-39-generic</span>
-<span class="go">﹩ clang -v</span>
-<span class="go">Ubuntu clang version 13.0.0-2</span>
-</code></pre></div>
-
-<p>Then I copied
-<a href="https://github.com/parca-dev/parca-agent/blob/31253527651ebebb74c6200eb68fe9251479ed6b/parca-agent.bpf.c">parca-agent.bpf.c</a>
-from parca-agent repository and tried to generate Go files using bpf2go tool.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ cd /vagrant/</span>
-<span class="go">﹩ mkdir -p cmd/profiler/bpf/</span>
-<span class="go">﹩ curl -o cmd/profiler/bpf/parca-agent.bpf.c https://raw.githubusercontent.com/parca-dev/parca-agent/31253527651ebebb74c6200eb68fe9251479ed6b/parca-agent.bpf.c</span>
-<span class="go">﹩ cat &gt; cmd/profiler/main.go &lt;&lt;&lt;&#39;&#39;&#39;</span>
-<span class="go">package main</span>
-
-<span class="go">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-13 ParcaAgent ./bpf/parca-agent.bpf.c -- -I../../headers</span>
-
-<span class="go">func main() {}</span>
-<span class="go">&#39;&#39;&#39;</span>
-<span class="go">﹩ go mod init diy-parca-agent</span>
-<span class="go">﹩ go get github.com/cilium/ebpf/cmd/bpf2go</span>
-<span class="go">﹩ go generate ./cmd/profiler/</span>
-<span class="go">/vagrant/cmd/profiler/bpf/parca-agent.bpf.c:11:10: fatal error: &#39;vmlinux.h&#39; file not found</span>
-</code></pre></div>
-
-<p><code>vmlinux.h</code> can be generated from the installed kernel using bpftool tool.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ mkdir headers</span>
-<span class="go">﹩ sudo apt-get install linux-tools-$(uname -r) linux-tools-common</span>
-<span class="go">﹩ bpftool btf dump file /sys/kernel/btf/vmlinux format c &gt; ./headers/vmlinux.h</span>
-</code></pre></div>
-
-<p>The remaining missing headers I copied from ubuntu-kernel, libbpf, and cilium repositories.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ curl -o ./headers/bpf_core_read.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/impish/plain/tools/lib/bpf/bpf_core_read.h</span>
-<span class="go">﹩ curl -o ./headers/bpf_endian.h https://raw.githubusercontent.com/cilium/ebpf/master/examples/headers/bpf_endian.h</span>
-<span class="go">﹩ curl -o ./headers/bpf_helpers.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/impish/plain/tools/lib/bpf/bpf_helpers.h</span>
-<span class="go">﹩ curl -o ./headers/bpf_tracing.h https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/impish/plain/tools/lib/bpf/bpf_tracing.h</span>
-<span class="go">﹩ curl -o ./headers/bpf_helper_defs.h https://raw.githubusercontent.com/libbpf/libbpf/master/src/bpf_helper_defs.h</span>
-</code></pre></div>
-
-<p>Finally, all the dependencies were resolved and Go code was generated.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ go generate ./cmd/profiler/</span>
-<span class="go">Compiled /vagrant/cmd/profiler/parcaagent_bpfel.o</span>
-<span class="go">Stripped /vagrant/cmd/profiler/parcaagent_bpfel.o</span>
-<span class="go">Wrote /vagrant/cmd/profiler/parcaagent_bpfel.go</span>
-<span class="go">Compiled /vagrant/cmd/profiler/parcaagent_bpfeb.o</span>
-<span class="go">Stripped /vagrant/cmd/profiler/parcaagent_bpfeb.o</span>
-<span class="go">Wrote /vagrant/cmd/profiler/parcaagent_bpfeb.go</span>
-</code></pre></div>
-
-<p>Next step was to see whether <code>DoSample</code> BPF program is loaded into the kernel from an ELF.
-<code>ParcaAgentObjects{}</code> contains all objects (BPF program and BPF maps) after they have been loaded into the kernel.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">objs</span> <span class="o">:=</span> <span class="nx">ParcaAgentObjects</span><span class="p">{}</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">LoadParcaAgentObjects</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF program and maps: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
-</code></pre></div>
-
-<p>It worked, no errors were printed.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler/</span>
-</code></pre></div>
-
-<blockquote>
-<p>A call to perf_event_open() creates a file descriptor
-that allows measuring performance information.
-Each file descriptor corresponds to one event that is measured.
-Events can be enabled and disabled via ioctl(2).
-https://man7.org/linux/man-pages/man2/perf_event_open.2.html</p>
-</blockquote>
-<p>It's time to attach <code>DoSample</code> BPF program to perf event using
-<code>unix.PerfEventOpen()</code> and <code>unix.IoctlSetInt()</code> functions.
-Note, Parca Agent doesn't directly use <code>unix.IoctlSetInt()</code> and relies on
-<a href="https://pkg.go.dev/github.com/aquasecurity/libbpfgo#BPFProg.AttachPerfEvent">AttachPerfEvent()</a>
-function from <a href="http://github.com/aquasecurity/libbpfgo">github.com/aquasecurity/libbpfgo</a>.
-I found cilium related explanation <a href="https://github.com/cilium/ebpf/discussions/548">#548</a>
-how to achieve the same thing:</p>
+<h2>Memory mapping</h2>
+<p>Alright, but what does
+<code>m, err := mapping.PIDAddrMapping(pid, addr)</code> line do?
+Basically the function call does the following
+(see <a href="https://github.com/parca-dev/parca-agent/blob/1e935f4d5f7b4484f6cf3d4ee26340f3718ff37d/pkg/maps/maps.go#L85">maps.go</a>):</p>
 <ol>
-<li>Load the BPF program into the kernel: <code>LoadParcaAgentObjects(&amp;objs, nil)</code></li>
-<li>Open the perf event: <code>fd, _ := unix.PerfEventOpen(...)</code>.</li>
-<li>Set the BPF program on the perf event:
-  <code>unix.IoctlSetInt(fd, unix.PERF_EVENT_IOC_SET_BPF, objs.DoSample.FD())</code></li>
-<li>Enable the perf event:
-   <code>unix.IoctlSetInt(fd, unix.PERF_EVENT_IOC_ENABLE, 0)</code></li>
+<li>opens a memory map file of a given process <code>/proc/PID/maps</code></li>
+<li>parses a memory map using <code>github.com/google/pprof/profile</code> package</li>
+<li>looks up a mapping for a given memory address previously found in a stack trace (e.g., <code>0xdeadbeef</code>),
+   i.e., it should be located between <code>m.Start</code> and <code>m.Limit</code> inclusively.
+   For example, in <code>[0x55dd2d5eb000; 0x55dd2d65f000]</code> interval.</li>
 </ol>
-<p>Those steps worked as well.
-I was hopeful to see whether stack traces were collected,
-so I periodically printed the content of <code>Counts</code> BPF map.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">type</span> <span class="nx">stackCountKey</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">PID</span>           <span class="kt">uint32</span>
-    <span class="nx">UserStackID</span>   <span class="kt">int32</span>
-    <span class="nx">KernelStackID</span> <span class="kt">int32</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="nx">f</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;/proc/%d/maps&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">pid</span><span class="p">),</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="p">(</span>
-    <span class="nx">key</span>   <span class="nx">stackCountKey</span>
-    <span class="nx">value</span> <span class="kt">uint64</span>
-<span class="p">)</span>
-<span class="nx">it</span> <span class="o">:=</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ParcaAgentMaps</span><span class="p">.</span><span class="nx">Counts</span><span class="p">.</span><span class="nx">Iterate</span><span class="p">()</span>
-<span class="k">for</span> <span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">key</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%+v seen %d times\n&quot;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">it</span><span class="p">.</span><span class="nx">Err</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from Counts map: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
+<span class="nx">mm</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">ParseProcMaps</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span><span class="w"></span>
+
+<span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">mm</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Start</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Limit</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">m</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
-<p>The easiest way to reliably get stack traces was to run <code>top</code> in another terminal.
-I made the profiler focus on its PID 15958 and it worked 🎉.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ top</span>
-<span class="go">﹩ sudo go run ./cmd/profiler/ -pid 15958</span>
+<p>Note, <code>mm</code> is a slice of <code>*profile.Mapping{}</code> structs
+that could look as it's shown below.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">mm</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Mapping</span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">                     </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Start</span><span class="p">:</span><span class="w">                  </span><span class="mi">94408437313536</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x55dd2d5eb000</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Limit</span><span class="p">:</span><span class="w">                  </span><span class="mi">94408437788672</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x55dd2d65f000</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Offset</span><span class="p">:</span><span class="w">                 </span><span class="mi">45056</span><span class="p">,</span><span class="w">          </span><span class="c1">// 0xb000</span><span class="w"></span>
+<span class="w">        </span><span class="nx">File</span><span class="p">:</span><span class="w">                   </span><span class="s">&quot;/usr/sbin/sshd&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">BuildID</span><span class="p">:</span><span class="w">                </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">HasFunctions</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">HasFilenames</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">HasLineNumbers</span><span class="p">:</span><span class="w">         </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">HasInlineFrames</span><span class="p">:</span><span class="w">        </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">KernelRelocationSymbol</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">                     </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Start</span><span class="p">:</span><span class="w">                  </span><span class="mi">140349706260480</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x7fa5b662d000</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Limit</span><span class="p">:</span><span class="w">                  </span><span class="mi">140349706448896</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x7fa5b665b000</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Offset</span><span class="p">:</span><span class="w">                 </span><span class="mi">24576</span><span class="p">,</span><span class="w">           </span><span class="c1">// 0x6000</span><span class="w"></span>
+<span class="w">        </span><span class="nx">File</span><span class="p">:</span><span class="w">                   </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/libnss_systemd.so.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">BuildID</span><span class="p">:</span><span class="w">                </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">HasFunctions</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">HasFilenames</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">HasLineNumbers</span><span class="p">:</span><span class="w">         </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">HasInlineFrames</span><span class="p">:</span><span class="w">        </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">KernelRelocationSymbol</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>Here is the corresponding memory map file.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo cat /proc/4068/maps</span>
+<span class="go">55dd2d5e0000-55dd2d5eb000 r--p 00000000 08:01 2869         /usr/sbin/sshd</span>
+<span class="go">55dd2d5eb000-55dd2d65f000 r-xp 0000b000 08:01 2869         /usr/sbin/sshd</span>
+<span class="go">55dd2d65f000-55dd2d69d000 r--p 0007f000 08:01 2869         /usr/sbin/sshd</span>
+<span class="go">55dd2d69e000-55dd2d6a1000 r--p 000bd000 08:01 2869         /usr/sbin/sshd</span>
+<span class="go">55dd2d6a1000-55dd2d6a2000 rw-p 000c0000 08:01 2869         /usr/sbin/sshd</span>
+<span class="go">55dd2d6a2000-55dd2d6a6000 rw-p 00000000 00:00 0</span>
+<span class="go">55dd2e9d6000-55dd2ea68000 rw-p 00000000 00:00 0            [heap]</span>
+<span class="go">55dd2ea68000-55dd2ea8a000 rw-p 00000000 00:00 0            [heap]</span>
+<span class="go">7fa5b6627000-7fa5b662d000 r--p 00000000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
+<span class="go">7fa5b662d000-7fa5b665b000 r-xp 00006000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
+<span class="go">7fa5b665b000-7fa5b666a000 r--p 00034000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
+<span class="go">7fa5b666a000-7fa5b666e000 r--p 00042000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
+<span class="go">7fa5b666e000-7fa5b666f000 rw-p 00046000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
+<span class="go">7fa5b6675000-7fa5b6676000 r--p 00000000 08:01 3974         /usr/lib/x86_64-linux-gnu/security/pam_env.so</span>
+
+<span class="go">...</span>
+
+<span class="go">7fa5b72f4000-7fa5b72f6000 rw-p 00034000 08:01 3657         /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span>
+<span class="go">7fff5522d000-7fff55271000 rw-p 00000000 00:00 0            [stack]</span>
+<span class="go">7fff55285000-7fff55289000 r--p 00000000 00:00 0            [vvar]</span>
+<span class="go">7fff55289000-7fff5528b000 r-xp 00000000 00:00 0            [vdso]</span>
+<span class="go">ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0    [vsyscall]</span>
+</code></pre></div>
+
+<p>🤔</p>
+<p>Let's do a similar thing in a new profiler called profiler2.
+The v2 DIY profiler is able to print a memory map file of a given process
+and show the traced memory addresses of user and kernel space.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler2 -pid=4068</span>
+<span class="go">/proc/4068/maps</span>
+<span class="go">start=0x55dd2d5eb000 limit=0x55dd2d65f000 offset=0xb000 /usr/sbin/sshd</span>
+<span class="go">...</span>
+
 <span class="go">Waiting for stack traces...</span>
-<span class="go">{PID:15958 UserStackID:132 KernelStackID:114} seen 1 times</span>
-<span class="go">{PID:15958 UserStackID:709 KernelStackID:-14} seen 1 times # -14 indicates bpf_get_stackid() error.</span>
-<span class="go">{PID:15958 UserStackID:366 KernelStackID:30} seen 2 times</span>
-<span class="go">{PID:15958 UserStackID:674 KernelStackID:943} seen 1 times</span>
 </code></pre></div>
 
-<p>The end of my post is an disappointing anticlimax because
-I haven't looked yet at how to show the actual stack traces.
-I will update <a href="https://github.com/marselester/diy-parca-agent">the repository</a> when I have time.</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+<h2>pprof</h2>
+<p>It would be great to finally see symbols (function names) instead of memory addresses
+and pprof is going to help us with that.
+pprof is a tool for visualization and analysis of profiling data.
+It reads a collection of profiling samples in
+<a href="https://github.com/google/pprof/blob/main/proto/profile.proto">profile.proto</a> format
+and generates reports to visualize the collected profiles.</p>
+<p>Let's get back to <code>profileLoop()</code> method and see what else it's doing:</p>
+<ol>
+<li>it prepares <code>prof := profile.Profile{}</code> struct which is an in-memory representation of profile.proto</li>
+<li>using addresses from BPF maps it fills <code>Profile.Location</code> — the set of program locations;
+   each location describes function and line table debug information</li>
+<li>it fills <code>Profile.Sample</code> — the set of samples recorded in a profile</li>
+<li>it fills <code>Profile.Mapping</code> — mapping from address ranges to the object file</li>
+<li>it uploads object files to Parca server</li>
+<li>it uploads pprof profile</li>
+</ol>
+<p>The first step is to create a CPU profile which will be saved somewhere by <code>prof.Write()</code>
+after a profile was filled with samples.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">Profile</span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// SampleType is a description of the samples associated with each Sample.Value.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// By convention the number of events should use unit &quot;count&quot; and</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// it should be at index 0.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">SampleType</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">ValueType</span><span class="p">{{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;samples&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Unit</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;count&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">}},</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// TimeNanos is a time of collection (UTC) represented as nanoseconds past the epoch.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">TimeNanos</span><span class="p">:</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">UnixNano</span><span class="p">(),</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// DurationNanos is a profiling duration in nanoseconds, Parca uses 10s by default.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">DurationNanos</span><span class="p">:</span><span class="w"> </span><span class="nb">int64</span><span class="p">(</span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// PeriodType is the kind of events between sampled ocurrences,</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// i.e., [&quot;cpu&quot;, &quot;nanoseconds&quot;].</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ValueType describes the semantics and measurement units of a value.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">PeriodType</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">ValueType</span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cpu&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Unit</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;nanoseconds&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Period is the number of events between sampled occurrences.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// We sample at 100Hz (100 times per second),</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// which is every 0.01s or 10 million nanoseconds.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Period</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000</span><span class="p">,</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>A simplified version of the steps 2 to 4 show
+how user-space stack traces (samples) are added to a pprof profile.</p>
+<p>For every non-zero unique address found in stack traces
+we create a <code>profile.Location{}</code> to describe a function.
+A corresponding memory mapping is added to that newly created location
+("Memory mapping" section above shows how to find a mapping for an address).
+All the locations are appended to <code>prof.Location</code> slice.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ID is a unique nonzero id for the location.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">locIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Address is the instruction address for this location.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// It should be within [Mapping.memory_start...Mapping.memory_limit]</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// for the corresponding mapping.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Address</span><span class="p">:</span><span class="w"> </span><span class="nx">addr</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Mapping is the corresponding profile.Mapping for this location.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// It can be nil if the mapping is unknown.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Mapping</span><span class="p">:</span><span class="w"> </span><span class="nx">m</span><span class="p">,</span><span class="w"></span>
+<span class="p">})</span><span class="w"></span>
+</code></pre></div>
+
+<p>Locations related to a given stack trace are added to a sample.
+Each <code>profile.Sample</code> records how many times a particular stack trace was seen.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Sample</span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Value</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">int64</span><span class="p">{</span><span class="nb">int64</span><span class="p">(</span><span class="nx">seen</span><span class="p">)},</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Location</span><span class="p">:</span><span class="w"> </span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"></span>
+<span class="p">})</span><span class="w"></span>
+</code></pre></div>
+
+<p>At the end, all the mappings get assigned IDs starting with one
+because ID zero is reserved.
+The pprof tool will show the following error if ID zero is used:
+<code>malformed profile: found mapping with reserved ID=0</code>.
+See the whole code snippet in the details below.</p>
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">locationIndex</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">PID</span><span class="w">  </span><span class="kt">int</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Addr</span><span class="w"> </span><span class="kt">uint64</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="c1">// locationIndices maps {pid; addr} found in the sample</span><span class="w"></span>
+<span class="c1">// to an index in the Profile.Location slice</span><span class="w"></span>
+<span class="c1">// to look up a respective Location.</span><span class="w"></span>
+<span class="nx">locationIndices</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="nx">locationIndex</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span><span class="w"></span>
+
+<span class="k">for</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Collect user-space stack trace samples.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">sampleLocations</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{}</span><span class="w"></span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">userStack</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">continue</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">        </span><span class="c1">// Look up a location for the given PID and address</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// and append it to the current sample&#39;s locations.</span><span class="w"></span>
+<span class="w">        </span><span class="c1">//</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// In case a location wasn&#39;t found, create one.</span><span class="w"></span>
+<span class="w">        </span><span class="nx">key</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">locationIndex</span><span class="p">{</span><span class="nx">pid</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="nx">locIndex</span><span class="p">,</span><span class="w"> </span><span class="nx">found</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">locationIndices</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">found</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mappingForAddr</span><span class="p">(</span><span class="nx">mm</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to get process mapping for addr: %x&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">            </span><span class="nx">locIndex</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">)</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// Each Location describes function and line table debug information.</span><span class="w"></span>
+<span class="w">            </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="c1">// ID is a unique nonzero id for the location.</span><span class="w"></span>
+<span class="w">                </span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">locIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span><span class="w"></span>
+<span class="w">                </span><span class="c1">// Address is the instruction address for this location.</span><span class="w"></span>
+<span class="w">                </span><span class="c1">// It should be within [Mapping.memory_start...Mapping.memory_limit]</span><span class="w"></span>
+<span class="w">                </span><span class="c1">// for the corresponding mapping.</span><span class="w"></span>
+<span class="w">                </span><span class="nx">Address</span><span class="p">:</span><span class="w"> </span><span class="nx">addr</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="c1">// Mapping is the corresponding profile.Mapping for this location.</span><span class="w"></span>
+<span class="w">                </span><span class="c1">// It can be nil if the mapping is unknown.</span><span class="w"></span>
+<span class="w">                </span><span class="nx">Mapping</span><span class="p">:</span><span class="w"> </span><span class="nx">m</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="p">})</span><span class="w"></span>
+<span class="w">            </span><span class="nx">locationIndices</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">locIndex</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">        </span><span class="nx">sampleLocations</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"> </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">[</span><span class="nx">locIndex</span><span class="p">])</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// Each Sample records how many times a particular stack trace was seen</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// along with the corresponding locations.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Sample</span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Value</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">int64</span><span class="p">{</span><span class="nb">int64</span><span class="p">(</span><span class="nx">seen</span><span class="p">)},</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Location</span><span class="p">:</span><span class="w"> </span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">})</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="c1">// Mappings in pprof must have IDs and need to start with 1.</span><span class="w"></span>
+<span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">mm</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">ID</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="nx">prof</span><span class="p">.</span><span class="nx">Mapping</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">mm</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<p>🧪</p>
+<p>Putting those steps together gives us profiler3.
+In v3 DIY profiler we write a CPU profile to <code>cpu.pprof</code> file
+instead of uploading it to a Parca server.
+Let's run profiler3 and make sure the profiled program does something instead of idling,
+so there will be enough CPU samples.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler3 -pid=4068</span>
+<span class="go">/proc/4068/maps</span>
+<span class="go">start=0x55dd2d5eb000 limit=0x55dd2d65f000 offset=0xb000 /usr/sbin/sshd</span>
+<span class="go">...</span>
+
+<span class="go">Waiting for stack traces for 10s...</span>
+</code></pre></div>
+
+<p>After ten seconds the profiler will terminate leaving you with <code>cpu.pprof</code> file.
+You can inspect it with <code>go tool pprof cpu.pprof</code> command.</p>
+<p>Exploring Parca Agent's internals and reconstructing it in the simplest form
+helped me demystify some of aspects of BPF CPU profilers.</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/bpf.html">bpf </a>
@@ -470,11 +429,39 @@ I will update <a href="https://github.com/marselester/diy-parca-agent">the repos
 
 
 
-<p><a href="https://marselester.com/continuous-profiling-in-go.html#disqus_thread">comments</a></p>            </article>
+<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>            </article>
 
 
                 <hr  class="gradient"/>
 
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/continuous-profiling-in-go.html"><h3 class="article-title">Continuous profiling in Go</h3></a>
+<h6 class="subheader" title="2022-04-22T00:00:00+07:00">Fri 22 April 2022
+</h6>
+
+
+<p>In this post I explore possibilities of continuous profiling of Go programs
+using Parca and also peek under the hood of its BPF agent.
+You can find the results of my experiments in
+<a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
+<h2>Ad hoc profiling</h2>
+<p>I was looking for a way to profile Go programs …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/continuous-profiling-in-go.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/continuous-profiling-in-go.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
 
         
 
@@ -551,7 +538,7 @@ Let's set it up on Kubernetes and test how it works by scraping HTTP request met
 from <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes">hello web application</a>
 which also runs in the same cluster.</p>
 <p>First of all, we need Kubernetes cluster running. It's easy to bootstrap one via <a class="reference external" href="https://console.cloud.google.com">Google Container Engine</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> gcloud …</pre></div><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>gcloud …</pre></div><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/prometheus.html">prometheus </a>

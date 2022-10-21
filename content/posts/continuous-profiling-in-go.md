@@ -435,3 +435,6 @@ Waiting for stack traces...
 The end of my post is an disappointing anticlimax because
 I haven't looked yet at how to show the actual stack traces.
 I will update [the repository](https://github.com/marselester/diy-parca-agent) when I have time.
+
+Update: finally I figured out how to show stack traces, see
+[DIY CPU profiler: from BPF maps to pprof](https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html) post.

@@ -78,10 +78,10 @@ so &quot;hello.requests.total&quot; becomes &quot;hello_requests_total_counter&q
 <p>All we need is to configure Django to send metrics to statsd_exporter daemon.
 Let's set up &quot;Olympus&quot; Django project to demonstrate StatsD integration or
 you can get it from <a class="reference external" href="https://github.com/marselester/django-prometheus-via-statsd">github.com/marselester/django-prometheus-via-statsd</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> virtualenv venv
-<span class="gp">$</span> <span class="nb">source</span> ./venv/bin/activate
-<span class="gp">$</span> pip install <span class="nv">Django</span><span class="o">==</span><span class="m">1</span>.11.1 <span class="nv">statsd</span><span class="o">==</span><span class="m">3</span>.2.1
-<span class="gp">$</span> django-admin.py startproject olympus .
+<div class="highlight"><pre><span></span><span class="gp">$ </span>virtualenv venv
+<span class="gp">$ </span><span class="nb">source</span> ./venv/bin/activate
+<span class="gp">$ </span>pip install <span class="nv">Django</span><span class="o">==</span><span class="m">1</span>.11.1 <span class="nv">statsd</span><span class="o">==</span><span class="m">3</span>.2.1
+<span class="gp">$ </span>django-admin.py startproject olympus .
 </pre></div>
 <p>These two lines of Django settings <cite>./olympus/settings.py</cite> configure a default StatsD client
 that is used in the &quot;say_hello&quot; Django view.</p>
@@ -90,28 +90,28 @@ that is used in the &quot;say_hello&quot; Django view.</p>
 <span class="n">STATSD_PORT</span> <span class="o">=</span> <span class="mi">8125</span>
 </pre></div>
 <p>Assuming &quot;say_hello&quot; is available at &quot;/hello&quot; URL path, we can start a web server.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> python manage.py runserver
-<span class="gp">$</span> curl http://localhost:8000/hello
+<div class="highlight"><pre><span></span><span class="gp">$ </span>python manage.py runserver
+<span class="gp">$ </span>curl http://localhost:8000/hello
 <span class="go">Hello, World!</span>
 </pre></div>
 <p>The Olympus application is ready to emit metrics. To make sure this is the case,
 we can use tcpdump to capture UDP packets on loopback interface on port 8125
 and print each packet in ASCII.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> tcpdump -i lo0 udp port <span class="m">8125</span> -A
+<div class="highlight"><pre><span></span><span class="gp">$ </span>tcpdump -i lo0 udp port <span class="m">8125</span> -A
 <span class="go">tcpdump: verbose output suppressed, use -v or -vv for full protocol decode</span>
 <span class="go">listening on lo0, link-type NULL (BSD loopback), capture size 262144 bytes</span>
 <span class="go">11:19:05.460810 IP localhost.57776 &gt; localhost.8125: UDP, length 24</span>
 <span class="go">E..4....@................ .3hello.requests.total:1|c</span>
 </pre></div>
 <p>As we can see, &quot;hello.requests.total:1|c&quot; is sent every time we hit <cite>http://localhost:8000/hello</cite>.</p>
-<div class="section" id="id1">
+<div class="section" id="statsd-exporter-1">
 <h2>StatsD Exporter</h2>
 <p>Since we have StatsD metrics being sent, we can expose them for Prometheus via statsd_exporter.
 Let's download the latest version and install it (the binary will be in &quot;$GOPATH/bin/&quot;).</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> go get -u github.com/prometheus/statsd_exporter
+<div class="highlight"><pre><span></span><span class="gp">$ </span>go get -u github.com/prometheus/statsd_exporter
 </pre></div>
 <p>Run statsd_exporter so it gets StatsD metrics from our Django application.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> statsd_exporter -statsd.listen-address<span class="o">=</span><span class="s2">&quot;localhost:8125&quot;</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>statsd_exporter -statsd.listen-address<span class="o">=</span><span class="s2">&quot;localhost:8125&quot;</span>
 </pre></div>
 <p>By default it exposes generated Prometheus metrics at <a class="reference external" href="http://localhost:9102/metrics">http://localhost:9102/metrics</a>.
 Check out the output, among many metrics there will be our counter from &quot;say_hello&quot; view.</p>
@@ -127,24 +127,24 @@ Minikube will help us here.
 Minukube is an easy way to run Kubernetes locally.
 When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
 we can configure our Docker client to communicate with the Minikube Docker daemon.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
+<div class="highlight"><pre><span></span><span class="gp">$ </span>minikube start
 <span class="go">Starting local Kubernetes cluster...</span>
 <span class="go">Kubectl is now configured to use the cluster.</span>
-<span class="gp">$</span> <span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
+<span class="gp">$ </span><span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
 </pre></div>
 <div class="section" id="django-application">
 <h3>Django application</h3>
 <p>First, we shall deploy our Django application with statsd_exporter running in the same Kubernetes Pod.
 It exposes 8000 (uWSGI) and 9102 (statsd_exporter's generated Prometheus metrics) container ports.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build -t marselester/olympus:v1.0.0 ./olympus-app/
-<span class="gp">$</span> kubectl apply -f ./kube/olympus-app/deployment.yml
-<span class="gp">$</span> kubectl apply -f ./kube/olympus-app/service.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>docker build -t marselester/olympus:v1.0.0 ./olympus-app/
+<span class="gp">$ </span>kubectl apply -f ./kube/olympus-app/deployment.yml
+<span class="gp">$ </span>kubectl apply -f ./kube/olympus-app/service.yml
 </pre></div>
 <p>Though we don't need Nginx in the demo, it's ubiquitous on production servers.
 Nginx proxies HTTP requests using uWSGI protocol to &quot;olympus-service&quot; Kubernetes Service
 we created above.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap olympus-nginx-conf --from-file<span class="o">=</span>./kube/nginx/olympus.conf
-<span class="gp">$</span> kubectl apply -f ./kube/nginx/deployment.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create configmap olympus-nginx-conf --from-file<span class="o">=</span>./kube/nginx/olympus.conf
+<span class="gp">$ </span>kubectl apply -f ./kube/nginx/deployment.yml
 </pre></div>
 </div>
 <div class="section" id="prometheus">
@@ -153,14 +153,14 @@ we created above.</p>
 own metrics from 9102 port and metrics from Pods that have &quot;app: olympus&quot; label.</p>
 <p>Prometheus server listens on port 9090. On production servers you'll likely run
 it behind Nginx with basic authentication and make it accessible via VPN only.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap prometheus-server-conf --from-file<span class="o">=</span>./kube/prometheus/prometheus.yml
-<span class="gp">$</span> kubectl apply -f ./kube/prometheus/deployment.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create configmap prometheus-server-conf --from-file<span class="o">=</span>./kube/prometheus/prometheus.yml
+<span class="gp">$ </span>kubectl apply -f ./kube/prometheus/deployment.yml
 </pre></div>
 <p>But in our case we'll use Kubernetes port forwarding to test whether Django
 metrics show up in Prometheus dashboard.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl port-forward nginx-deployment-3580857522-tn332 <span class="m">8080</span>:80
-<span class="gp">$</span> kubectl port-forward prometheus-deployment-2456821496-8zdg8 <span class="m">9090</span>
-<span class="gp">$</span> curl http://localhost:8080/hello
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl port-forward nginx-deployment-3580857522-tn332 <span class="m">8080</span>:80
+<span class="gp">$ </span>kubectl port-forward prometheus-deployment-2456821496-8zdg8 <span class="m">9090</span>
+<span class="gp">$ </span>curl http://localhost:8080/hello
 <span class="go">Hello, World!</span>
 </pre></div>
 <p>&quot;hello_requests_total_counter&quot; should be searchable at the expression browser
@@ -176,24 +176,24 @@ metrics show up in Prometheus dashboard.</p>
 <p>Prometheus Operator and Helm look awesome, though I have not played with Operator yet.
 Here is how you can set up Prometheus via Helm (package manager for Kubernetes).
 You will need the Helm client</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> brew install kubernetes-helm
+<div class="highlight"><pre><span></span><span class="gp">$ </span>brew install kubernetes-helm
 </pre></div>
 <p>and Helm server (Tiller). The following command installs it into the Kubernetes cluster.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> helm init
+<div class="highlight"><pre><span></span><span class="gp">$ </span>helm init
 </pre></div>
 <p>Now you can install Prometheus Helm package (chart).</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> helm repo update
-<span class="gp">$</span> helm install --name team-ops stable/prometheus
+<div class="highlight"><pre><span></span><span class="gp">$ </span>helm repo update
+<span class="gp">$ </span>helm install --name team-ops stable/prometheus
 </pre></div>
 <p>Nice, we have full-blown Prometheus &quot;team-ops&quot; chart release running
 with alert manager and node exporter.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> helm list
+<div class="highlight"><pre><span></span><span class="gp">$ </span>helm list
 <span class="go">NAME        REVISION    UPDATED                     STATUS      CHART               NAMESPACE</span>
 <span class="go">team-ops    1           Thu Jun  8 21:40:29 2017    DEPLOYED    prometheus-3.0.2    default</span>
 </pre></div>
 <p>Let's add one more Prometheus to the cluster (call it &quot;team-dev&quot;),
 but this time we want only Prometheus server with a custom prometheus.yml config.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> helm install --name team-dev <span class="se">\</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>helm install --name team-dev <span class="se">\</span>
     --set alertmanager.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
     --set kubeStateMetrics.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
     --set nodeExporter.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
@@ -201,13 +201,13 @@ but this time we want only Prometheus server with a custom prometheus.yml config
 </pre></div>
 <p>The config is stored in &quot;team-dev-prometheus-server&quot; ConfigMap.
 Let's overwrite it with our prometheus.yml.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl create configmap team-dev-prometheus-server <span class="se">\</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create configmap team-dev-prometheus-server <span class="se">\</span>
     --from-file<span class="o">=</span>./kube/prometheus/prometheus.yml <span class="se">\</span>
     -o yaml <span class="se">\</span>
     --dry-run <span class="p">|</span> kubectl replace -f -
 </pre></div>
 <p>To see whether &quot;team-dev&quot; Prometheus started, we can run a port forwarding:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl port-forward team-dev-prometheus-server-4131857549-c98j0 <span class="m">9091</span>:9090
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl port-forward team-dev-prometheus-server-4131857549-c98j0 <span class="m">9091</span>:9090
 </pre></div>
 <p>Prometheus &quot;team-dev&quot; release is accessible at <a class="reference external" href="http://localhost:9091/graph">http://localhost:9091/graph</a>.</p>
 <p>I hope this helps. Cheers!</p>
@@ -395,7 +395,7 @@ Also …</p><p class="subheader">Category: <a href="https://marselester.com/cate
 популярной книги по разработке ПО &quot;Мифический человеко-месяц&quot; гласит, что
 основной проблемой, характерной для крупных систем, является поддержание их
 концептуальной целостности. Хорошая архитектура должна соответствовать
-проблеме <a class="footnote-reference" href="#mcconnell" id="id1">[1]</a>.</p>
+проблеме <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
 <p>Разделение системы на подсистемы на уровне архитектуры, позволяет …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
 
     Tagged: 

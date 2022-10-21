@@ -64,13 +64,13 @@ In this short tutorial we'll see how to achieve that with <a class="reference ex
 where we have services to rent a car and book a hotel.</p>
 <p>Firstly, we shall install Ambassador on <a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minikube</a>
 by following <a class="reference external" href="https://www.getambassador.io/user-guide/getting-started/">Ambassador user guide</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> minikube start
+<div class="highlight"><pre><span></span><span class="gp">$ </span>minikube start
 <span class="go">Starting local Kubernetes v1.13.2 cluster...</span>
-<span class="gp">$</span> kubectl apply -f https://www.getambassador.io/yaml/ambassador/ambassador-rbac.yaml
+<span class="gp">$ </span>kubectl apply -f https://www.getambassador.io/yaml/ambassador/ambassador-rbac.yaml
 </pre></div>
 <p>Next, create Kubernetes service for Ambassador deployment of type NodePort, so it's easily accessible outside of the cluster.
 It will be the entry point of our API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
 <span class="go">apiVersion: v1</span>
 <span class="go">kind: Service</span>
 <span class="go">metadata:</span>
@@ -81,10 +81,10 @@ It will be the entry point of our API gateway.</p>
 <span class="go">  type: NodePort</span>
 <span class="go">  ports:</span>
 <span class="go">    - port: 80</span>
-<span class="gp">  #</span> Propagate the original <span class="nb">source</span> IP of the client.
+<span class="gp">  # </span>Propagate the original <span class="nb">source</span> IP of the client.
 <span class="go">  externalTrafficPolicy: Local</span>
 <span class="go">&#39;</span>
-<span class="gp">$</span> <span class="nv">AMBASSADORURL</span><span class="o">=</span><span class="k">$(</span>minikube service --url ambassador<span class="k">)</span>
+<span class="gp">$ </span><span class="nv">AMBASSADORURL</span><span class="o">=</span><span class="k">$(</span>minikube service --url ambassador<span class="k">)</span>
 </pre></div>
 <p>Note, there is a diagnostic web UI at <cite>$AMBASSADORURL/ambassador/v0/diag/</cite>.
 You should restrict access to it from your custom auth service.</p>
@@ -94,18 +94,18 @@ You should restrict access to it from your custom auth service.</p>
 If you prefer to build Docker images yourself, make sure they are accessible from Minikube:
 configure Docker client to communicate with the Minikube Docker daemon.
 Note, you can restore your local Docker environment with <cite>eval $(minikube docker-env --unset)</cite> later on.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> git clone https://github.com/marselester/apigate.git
-<span class="gp">$</span> <span class="nb">cd</span> ./apigate/
-<span class="gp">$</span> <span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
-<span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-hotel:v1.0.0 --file<span class="o">=</span>docker/hotel.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>git clone https://github.com/marselester/apigate.git
+<span class="gp">$ </span><span class="nb">cd</span> ./apigate/
+<span class="gp">$ </span><span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
+<span class="gp">$ </span>docker build --tag<span class="o">=</span>marselester/travel-hotel:v1.0.0 --file<span class="o">=</span>docker/hotel.Dockerfile .
+<span class="gp">$ </span>kubectl apply -f k8s-ambassador/hotel/deployment.yml
+<span class="gp">$ </span>kubectl apply -f k8s-ambassador/hotel/service.yml
 </pre></div>
 <p>The hotel app should be running:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>hotel
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl get pods -l <span class="nv">app</span><span class="o">=</span>hotel
 <span class="go">hotel-api-8d7d59b69-bcsvh</span>
-<span class="gp">$</span> kubectl port-forward hotel-api-8d7d59b69-bcsvh <span class="m">8000</span>
-<span class="gp">$</span> curl localhost:8000/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<span class="gp">$ </span>kubectl port-forward hotel-api-8d7d59b69-bcsvh <span class="m">8000</span>
+<span class="gp">$ </span>curl localhost:8000/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
 <span class="go">{</span>
 <span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
 <span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
@@ -113,34 +113,34 @@ Note, you can restore your local Docker environment with <cite>eval $(minikube d
 <span class="go">}</span>
 </pre></div>
 <p>Now, it's time to put the <cite>hotel</cite> Service behind the gateway by adding annotations to the service.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: hotel_mapping</span>
-      <span class="no">prefix: /v1/hotels</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: hotel</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
+<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hotel</span><span class="w"></span>
+<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
+<span class="w">      </span><span class="no">---</span><span class="w"></span>
+<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
+<span class="w">      </span><span class="no">kind: Mapping</span><span class="w"></span>
+<span class="w">      </span><span class="no">name: hotel_mapping</span><span class="w"></span>
+<span class="w">      </span><span class="no">prefix: /v1/hotels</span><span class="w"></span>
+<span class="w">      </span><span class="no">rewrite: &quot;&quot;</span><span class="w"></span>
+<span class="w">      </span><span class="no">service: hotel</span><span class="w"></span>
+<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hotel</span><span class="w"></span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
+<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
+<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span><span class="w"></span>
 </pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service-gate.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f k8s-ambassador/hotel/service-gate.yml
 </pre></div>
 <p>By default, Ambassador would rewrite <cite>/v1/hotels</cite> prefix to <cite>/</cite>.
 With <cite>rewrite: &quot;&quot;</cite> directive we configure Ambassador to not change the prefix as
 it forwards a request to the <cite>hotel</cite> service.
 Let's confirm that hotel booking requests are routed to the hotel app:</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
 <span class="go">{</span>
 <span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
 <span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
@@ -148,33 +148,33 @@ Let's confirm that hotel booking requests are routed to the hotel app:</p>
 <span class="go">}</span>
 </pre></div>
 <p>The car rental app is deployed similarly.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">car</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: car_mapping</span>
-      <span class="no">prefix: /v1/cars</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: car</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">car</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
+<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">car</span><span class="w"></span>
+<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
+<span class="w">      </span><span class="no">---</span><span class="w"></span>
+<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
+<span class="w">      </span><span class="no">kind: Mapping</span><span class="w"></span>
+<span class="w">      </span><span class="no">name: car_mapping</span><span class="w"></span>
+<span class="w">      </span><span class="no">prefix: /v1/cars</span><span class="w"></span>
+<span class="w">      </span><span class="no">rewrite: &quot;&quot;</span><span class="w"></span>
+<span class="w">      </span><span class="no">service: car</span><span class="w"></span>
+<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">car</span><span class="w"></span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
+<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
+<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span><span class="w"></span>
 </pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-car:v1.0.0 --file<span class="o">=</span>docker/car.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/car/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/car/service-gate.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>docker build --tag<span class="o">=</span>marselester/travel-car:v1.0.0 --file<span class="o">=</span>docker/car.Dockerfile .
+<span class="gp">$ </span>kubectl apply -f k8s-ambassador/car/deployment.yml
+<span class="gp">$ </span>kubectl apply -f k8s-ambassador/car/service-gate.yml
 </pre></div>
 <p>You can see that the car booking is available at the gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl <span class="nv">$AMBASSADORURL</span>/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl <span class="nv">$AMBASSADORURL</span>/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
 <span class="go">{</span>
 <span class="go">    &quot;id&quot;: &quot;9e0d65f5-9de2-4428-9bee-1f3967f05129&quot;,</span>
 <span class="go">    &quot;car_id&quot;: &quot;cfb6f7a5-4591-4f5c-8b17-9a1b10f98ada&quot;,</span>
@@ -188,53 +188,53 @@ Let's confirm that hotel booking requests are routed to the hotel app:</p>
 This work is delegated to <cite>travelauth</cite> Service that performs HTTP Basic authentication
 and returns a username in <cite>X-Travel-User</cite> header if credentials matched.
 We shall start from deploying it on the cluster.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-auth:v1.0.0 --file<span class="o">=</span>docker/auth.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/service.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>docker build --tag<span class="o">=</span>marselester/travel-auth:v1.0.0 --file<span class="o">=</span>docker/auth.Dockerfile .
+<span class="gp">$ </span>kubectl apply -f k8s-ambassador/auth/deployment.yml
+<span class="gp">$ </span>kubectl apply -f k8s-ambassador/auth/service.yml
 </pre></div>
 <p>If the auth server is properly deployed, it will prompt for username/password.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>auth
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl get pods -l <span class="nv">app</span><span class="o">=</span>auth
 <span class="go">auth-api-556685f658-h9qb4</span>
-<span class="gp">$</span> kubectl port-forward auth-api-556685f658-h9qb4 <span class="m">8000</span>
-<span class="gp">$</span> curl -i -u bob:bob localhost:8000/v1/hotels
+<span class="gp">$ </span>kubectl port-forward auth-api-556685f658-h9qb4 <span class="m">8000</span>
+<span class="gp">$ </span>curl -i -u bob:bob localhost:8000/v1/hotels
 <span class="go">HTTP/1.1 200 OK</span>
 <span class="go">X-Travel-User: bob</span>
 </pre></div>
 <p>Let's tell Ambassador to
 <a class="reference external" href="https://www.getambassador.io/reference/services/auth-service/">forward all requests to the auth server</a>
 and copy <cite>X-Travel-User</cite> response header from the auth server to the routed request.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">travelauth</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: AuthService</span>
-      <span class="no">name: gate_auth</span>
-      <span class="no"># This is k8s service name; all API requests are sent there. For example,</span>
-      <span class="no"># API request /v1/hotels will be sent to http://travelauth:80/v1/hotels.</span>
-      <span class="no">auth_service: travelauth</span>
-      <span class="no">proto: http</span>
-      <span class="no"># The travelauth service adds a username into a header after successful authentication,</span>
-      <span class="no"># so all the other services know who the user is (ratelimit, hotel, car services).</span>
-      <span class="no">allowed_authorization_headers:</span>
-        <span class="no">- &quot;X-Travel-User&quot;</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">auth</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
+<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">travelauth</span><span class="w"></span>
+<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
+<span class="w">      </span><span class="no">---</span><span class="w"></span>
+<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
+<span class="w">      </span><span class="no">kind: AuthService</span><span class="w"></span>
+<span class="w">      </span><span class="no">name: gate_auth</span><span class="w"></span>
+<span class="w">      </span><span class="no"># This is k8s service name; all API requests are sent there. For example,</span><span class="w"></span>
+<span class="w">      </span><span class="no"># API request /v1/hotels will be sent to http://travelauth:80/v1/hotels.</span><span class="w"></span>
+<span class="w">      </span><span class="no">auth_service: travelauth</span><span class="w"></span>
+<span class="w">      </span><span class="no">proto: http</span><span class="w"></span>
+<span class="w">      </span><span class="no"># The travelauth service adds a username into a header after successful authentication,</span><span class="w"></span>
+<span class="w">      </span><span class="no"># so all the other services know who the user is (ratelimit, hotel, car services).</span><span class="w"></span>
+<span class="w">      </span><span class="no">allowed_authorization_headers:</span><span class="w"></span>
+<span class="w">        </span><span class="no">- &quot;X-Travel-User&quot;</span><span class="w"></span>
+<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auth</span><span class="w"></span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
+<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
+<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span><span class="w"></span>
 </pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/auth/service-auth.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f k8s-ambassador/auth/service-auth.yml
 </pre></div>
 <p>With updated config Ambassador should enforce authentication on API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl -i <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl -i <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
 <span class="go">HTTP/1.1 401 Unauthorized</span>
-<span class="gp">$</span> curl -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
+<span class="gp">$ </span>curl -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
 <span class="go">HTTP/1.1 200 OK</span>
 <span class="go">{</span>
 <span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
@@ -255,107 +255,107 @@ The protocol buffer definition of RateLimitService service is described in <cite
 You need to <a class="reference external" href="https://grpc.io/docs/quickstart/go.html">install</a> protoc compiler and protoc plugin for Go
 (beware of <a class="reference external" href="https://github.com/golang/protobuf/issues/763">ProtoPackageIsVersion3 issue</a>)
 to generate gRPC service code.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> brew install protobuf
-<span class="gp">$</span> go get -u github.com/golang/protobuf/protoc-gen-go
-<span class="gp">$</span> <span class="nb">cd</span> <span class="nv">$GOPATH</span>/src/github.com/golang/protobuf/protoc-gen-go
-<span class="gp">$</span> git checkout v1.2.0
-<span class="gp">$</span> go install
+<div class="highlight"><pre><span></span><span class="gp">$ </span>brew install protobuf
+<span class="gp">$ </span>go get -u github.com/golang/protobuf/protoc-gen-go
+<span class="gp">$ </span><span class="nb">cd</span> <span class="nv">$GOPATH</span>/src/github.com/golang/protobuf/protoc-gen-go
+<span class="gp">$ </span>git checkout v1.2.0
+<span class="gp">$ </span>go install
 </pre></div>
 <p>The arguments tell protoc to use <cite>ratelimit.proto</cite> definition,
 search for imports in <cite>./internal/pb/</cite> dir, generate Go code using gprc plugin,
 and place the result in <cite>./internal/pb/</cite> dir.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> protoc ratelimit.proto -I internal/pb/ --go_out<span class="o">=</span><span class="nv">plugins</span><span class="o">=</span>grpc:internal/pb/
+<div class="highlight"><pre><span></span><span class="gp">$ </span>protoc ratelimit.proto -I internal/pb/ --go_out<span class="o">=</span><span class="nv">plugins</span><span class="o">=</span>grpc:internal/pb/
 </pre></div>
 <p>We now have a newly generated gRPC server and client code in <cite>./internal/pb/ratelimit.pb.go</cite>.
 Our ratelimit server already implements <cite>RateLimitServiceServer</cite> interface.</p>
-<div class="highlight"><pre><span></span><span class="c1">// ShouldRateLimit must respond to the request with an OK or OVER_LIMIT code.</span>
-<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">)</span> <span class="nx">ShouldRateLimit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">req</span> <span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// Descriptors is a list of labels on which the rate limit service can base</span>
-    <span class="c1">// its decision to accept or reject the request.</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s: %+v&quot;</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">GetDomain</span><span class="p">(),</span> <span class="nx">req</span><span class="p">.</span><span class="nx">GetDescriptors</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><span class="c1">// ShouldRateLimit must respond to the request with an OK or OVER_LIMIT code.</span><span class="w"></span>
+<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">server</span><span class="p">)</span><span class="w"> </span><span class="nx">ShouldRateLimit</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="w"> </span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitRequest</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Descriptors is a list of labels on which the rate limit service can base</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// its decision to accept or reject the request.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s: %+v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">.</span><span class="nx">GetDomain</span><span class="p">(),</span><span class="w"> </span><span class="nx">req</span><span class="p">.</span><span class="nx">GetDescriptors</span><span class="p">())</span><span class="w"></span>
 
-    <span class="nx">resp</span> <span class="o">:=</span> <span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">{</span>
-        <span class="nx">OverallCode</span><span class="p">:</span> <span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse_OVER_LIMIT</span><span class="p">,</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">resp</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="nx">resp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">OverallCode</span><span class="p">:</span><span class="w"> </span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse_OVER_LIMIT</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">resp</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 <p>Let's deploy it on the cluster and send a few requests using
 <a class="reference external" href="https://github.com/fullstorydev/grpcurl">grpcurl</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> docker build --tag<span class="o">=</span>marselester/travel-ratelimit:v1.0.0 --file<span class="o">=</span>docker/ratelimit.Dockerfile .
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/deployment.yml
-<span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/service.yml
-<span class="gp">$</span> kubectl get pods -l <span class="nv">app</span><span class="o">=</span>ratelimit
+<div class="highlight"><pre><span></span><span class="gp">$ </span>docker build --tag<span class="o">=</span>marselester/travel-ratelimit:v1.0.0 --file<span class="o">=</span>docker/ratelimit.Dockerfile .
+<span class="gp">$ </span>kubectl apply -f k8s-ambassador/ratelimit/deployment.yml
+<span class="gp">$ </span>kubectl apply -f k8s-ambassador/ratelimit/service.yml
+<span class="gp">$ </span>kubectl get pods -l <span class="nv">app</span><span class="o">=</span>ratelimit
 <span class="go">ratelimit-api-5554898589-4gmv5</span>
-<span class="gp">$</span> kubectl port-forward ratelimit-api-5554898589-4gmv5 <span class="m">5000</span>
+<span class="gp">$ </span>kubectl port-forward ratelimit-api-5554898589-4gmv5 <span class="m">5000</span>
 </pre></div>
 <p>As we can see the server exposes RateLimitService.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> grpcurl -plaintext localhost:5000 list
+<div class="highlight"><pre><span></span><span class="gp">$ </span>grpcurl -plaintext localhost:5000 list
 <span class="go">grpc.reflection.v1alpha.ServerReflection</span>
 <span class="go">pb.lyft.ratelimit.RateLimitService</span>
 </pre></div>
 <p>Its ShouldRateLimit method should return <cite>OK</cite> or <cite>OVER_LIMIT</cite> reply.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> grpcurl -d <span class="s1">&#39;{&quot;domain&quot;:&quot;envoy&quot;}&#39;</span> -plaintext localhost:5000 pb.lyft.ratelimit.RateLimitService/ShouldRateLimit
+<div class="highlight"><pre><span></span><span class="gp">$ </span>grpcurl -d <span class="s1">&#39;{&quot;domain&quot;:&quot;envoy&quot;}&#39;</span> -plaintext localhost:5000 pb.lyft.ratelimit.RateLimitService/ShouldRateLimit
 <span class="go">{</span>
 <span class="go">  &quot;overallCode&quot;: &quot;OVER_LIMIT&quot;</span>
 <span class="go">}</span>
 </pre></div>
 <p>Now we shall introduce the ratelimit service to Ambassador.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">travelratelimit</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: RateLimitService</span>
-      <span class="no">name: gate_ratelimit</span>
-      <span class="no">service: travelratelimit</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ratelimit</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5000</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
+<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">travelratelimit</span><span class="w"></span>
+<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
+<span class="w">      </span><span class="no">---</span><span class="w"></span>
+<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
+<span class="w">      </span><span class="no">kind: RateLimitService</span><span class="w"></span>
+<span class="w">      </span><span class="no">name: gate_ratelimit</span><span class="w"></span>
+<span class="w">      </span><span class="no">service: travelratelimit</span><span class="w"></span>
+<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ratelimit</span><span class="w"></span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
+<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
+<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5000</span><span class="w"></span>
 </pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/ratelimit/service-rate.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f k8s-ambassador/ratelimit/service-rate.yml
 </pre></div>
 <p>Finally, I am going to add <cite>labels</cite> to attach rate limiting descriptors as shown in
 <a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Rate Limiting tutorial</a>.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
-<span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Service</span>
-<span class="nt">metadata</span><span class="p">:</span>
-  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">annotations</span><span class="p">:</span>
-    <span class="nt">getambassador.io/config</span><span class="p">:</span> <span class="p p-Indicator">|</span>
-      <span class="no">---</span>
-      <span class="no">apiVersion: ambassador/v1</span>
-      <span class="no">kind: Mapping</span>
-      <span class="no">name: hotel_mapping</span>
-      <span class="no">prefix: /v1/hotels</span>
-      <span class="no">rewrite: &quot;&quot;</span>
-      <span class="no">service: hotel</span>
-      <span class="no">labels:</span>
-        <span class="no">ambassador:</span>
-          <span class="no">- request_label_group:</span>
-            <span class="no">- x-ambassador-test-allow:</span>
-                <span class="no">header: &quot;x-ambassador-test-allow&quot;</span>
-                <span class="no">omit_if_not_present: true</span>
-<span class="nt">spec</span><span class="p">:</span>
-  <span class="nt">selector</span><span class="p">:</span>
-    <span class="nt">app</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">hotel</span>
-  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">NodePort</span>
-  <span class="nt">ports</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
-      <span class="nt">targetPort</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8000</span>
+<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
+<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hotel</span><span class="w"></span>
+<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
+<span class="w">      </span><span class="no">---</span><span class="w"></span>
+<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
+<span class="w">      </span><span class="no">kind: Mapping</span><span class="w"></span>
+<span class="w">      </span><span class="no">name: hotel_mapping</span><span class="w"></span>
+<span class="w">      </span><span class="no">prefix: /v1/hotels</span><span class="w"></span>
+<span class="w">      </span><span class="no">rewrite: &quot;&quot;</span><span class="w"></span>
+<span class="w">      </span><span class="no">service: hotel</span><span class="w"></span>
+<span class="w">      </span><span class="no">labels:</span><span class="w"></span>
+<span class="w">        </span><span class="no">ambassador:</span><span class="w"></span>
+<span class="w">          </span><span class="no">- request_label_group:</span><span class="w"></span>
+<span class="w">            </span><span class="no">- x-ambassador-test-allow:</span><span class="w"></span>
+<span class="w">                </span><span class="no">header: &quot;x-ambassador-test-allow&quot;</span><span class="w"></span>
+<span class="w">                </span><span class="no">omit_if_not_present: true</span><span class="w"></span>
+<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hotel</span><span class="w"></span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
+<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
+<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span><span class="w"></span>
 </pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$</span> kubectl apply -f k8s-ambassador/hotel/service-rate.yml
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f k8s-ambassador/hotel/service-rate.yml
 </pre></div>
 <p>If a request made to the hotel API has header <cite>X-Ambassador-Test-Allow</cite>,
 it should be eligible for rate limiting.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> curl -H <span class="s2">&quot;x-ambassador-test-allow: probably&quot;</span> -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl -H <span class="s2">&quot;x-ambassador-test-allow: probably&quot;</span> -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels
 <span class="go">HTTP/1.1 200 OK</span>
 </pre></div>
 <p>Unfortunately I have not been able to make rate limiting work yet.

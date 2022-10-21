@@ -140,9 +140,9 @@ by a problem you're solving, its constraints and guarantees you need).
 Most likely you've already chosen the storages in advance, so make sure you
 don't fight with interfaces you defined in your domain model. If you know your services
 need to share the same SQL transaction, embrace it in interfaces, for instance:</p>
-<div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">PaymentService</span> <span class="kd">interface</span> <span class="p">{</span>
-  <span class="nx">CreatePayment</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">tx</span> <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">Tx</span><span class="p">,</span> <span class="o">*</span><span class="nx">Payment</span><span class="p">)</span> <span class="kt">error</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><span class="kd">type</span><span class="w"> </span><span class="nx">PaymentService</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">CreatePayment</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">tx</span><span class="w"> </span><span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">Tx</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="nx">Payment</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 <p>Do you put all operations (add/list) into one service interface? I don't know.
 You have to decide. If you add an entity to Postgres, you expect to list them
@@ -198,46 +198,46 @@ by their dependency name, for example, kafka, rest, mock, rocksdb.</p>
 There were two design options: embed the services to the Client struct or
 inject a service into each other. The example below would allow to have
 a swappable <cite>PaymentService</cite> (&quot;pg&quot; refers to a Postgres implementation):</p>
-<div class="highlight"><pre><span></span><span class="nx">kafka</span><span class="p">.</span><span class="nx">TransferService</span><span class="p">.</span><span class="nx">PaymentService</span> <span class="p">=</span> <span class="nx">pg</span><span class="p">.</span><span class="nx">NewPaymentService</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><span class="nx">kafka</span><span class="p">.</span><span class="nx">TransferService</span><span class="p">.</span><span class="nx">PaymentService</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">pg</span><span class="p">.</span><span class="nx">NewPaymentService</span><span class="p">()</span><span class="w"></span>
 </pre></div>
 <p>On the other hand, grouping services in the Client would let services maintain DB transactions
 by sharing the same <cite>*sql.DB</cite>. Here is <cite>pg.Client</cite> example:</p>
-<div class="highlight"><pre><span></span><span class="c1">// Client represents a client to the underlying PostgreSQL data store.</span>
-<span class="kd">type</span> <span class="nx">Client</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="nx">Transfer</span> <span class="o">*</span><span class="nx">TransferService</span>
-  <span class="nx">Payment</span>  <span class="o">*</span><span class="nx">PaymentService</span>
+<div class="highlight"><pre><span></span><span class="c1">// Client represents a client to the underlying PostgreSQL data store.</span><span class="w"></span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">Client</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">Transfer</span><span class="w"> </span><span class="o">*</span><span class="nx">TransferService</span><span class="w"></span>
+<span class="w">  </span><span class="nx">Payment</span><span class="w">  </span><span class="o">*</span><span class="nx">PaymentService</span><span class="w"></span>
 
-  <span class="nx">logger</span> <span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span>
+<span class="w">  </span><span class="nx">logger</span><span class="w"> </span><span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span><span class="w"></span>
 
-  <span class="nx">db</span>        <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">DB</span>
-  <span class="nx">transferQ</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span>
-  <span class="nx">paymentQ</span>  <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="nx">db</span><span class="w">        </span><span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">DB</span><span class="w"></span>
+<span class="w">  </span><span class="nx">transferQ</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="w"></span>
+<span class="w">  </span><span class="nx">paymentQ</span><span class="w">  </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 <p>In <a class="reference external" href="https://github.com/marselester/distributed-signup/blob/master/pg/user_service.go">distributed-signup</a>
 project a Client concept is baked into <cite>UserService</cite>, because it was the only service that
 needed access to Postgres.</p>
-<div class="highlight"><pre><span></span><span class="c1">// UserService reprensets a service to store signed up users.</span>
-<span class="kd">type</span> <span class="nx">UserService</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="nx">config</span> <span class="nx">Config</span>
+<div class="highlight"><pre><span></span><span class="c1">// UserService reprensets a service to store signed up users.</span><span class="w"></span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">UserService</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">config</span><span class="w"> </span><span class="nx">Config</span><span class="w"></span>
 
-  <span class="nx">pool</span> <span class="o">*</span><span class="nx">pgx</span><span class="p">.</span><span class="nx">ConnPool</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="nx">pool</span><span class="w"> </span><span class="o">*</span><span class="nx">pgx</span><span class="p">.</span><span class="nx">ConnPool</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 <p>Package rest is responsible for translating incoming HTTP requests to wallet domain and
 then translating results from wallet model back to HTTP responses.
 The package doesn't implement <cite>TransferService</cite> per se, it uses one in its Server.
 The REST-style API server itself is put together in
 <a class="reference external" href="https://github.com/marselester/distributed-payment/blob/master/cmd/transfer-server/main.go">cmd/transfer-server</a>.</p>
-<div class="highlight"><pre><span></span><span class="c1">// Server represents an HTTP API handler for wallet services.</span>
-<span class="c1">// It wraps a TransferService so we can provide different</span>
-<span class="c1">// implementations, e.g., Kafka or a mock.</span>
-<span class="kd">type</span> <span class="nx">Server</span> <span class="kd">struct</span> <span class="p">{</span>
-  <span class="o">*</span><span class="nx">chi</span><span class="p">.</span><span class="nx">Mux</span>
-  <span class="nx">logger</span>          <span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span>
-  <span class="nx">transferService</span> <span class="nx">wallet</span><span class="p">.</span><span class="nx">TransferService</span>
-  <span class="nx">wopts</span>           <span class="nx">walletOption</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><span class="c1">// Server represents an HTTP API handler for wallet services.</span><span class="w"></span>
+<span class="c1">// It wraps a TransferService so we can provide different</span><span class="w"></span>
+<span class="c1">// implementations, e.g., Kafka or a mock.</span><span class="w"></span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">Server</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="o">*</span><span class="nx">chi</span><span class="p">.</span><span class="nx">Mux</span><span class="w"></span>
+<span class="w">  </span><span class="nx">logger</span><span class="w">          </span><span class="nx">wallet</span><span class="p">.</span><span class="nx">Logger</span><span class="w"></span>
+<span class="w">  </span><span class="nx">transferService</span><span class="w"> </span><span class="nx">wallet</span><span class="p">.</span><span class="nx">TransferService</span><span class="w"></span>
+<span class="w">  </span><span class="nx">wopts</span><span class="w">           </span><span class="nx">walletOption</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 <p>Originally in <a class="reference external" href="https://medium.com/wtf-dial/wtf-dial-http-api-d8800ccd605f">WTF Dial: HTTP API</a>
 Ben Johnson explained how to implement API properly and isolate http dependencies in wtf/http package.</p>

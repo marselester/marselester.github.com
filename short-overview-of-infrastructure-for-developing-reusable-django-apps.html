@@ -68,8 +68,8 @@
 Первый способ заключается в создании приложения внутри каталога проекта с
 помощью команды <tt class="docutils literal">manage.py startapp</tt>. Второй способ – разработка
 независимого приложения. Автономное приложение проще использовать и
-распространять <a class="footnote-reference" href="#bennett" id="id1">[1]</a>.</p>
-<div class="section" id="id2">
+распространять <a class="footnote-reference" href="#bennett" id="footnote-reference-1">[1]</a>.</p>
+<div class="section" id="section-1">
 <h2>Системы пакетирования</h2>
 <p>Для того чтобы Django смог найти изолированное приложение, нужно чтобы оно
 находилось в Python пути. Python путь – это список каталогов, в которых Python
@@ -87,7 +87,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 <li>управление зависимостями пакетов;</li>
 <li>получение информации об установленных пакетах (например, версия пакета);</li>
 <li>удаление пакетов;</li>
-<li>поиск пакетов по PyPI <a class="footnote-reference" href="#ziade" id="id3">[2]</a>.</li>
+<li>поиск пакетов по PyPI <a class="footnote-reference" href="#ziade" id="footnote-reference-2">[2]</a>.</li>
 </ul>
 <p>Текущее состояние систем пакетирования показано на рисунке. Если
 разрабатываемому пакету необходим модуль <em>Setuptools</em>, рекомендуется
@@ -97,11 +97,11 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 библиотеки Python и обеспечивает основу для пакетирования. В будущем
 <em>distutils2</em> заменит <em>Setuptools</em> и <em>distutils</em>, а также устранит
 необходимость в <em>Distribute</em>. До завершения работ над <em>distutils2</em>
-разработчикам рекомендуют использовать <em>distutils</em> <a class="footnote-reference" href="#ziade" id="id4">[2]</a>.</p>
+разработчикам рекомендуют использовать <em>distutils</em> <a class="footnote-reference" href="#ziade" id="footnote-reference-3">[2]</a>.</p>
 <a class="reference external image-reference" href="http://ziade.org/2012/11/17/chronology-of-packaging/"><img alt="" src="http://blog.ziade.org/history-part1.png" /></a>
 <a class="reference external image-reference" href="http://ziade.org/2012/11/17/chronology-of-packaging/"><img alt="" src="http://blog.ziade.org/history-part2.png" /></a>
 </div>
-<div class="section" id="id5">
+<div class="section" id="section-2">
 <h2>Управление экосистемой пакетирования</h2>
 <p>Для манипулирования экосистемой пакетирования были разработаны такие
 инструменты, как Pip и Virtualenv. Pip – это инструмент для установки и
@@ -123,7 +123,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 создаст окружение <tt class="docutils literal">my_env</tt> без пакетов, <tt class="docutils literal">source my_env/bin/activate</tt>
 активирует окружение <tt class="docutils literal">my_env</tt>, а <tt class="docutils literal">deactivate</tt> отключит его.</p>
 </div>
-<div class="section" id="id6">
+<div class="section" id="section-3">
 <h2>Метаданные проекта</h2>
 <p>Наименьший проект на Python состоит из двух файлов. Файл <tt class="docutils literal">setup.py</tt>, который
 содержит метаданные о проекте и файл, который содержит Python код для
@@ -131,7 +131,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 необходимые для заполнения: <em>name</em>, <em>version</em> и <em>packages</em>. Поле <em>name</em> должно
 быть уникальным для публикации в PyPI. Поле <em>version</em> следит за различными
 версиями проекта. Поле <em>packages</em> описывает, где размещен Python код проекта
-<a class="footnote-reference" href="#ziade" id="id7">[2]</a>. Ниже приведен пример файла <tt class="docutils literal">setup.py</tt>, который также включает
+<a class="footnote-reference" href="#ziade" id="footnote-reference-4">[2]</a>. Ниже приведен пример файла <tt class="docutils literal">setup.py</tt>, который также включает
 информацию о лицензии и описание проекта:</p>
 <div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
 <span class="kn">from</span> <span class="nn">distutils.core</span> <span class="kn">import</span> <span class="n">setup</span>
@@ -148,12 +148,12 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 <span class="p">)</span>
 </pre></div>
 </div>
-<div class="section" id="id8">
+<div class="section" id="section-4">
 <h2>Структура репозитория</h2>
 <p>Для удобства разработки в Django существует стандарт организации проекта и
-стиль кодирования <a class="footnote-reference" href="#django" id="id9">[3]</a>. При разработке приложений автор в большей
+стиль кодирования <a class="footnote-reference" href="#django" id="footnote-reference-5">[3]</a>. При разработке приложений автор в большей
 степени опирается на них, а также на практический опыт компании Lincoln Loop
-<a class="footnote-reference" href="#lincolnloop" id="id10">[4]</a>. Руководство по стилю кодирования и автоматизация имеет важное
+<a class="footnote-reference" href="#lincolnloop" id="footnote-reference-6">[4]</a>. Руководство по стилю кодирования и автоматизация имеет важное
 значение для цикла разработки. Структура репозитория в той же степени является
 важной частью архитектуры проекта. Рассмотрим некоторые особенности:</p>
 <ul class="simple">
@@ -165,7 +165,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 включены в пакет, например, <tt class="docutils literal">include README.rst</tt>;</li>
 <li>в <tt class="docutils literal">requirements.txt</tt> следует указывать зависимости, необходимые для
 участия в разработке проекта (тестирование, генерация документации)
-<a class="footnote-reference" href="#reitz" id="id11">[5]</a>;</li>
+<a class="footnote-reference" href="#reitz" id="footnote-reference-7">[5]</a>;</li>
 <li><tt class="docutils literal">todo/__init__.py</tt>;</li>
 <li><tt class="docutils literal">todo/models.py</tt>;</li>
 <li><tt class="docutils literal">docs/conf.py</tt>;</li>
@@ -174,15 +174,15 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 <li><tt class="docutils literal">tests/models.py</tt>.</li>
 </ul>
 </div>
-<div class="section" id="id12">
+<div class="section" id="section-5">
 <h2>Обнаружение и запуск тестов</h2>
 <p>Тесты не следует распространять вместе с модулем, так как это приводит к
 увеличению сложности для конечных пользователей – наборы тестов требуют
 дополнительных зависимостей. На конференции <em>PyCon US 2012</em> Карл Майер
-предложил решение <a class="footnote-reference" href="#meyer" id="id13">[6]</a>, которое позволило отделить тесты от приложений в
+предложил решение <a class="footnote-reference" href="#meyer" id="footnote-reference-8">[6]</a>, которое позволило отделить тесты от приложений в
 проекте и реализовать обнаружение и запуск всех тестов из каталога <tt class="docutils literal">tests</tt>.
 Автор применил данное решение для организации тестов в многоразовых Django
-приложениях <a class="footnote-reference" href="#app-skeleton" id="id14">[7]</a>. В корне репозитория располагается скрипт
+приложениях <a class="footnote-reference" href="#app-skeleton" id="footnote-reference-9">[7]</a>. В корне репозитория располагается скрипт
 <tt class="docutils literal">runtests.py</tt>, который запускает тесты:</p>
 <div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -229,7 +229,7 @@ Python Пакетов (PyPI). Он позволяет разработчикам
 <tt class="docutils literal">tests</tt> и название которых совпадает с <em>models.py</em>, <em>tests.py</em> или
 <em>test*.py</em>.</p>
 </div>
-<div class="section" id="id15">
+<div class="section" id="section-6">
 <h2>Автоматизация тестирования</h2>
 <p>Для автоматизации тестирования Python проектов автор использует инструмент
 tox. Он может быть использован:</p>
@@ -239,7 +239,7 @@ tox. Он может быть использован:</p>
 <li>в качестве интерфейса для сервера непрерывной интеграции, например, Jenkins.</li>
 </ul>
 <p>Ниже приведен пример конфигурации <tt class="docutils literal">tox.ini</tt> со средами <em>Python 2.6</em>,
-<em>Python 2.7</em> и <em>Django 1.3</em> <a class="footnote-reference" href="#django-todo" id="id16">[8]</a>:</p>
+<em>Python 2.7</em> и <em>Django 1.3</em> <a class="footnote-reference" href="#django-todo" id="footnote-reference-10">[8]</a>:</p>
 <pre class="literal-block">
 [tox]
 envlist=py26,py27,dj13
@@ -267,49 +267,49 @@ deps=
 <table class="docutils footnote" frame="void" id="bennett" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>Bennett B. Practical Django Projects.</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-1">[1]</a></td><td>Bennett B. Practical Django Projects.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="ziade" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label">[2]</td><td><em>(<a class="fn-backref" href="#id3">1</a>, <a class="fn-backref" href="#id4">2</a>, <a class="fn-backref" href="#id7">3</a>)</em> Ziadé T. <a class="reference external" href="http://guide.python-distribute.org/">The Hitchhiker's Guide to Packaging</a>.</td></tr>
+<tr><td class="label">[2]</td><td><em>(<a class="fn-backref" href="#footnote-reference-2">1</a>, <a class="fn-backref" href="#footnote-reference-3">2</a>, <a class="fn-backref" href="#footnote-reference-4">3</a>)</em> Ziadé T. <a class="reference external" href="http://guide.python-distribute.org/">The Hitchhiker's Guide to Packaging</a>.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="django" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id9">[3]</a></td><td>Django community. <a class="reference external" href="https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/">Django Coding Style</a>.</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-5">[3]</a></td><td>Django community. <a class="reference external" href="https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/">Django Coding Style</a>.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="lincolnloop" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id10">[4]</a></td><td>Lincoln Loop company. <a class="reference external" href="http://lincolnloop.com/django-best-practices/">Django Best Practices</a>.</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-6">[4]</a></td><td>Lincoln Loop company. <a class="reference external" href="http://lincolnloop.com/django-best-practices/">Django Best Practices</a>.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="reitz" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id11">[5]</a></td><td>Reitz K. <a class="reference external" href="http://kennethreitz.com/repository-structure-and-python.html">Repository Structure and Python</a>.</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-7">[5]</a></td><td>Reitz K. <a class="reference external" href="http://kennethreitz.com/repository-structure-and-python.html">Repository Structure and Python</a>.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="meyer" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id13">[6]</a></td><td>Meyer C. <a class="reference external" href="http://carljm.github.com/django-testing-slides/">Testing and Django</a> at PyCon US 2012.</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-8">[6]</a></td><td>Meyer C. <a class="reference external" href="http://carljm.github.com/django-testing-slides/">Testing and Django</a> at PyCon US 2012.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="app-skeleton" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id14">[7]</a></td><td>Мавлеткулов М. <a class="reference external" href="https://github.com/marselester/reusable-django-app-skeleton">Reusable Django app skeleton</a>.</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-9">[7]</a></td><td>Мавлеткулов М. <a class="reference external" href="https://github.com/marselester/reusable-django-app-skeleton">Reusable Django app skeleton</a>.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="django-todo" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id16">[8]</a></td><td>Мавлеткулов М. <a class="reference external" href="https://github.com/marselester/django-todo">Система управления цепочками задач</a>.</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-10">[8]</a></td><td>Мавлеткулов М. <a class="reference external" href="https://github.com/marselester/django-todo">Система управления цепочками задач</a>.</td></tr>
 </tbody>
 </table>
 </div>

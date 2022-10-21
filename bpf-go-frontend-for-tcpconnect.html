@@ -127,68 +127,68 @@ though instead of calling <code>LoadTCPConnectObjects()</code> the <code>LoadTCP
 parse an ELF file into <code>spec</code> struct (a collection of BPF maps and programs) and
 replace constants in the C program to filter connections by PID or UID.
 Here is how they are defined in <code>tcpconnect.bpf.c</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="k">const</span> <span class="k">volatile</span> <span class="kt">uid_t</span> <span class="n">filter_uid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-<span class="k">const</span> <span class="k">volatile</span> <span class="kt">pid_t</span> <span class="n">filter_pid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="k">volatile</span><span class="w"> </span><span class="kt">uid_t</span><span class="w"> </span><span class="n">filter_uid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span><span class="w"></span>
+<span class="k">const</span><span class="w"> </span><span class="k">volatile</span><span class="w"> </span><span class="kt">pid_t</span><span class="w"> </span><span class="n">filter_pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 
 <p>After the constants are rewritten, the BPF programs get loaded into the kernel with <code>spec.LoadAndAssign()</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="kn">package</span> <span class="nx">main</span>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
 
-<span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&quot;flag&quot;</span>
-    <span class="s">&quot;log&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="s">&quot;flag&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="s">&quot;log&quot;</span><span class="w"></span>
 
-    <span class="s">&quot;golang.org/x/sys/unix&quot;</span>
-<span class="p">)</span>
+<span class="w">    </span><span class="s">&quot;golang.org/x/sys/unix&quot;</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
 
-<span class="c1">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 TCPConnect ./bpf/tcpconnect.bpf.c -- -I../../headers</span>
+<span class="c1">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 TCPConnect ./bpf/tcpconnect.bpf.c -- -I../../headers</span><span class="w"></span>
 
-<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="p">(</span>
-        <span class="nx">filterUID</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">Int</span><span class="p">(</span><span class="s">&quot;uid&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;trace this UID only&quot;</span><span class="p">)</span>
-        <span class="nx">filterPID</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nx">Int</span><span class="p">(</span><span class="s">&quot;pid&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;trace this PID only&quot;</span><span class="p">)</span>
-    <span class="p">)</span>
-    <span class="nx">flag</span><span class="p">.</span><span class="nx">Parse</span><span class="p">()</span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="nx">filterUID</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">flag</span><span class="p">.</span><span class="nx">Int</span><span class="p">(</span><span class="s">&quot;uid&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;trace this UID only&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="nx">filterPID</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">flag</span><span class="p">.</span><span class="nx">Int</span><span class="p">(</span><span class="s">&quot;pid&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;trace this PID only&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">flag</span><span class="p">.</span><span class="nx">Parse</span><span class="p">()</span><span class="w"></span>
 
-    <span class="c1">// Increase the resource limit of the current process to provide sufficient space</span>
-    <span class="c1">// for locking memory for the BPF maps.</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">Setrlimit</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIMIT_MEMLOCK</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">Rlimit</span><span class="p">{</span>
-        <span class="nx">Cur</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span>
-        <span class="nx">Max</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span>
-    <span class="p">});</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to set temporary RLIMIT_MEMLOCK: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-        <span class="k">return</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="c1">// Increase the resource limit of the current process to provide sufficient space</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// for locking memory for the BPF maps.</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">Setrlimit</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIMIT_MEMLOCK</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">Rlimit</span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Cur</span><span class="p">:</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Max</span><span class="p">:</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">});</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to set temporary RLIMIT_MEMLOCK: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="c1">// Replace constants in the BPF C program to filter connections by PID or UID.</span>
-    <span class="nx">spec</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">LoadTCPConnect</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load collection spec: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-        <span class="k">return</span>
-    <span class="p">}</span>
-    <span class="nx">bpfConst</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{})</span>
-    <span class="k">if</span> <span class="o">*</span><span class="nx">filterUID</span> <span class="p">&gt;</span> <span class="o">-</span><span class="mi">1</span> <span class="p">{</span>
-        <span class="nx">bpfConst</span><span class="p">[</span><span class="s">&quot;filter_uid&quot;</span><span class="p">]</span> <span class="p">=</span> <span class="nb">uint32</span><span class="p">(</span><span class="o">*</span><span class="nx">filterUID</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">if</span> <span class="o">*</span><span class="nx">filterPID</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
-        <span class="nx">bpfConst</span><span class="p">[</span><span class="s">&quot;filter_pid&quot;</span><span class="p">]</span> <span class="p">=</span> <span class="nb">int32</span><span class="p">(</span><span class="o">*</span><span class="nx">filterPID</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">spec</span><span class="p">.</span><span class="nx">RewriteConstants</span><span class="p">(</span><span class="nx">bpfConst</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to rewrite BPF constants: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-        <span class="k">return</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="c1">// Replace constants in the BPF C program to filter connections by PID or UID.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">spec</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">LoadTCPConnect</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load collection spec: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="nx">bpfConst</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{})</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">*</span><span class="nx">filterUID</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">bpfConst</span><span class="p">[</span><span class="s">&quot;filter_uid&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">uint32</span><span class="p">(</span><span class="o">*</span><span class="nx">filterUID</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">*</span><span class="nx">filterPID</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">bpfConst</span><span class="p">[</span><span class="s">&quot;filter_pid&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">int32</span><span class="p">(</span><span class="o">*</span><span class="nx">filterPID</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">spec</span><span class="p">.</span><span class="nx">RewriteConstants</span><span class="p">(</span><span class="nx">bpfConst</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to rewrite BPF constants: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="c1">// Load the BPF program into the kernel from an ELF.</span>
-    <span class="c1">// TCPConnectObjects contains all objects (BPF programs and maps) after they have been loaded into the kernel:</span>
-    <span class="c1">// - TcpV4Connect, TcpV4ConnectRet, TcpV6Connect, TcpV6ConnectRet BPF programs,</span>
-    <span class="c1">// - Events, Ipv4Count, Ipv6Count, Sockets BPF maps.</span>
-    <span class="nx">objs</span> <span class="o">:=</span> <span class="nx">TCPConnectObjects</span><span class="p">{}</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">spec</span><span class="p">.</span><span class="nx">LoadAndAssign</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF programs and maps: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-        <span class="k">return</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="c1">// Load the BPF program into the kernel from an ELF.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// TCPConnectObjects contains all objects (BPF programs and maps) after they have been loaded into the kernel:</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// - TcpV4Connect, TcpV4ConnectRet, TcpV6Connect, TcpV6ConnectRet BPF programs,</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// - Events, Ipv4Count, Ipv6Count, Sockets BPF maps.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">objs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">TCPConnectObjects</span><span class="p">{}</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">spec</span><span class="p">.</span><span class="nx">LoadAndAssign</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF programs and maps: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <h2>Kprobes</h2>
@@ -198,91 +198,91 @@ and they can instrument instructions within functions.
 There is also an interface called kretprobes for instrumenting when functions return, and their return values.</p>
 <p>The <code>tcpconnect.bpf.c</code> lists four BPF programs that trace events related to creating TCP sessions:
 enter and exit of <code>tcp_v4_connect()</code> and <code>tcp_v6_connect()</code> kernel functions.</p>
-<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kprobe/tcp_v4_connect&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">BPF_KPROBE</span><span class="p">(</span><span class="n">tcp_v4_connect</span><span class="p">,</span> <span class="k">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">enter_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">sk</span><span class="p">);</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kprobe/tcp_v4_connect&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">BPF_KPROBE</span><span class="p">(</span><span class="n">tcp_v4_connect</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">sock</span><span class="w"> </span><span class="o">*</span><span class="n">sk</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">enter_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">sk</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kretprobe/tcp_v4_connect&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">BPF_KRETPROBE</span><span class="p">(</span><span class="n">tcp_v4_connect_ret</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ret</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">exit_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">ret</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
-<span class="p">}</span>
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kretprobe/tcp_v4_connect&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">BPF_KRETPROBE</span><span class="p">(</span><span class="n">tcp_v4_connect_ret</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ret</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">exit_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ret</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kprobe/tcp_v6_connect&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">BPF_KPROBE</span><span class="p">(</span><span class="n">tcp_v6_connect</span><span class="p">,</span> <span class="k">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">enter_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">sk</span><span class="p">);</span>
-<span class="p">}</span>
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kprobe/tcp_v6_connect&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">BPF_KPROBE</span><span class="p">(</span><span class="n">tcp_v6_connect</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">sock</span><span class="w"> </span><span class="o">*</span><span class="n">sk</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">enter_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">sk</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kretprobe/tcp_v6_connect&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">BPF_KRETPROBE</span><span class="p">(</span><span class="n">tcp_v6_connect_ret</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ret</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">exit_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">ret</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
-<span class="p">}</span>
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;kretprobe/tcp_v6_connect&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">BPF_KRETPROBE</span><span class="p">(</span><span class="n">tcp_v6_connect_ret</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ret</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">exit_tcp_connect</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">ret</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p>On Go side I attached the BPF programs to kprobes/kretprobes.
 The <code>link.Kprobe()</code>, <code>link.Kretprobe</code> functions return a link (it represents a program attached to a BPF hook)
 which is later used to detach a BPF program.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">tcpv4kp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Kprobe</span><span class="p">(</span><span class="s">&quot;tcp_v4_connect&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV4Connect</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v4_connect kprobe: %s&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">tcpv4kp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><span class="nx">tcpv4kp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">link</span><span class="p">.</span><span class="nx">Kprobe</span><span class="p">(</span><span class="s">&quot;tcp_v4_connect&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV4Connect</span><span class="p">)</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v4_connect kprobe: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">tcpv4kp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 
-<span class="nx">tcpv4krp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Kretprobe</span><span class="p">(</span><span class="s">&quot;tcp_v4_connect&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV4ConnectRet</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v4_connect kretprobe: %s&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">tcpv4krp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<span class="nx">tcpv4krp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">link</span><span class="p">.</span><span class="nx">Kretprobe</span><span class="p">(</span><span class="s">&quot;tcp_v4_connect&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV4ConnectRet</span><span class="p">)</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v4_connect kretprobe: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">tcpv4krp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 
-<span class="nx">tcpv6kp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Kprobe</span><span class="p">(</span><span class="s">&quot;tcp_v6_connect&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV6Connect</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v6_connect kprobe: %s&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">tcpv6kp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<span class="nx">tcpv6kp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">link</span><span class="p">.</span><span class="nx">Kprobe</span><span class="p">(</span><span class="s">&quot;tcp_v6_connect&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV6Connect</span><span class="p">)</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v6_connect kprobe: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">tcpv6kp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 
-<span class="nx">tcpv6krp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Kretprobe</span><span class="p">(</span><span class="s">&quot;tcp_v6_connect&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV6ConnectRet</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v6_connect kretprobe: %s&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">tcpv6krp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<span class="nx">tcpv6krp</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">link</span><span class="p">.</span><span class="nx">Kretprobe</span><span class="p">(</span><span class="s">&quot;tcp_v6_connect&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectPrograms</span><span class="p">.</span><span class="nx">TcpV6ConnectRet</span><span class="p">)</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to tcp_v6_connect kretprobe: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">tcpv6krp</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 </code></pre></div>
 
 <p>The <code>bpf_perf_event_output()</code> C function emits records to user space via a BPF map <code>events</code>
 that accesses perf per-CPU ring buffers.</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_PERF_EVENT_ARRAY</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
-<span class="p">}</span> <span class="n">events</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_PERF_EVENT_ARRAY</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span><span class="w"></span>
 
-<span class="k">struct</span> <span class="n">event</span> <span class="n">e</span> <span class="o">=</span> <span class="p">{};</span>
-<span class="n">bpf_perf_event_output</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">events</span><span class="p">,</span> <span class="n">BPF_F_CURRENT_CPU</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">e</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="p">));</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">event</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span><span class="w"></span>
+<span class="n">bpf_perf_event_output</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">events</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_F_CURRENT_CPU</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">e</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="p">));</span><span class="w"></span>
 </code></pre></div>
 
 <p>In user space the events are read using <code>github.com/cilium/ebpf/perf</code> package.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Open a perf event reader from user space on the PERF_EVENT_ARRAY map</span>
-<span class="c1">// defined in the BPF C program.</span>
-<span class="nx">rd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectMaps</span><span class="p">.</span><span class="nx">Events</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Getpagesize</span><span class="p">())</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to create perf event reader: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Open a perf event reader from user space on the PERF_EVENT_ARRAY map</span><span class="w"></span>
+<span class="c1">// defined in the BPF C program.</span><span class="w"></span>
+<span class="nx">rd</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">perf</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">objs</span><span class="p">.</span><span class="nx">TCPConnectMaps</span><span class="p">.</span><span class="nx">Events</span><span class="p">,</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getpagesize</span><span class="p">())</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to create perf event reader: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">rd</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 
-<span class="k">for</span> <span class="p">{</span>
-    <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">break</span>
-        <span class="p">}</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;received from perf ring buffer: %s&quot;</span><span class="p">,</span> <span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">)</span>
-<span class="p">}</span>
+<span class="k">for</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">record</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">break</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;received from perf ring buffer: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p>Running <code>curl</code> shows that the TCP connect events are captured.</p>
@@ -294,47 +294,47 @@ that accesses perf per-CPU ring buffers.</p>
 <h2>Decoding events</h2>
 <p>Let's decode the events and print them as the original tcpconnect program does.
 As mentioned before, the <code>event</code> Go struct should match its C counterpart.</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="p">{</span>
-    <span class="k">union</span> <span class="p">{</span>
-        <span class="n">__u32</span> <span class="n">saddr_v4</span><span class="p">;</span>
-        <span class="n">__u8</span> <span class="n">saddr_v6</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
-    <span class="p">};</span>
-    <span class="k">union</span> <span class="p">{</span>
-        <span class="n">__u32</span> <span class="n">daddr_v4</span><span class="p">;</span>
-        <span class="n">__u8</span> <span class="n">daddr_v6</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
-    <span class="p">};</span>
-    <span class="kt">char</span> <span class="n">task</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
-    <span class="n">__u64</span> <span class="n">ts_us</span><span class="p">;</span>
-    <span class="n">__u32</span> <span class="n">af</span><span class="p">;</span> <span class="c1">// AF_INET or AF_INET6</span>
-    <span class="n">__u32</span> <span class="n">pid</span><span class="p">;</span>
-    <span class="n">__u32</span> <span class="n">uid</span><span class="p">;</span>
-    <span class="n">__u16</span> <span class="n">dport</span><span class="p">;</span>
-<span class="p">};</span>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">event</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">union</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">__u32</span><span class="w"> </span><span class="n">saddr_v4</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">__u8</span><span class="w"> </span><span class="n">saddr_v6</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="p">};</span><span class="w"></span>
+<span class="w">    </span><span class="k">union</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">__u32</span><span class="w"> </span><span class="n">daddr_v4</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">__u8</span><span class="w"> </span><span class="n">daddr_v6</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="p">};</span><span class="w"></span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">task</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="n">__u64</span><span class="w"> </span><span class="n">ts_us</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">__u32</span><span class="w"> </span><span class="n">af</span><span class="p">;</span><span class="w"> </span><span class="c1">// AF_INET or AF_INET6</span>
+<span class="w">    </span><span class="n">__u32</span><span class="w"> </span><span class="n">pid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">__u32</span><span class="w"> </span><span class="n">uid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">__u16</span><span class="w"> </span><span class="n">dport</span><span class="p">;</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 </code></pre></div>
 
 <p>I wasn't sure how to represent <code>union { ... }</code> in Go, so allocating 16-byte slice worked well,
 since the union is only as big as necessary to hold its largest member (IPv6 address).</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// event represents a perf event sent to user space from the BPF program running in the kernel.</span>
-<span class="c1">// Note, that it must match the C event struct, and both C and Go structs must be aligned the same way.</span>
-<span class="kd">type</span> <span class="nx">event</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="c1">// SrcAddr is the source address.</span>
-    <span class="nx">SrcAddr</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
-    <span class="c1">// DstAddr is the destination address.</span>
-    <span class="nx">DstAddr</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
-    <span class="c1">// Comm is the process name that opened the connection.</span>
-    <span class="nx">Comm</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
-    <span class="c1">// Timestamp is the timestamp in microseconds.</span>
-    <span class="nx">Timestamp</span> <span class="kt">uint64</span>
-    <span class="c1">// AddrFam is the address family, 2 is AF_INET (IPv4), 10 is AF_INET6 (IPv6).</span>
-    <span class="nx">AddrFam</span> <span class="kt">uint32</span>
-    <span class="c1">// PID is the process ID that opened the connection.</span>
-    <span class="nx">PID</span> <span class="kt">uint32</span>
-    <span class="c1">// UID is the process user ID.</span>
-    <span class="nx">UID</span> <span class="kt">uint32</span>
-    <span class="c1">// DstPort is the destination port (uint16 in C struct).</span>
-    <span class="c1">// Note, network byte order is big-endian.</span>
-    <span class="nx">DstPort</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="kt">byte</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// event represents a perf event sent to user space from the BPF program running in the kernel.</span><span class="w"></span>
+<span class="c1">// Note, that it must match the C event struct, and both C and Go structs must be aligned the same way.</span><span class="w"></span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">event</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// SrcAddr is the source address.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">SrcAddr</span><span class="w"> </span><span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// DstAddr is the destination address.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">DstAddr</span><span class="w"> </span><span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Comm is the process name that opened the connection.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Comm</span><span class="w"> </span><span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Timestamp is the timestamp in microseconds.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Timestamp</span><span class="w"> </span><span class="kt">uint64</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// AddrFam is the address family, 2 is AF_INET (IPv4), 10 is AF_INET6 (IPv6).</span><span class="w"></span>
+<span class="w">    </span><span class="nx">AddrFam</span><span class="w"> </span><span class="kt">uint32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// PID is the process ID that opened the connection.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">PID</span><span class="w"> </span><span class="kt">uint32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// UID is the process user ID.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">UID</span><span class="w"> </span><span class="kt">uint32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// DstPort is the destination port (uint16 in C struct).</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Note, network byte order is big-endian.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">DstPort</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="kt">byte</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p>The source and destination addresses were pretty-printed using <code>net.IP</code> type
@@ -343,33 +343,33 @@ since the union is only as big as necessary to hold its largest member (IPv6 add
 <p>The destination port (unsigned 16-bit integer in C struct) was translated with
 <code>binary.BigEndian.Uint16()</code> function because <code>DstPort</code> byte order is big-endian
 (most significant bits first).</p>
-<div class="highlight"><pre><span></span><code><span class="kd">func</span> <span class="nx">printEvent</span><span class="p">(</span><span class="nx">w</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Writer</span><span class="p">,</span> <span class="nx">e</span> <span class="o">*</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="p">(</span>
-        <span class="nx">srcAddr</span><span class="p">,</span> <span class="nx">dstAddr</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span>
-        <span class="nx">ipVer</span>            <span class="kt">byte</span>
-    <span class="p">)</span>
-    <span class="k">switch</span> <span class="nx">e</span><span class="p">.</span><span class="nx">AddrFam</span> <span class="p">{</span>
-    <span class="k">case</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="nx">srcAddr</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">SrcAddr</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
-        <span class="nx">dstAddr</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstAddr</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
-        <span class="nx">ipVer</span> <span class="p">=</span> <span class="mi">4</span>
-    <span class="k">case</span> <span class="mi">10</span><span class="p">:</span>
-        <span class="nx">srcAddr</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">SrcAddr</span><span class="p">[:])</span>
-        <span class="nx">dstAddr</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstAddr</span><span class="p">[:])</span>
-        <span class="nx">ipVer</span> <span class="p">=</span> <span class="mi">6</span>
-    <span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">printEvent</span><span class="p">(</span><span class="nx">w</span><span class="w"> </span><span class="nx">io</span><span class="p">.</span><span class="nx">Writer</span><span class="p">,</span><span class="w"> </span><span class="nx">e</span><span class="w"> </span><span class="o">*</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="nx">srcAddr</span><span class="p">,</span><span class="w"> </span><span class="nx">dstAddr</span><span class="w"> </span><span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="w"></span>
+<span class="w">        </span><span class="nx">ipVer</span><span class="w">            </span><span class="kt">byte</span><span class="w"></span>
+<span class="w">    </span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nx">AddrFam</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nx">srcAddr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">SrcAddr</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span><span class="w"></span>
+<span class="w">        </span><span class="nx">dstAddr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstAddr</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span><span class="w"></span>
+<span class="w">        </span><span class="nx">ipVer</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="mi">10</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nx">srcAddr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">SrcAddr</span><span class="p">[:])</span><span class="w"></span>
+<span class="w">        </span><span class="nx">dstAddr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">net</span><span class="p">.</span><span class="nx">IP</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstAddr</span><span class="p">[:])</span><span class="w"></span>
+<span class="w">        </span><span class="nx">ipVer</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintf</span><span class="p">(</span>
-        <span class="nx">w</span><span class="p">,</span>
-        <span class="s">&quot;%-6d %-12s %-2d %-16s %-16s %d\n&quot;</span><span class="p">,</span>
-        <span class="nx">e</span><span class="p">.</span><span class="nx">PID</span><span class="p">,</span>
-        <span class="nx">bytes</span><span class="p">.</span><span class="nx">TrimRight</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Comm</span><span class="p">[:],</span> <span class="s">&quot;\x00&quot;</span><span class="p">),</span>
-        <span class="nx">ipVer</span><span class="p">,</span>
-        <span class="nx">srcAddr</span><span class="p">,</span>
-        <span class="nx">dstAddr</span><span class="p">,</span>
-        <span class="nx">binary</span><span class="p">.</span><span class="nx">BigEndian</span><span class="p">.</span><span class="nx">Uint16</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstPort</span><span class="p">[:]),</span>
-    <span class="p">)</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintf</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="nx">w</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s">&quot;%-6d %-12s %-2d %-16s %-16s %d\n&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">e</span><span class="p">.</span><span class="nx">PID</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">bytes</span><span class="p">.</span><span class="nx">TrimRight</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Comm</span><span class="p">[:],</span><span class="w"> </span><span class="s">&quot;\x00&quot;</span><span class="p">),</span><span class="w"></span>
+<span class="w">        </span><span class="nx">ipVer</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">srcAddr</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">dstAddr</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">BigEndian</span><span class="p">.</span><span class="nx">Uint16</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">DstPort</span><span class="p">[:]),</span><span class="w"></span>
+<span class="w">    </span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p>Putting it all together we've got a Go frontend for tcpconnect with ability
@@ -387,34 +387,34 @@ to filter connections by PID and UID 🎉.</p>
 
 <p>You can find all the source code at
 <a href="https://github.com/marselester/libbpf-tools">github.com/marselester/libbpf-tools</a>.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%-6s %-12s %-2s %-16s %-16s %s\n&quot;</span><span class="p">,</span> <span class="s">&quot;PID&quot;</span><span class="p">,</span> <span class="s">&quot;COMM&quot;</span><span class="p">,</span> <span class="s">&quot;IP&quot;</span><span class="p">,</span> <span class="s">&quot;SADDR&quot;</span><span class="p">,</span> <span class="s">&quot;DADDR&quot;</span><span class="p">,</span> <span class="s">&quot;DPORT&quot;</span><span class="p">)</span>
-<span class="k">for</span> <span class="p">{</span>
-    <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">break</span>
-        <span class="p">}</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%-6s %-12s %-2s %-16s %-16s %s\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PID&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;COMM&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;IP&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;SADDR&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;DADDR&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;DPORT&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="k">for</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">record</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">break</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="k">if</span> <span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;ring event perf buffer is full, dropped %d samples&quot;</span><span class="p">,</span> <span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span><span class="p">)</span>
-        <span class="k">continue</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;ring event perf buffer is full, dropped %d samples&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">continue</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="kd">var</span> <span class="nx">e</span> <span class="nx">event</span>
-    <span class="nx">err</span> <span class="p">=</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span>
-        <span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">),</span>
-        <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span>
-        <span class="o">&amp;</span><span class="nx">e</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to parse perf event: %#+v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-        <span class="k">continue</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">e</span><span class="w"> </span><span class="nx">event</span><span class="w"></span>
+<span class="w">    </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">),</span><span class="w"></span>
+<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="o">&amp;</span><span class="nx">e</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to parse perf event: %#+v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">continue</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="nx">printEvent</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">e</span><span class="p">)</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="nx">printEvent</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">e</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 <p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 

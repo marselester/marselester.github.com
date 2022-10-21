@@ -64,8 +64,8 @@
 <p>Цель тестирования противоположна целям других этапов разработки. Его целью
 является нахождение ошибок. Успешным считается тест, нарушающий работу ПО. Все
 остальные этапы разработки направлены на предотвращение ошибок и недопущение
-нарушения работы программы <a class="footnote-reference" href="#mcconnell" id="id1">[1]</a>.</p>
-<div class="section" id="id2">
+нарушения работы программы <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
+<div class="section" id="section-1">
 <h2>Виды тестирования</h2>
 <p>Виды тестирования, выполняемые разработчиком: блочное тестирование,
 интеграционное тестирование.</p>
@@ -84,12 +84,12 @@
 тестируемого элемента тестировщику известна. Тестируя собственный код,
 программист использует именно этот вид тестирования.</p>
 <p>Тестирование требует, чтобы программист рассчитывал найти ошибки в своем коде
-<a class="footnote-reference" href="#mcconnell" id="id3">[1]</a>.</p>
+<a class="footnote-reference" href="#mcconnell" id="footnote-reference-2">[1]</a>.</p>
 </div>
 <div class="section" id="django">
 <h2>Рекомендации по тестированию Django приложений</h2>
 <p>Карл Майер дал следующие рекомендации по тестированию Django приложений
-<a class="footnote-reference" href="#meyer" id="id4">[2]</a>:</p>
+<a class="footnote-reference" href="#meyer" id="footnote-reference-3">[2]</a>:</p>
 <ul class="simple">
 <li>для представлений следует писать интеграционные тесты;</li>
 <li>для тестирования Ajax и других JavaScript взаимодействий нужно использовать
@@ -104,10 +104,10 @@ Django использует для импорта в БД), аргументир
 разработан инструмент <em>factory_boy</em>, который имеет следующие преимущества:
 близость тестовых данных к тестовому коду, не требует от тестирования введение
 избыточных данных, прост в обслуживании.</p>
-<div class="section" id="id5">
+<div class="section" id="section-2">
 <h3>Что именно тестировать?</h3>
 <p>Ответ на вопрос <em>&quot;Что именно тестировать в Django приложении?&quot;</em> дал Дэниэл
-Линдсли <a class="footnote-reference" href="#lindsley" id="id6">[3]</a>:</p>
+Линдсли <a class="footnote-reference" href="#lindsley" id="footnote-reference-4">[3]</a>:</p>
 <ul class="simple">
 <li>не следует тестировать стандартные функции Python и Django;</li>
 <li>если модель данных содержит пользовательские методы, их необходимо
@@ -118,16 +118,16 @@ Django использует для импорта в БД), аргументир
 </ul>
 </div>
 </div>
-<div class="section" id="id7">
+<div class="section" id="section-3">
 <h2>Тестирование моделей данных</h2>
 <p>Для тестирования Django моделей используют блочное тестирование. В качестве
 инструмента блочного тестирования автор выбрал библиотеку <em>unittest</em>, так как
 она входит в стандартную библиотеку Python. Тесты, написанные на <em>unittest</em>
-работают быстрее при тестировании Django приложений <a class="footnote-reference" href="#lindsley" id="id8">[3]</a>.</p>
+работают быстрее при тестировании Django приложений <a class="footnote-reference" href="#lindsley" id="footnote-reference-5">[3]</a>.</p>
 <p>В качестве примера проектирования тестов приводятся методы
 <em>days_quantity_after_deadline</em> (определяет количество просроченных дней
 задачи) и <em>start_date</em> (определяет дату начала работы над задачей).</p>
-<div class="section" id="id9">
+<div class="section" id="section-4">
 <h3>Количество просроченных дней задачи</h3>
 <p>Определение количества просроченных дней задачи. Для этого рассмотрим все
 возможные случаи наступления дедлайна:</p>
@@ -175,9 +175,9 @@ Django использует для импорта в БД), аргументир
 <p>Под &quot;чистыми тестами&quot; подразумеваются тесты, которые проверяют работает ли
 код, а не пытаются нарушить его работу всевозможными способами (&quot;грязные
 тесты&quot;). В организациях со зрелым процессом тестирования на каждый &quot;чистый
-тест&quot; обычно приходятся пять &quot;грязных&quot; <a class="footnote-reference" href="#mcconnell" id="id10">[1]</a>.</p>
+тест&quot; обычно приходятся пять &quot;грязных&quot; <a class="footnote-reference" href="#mcconnell" id="footnote-reference-6">[1]</a>.</p>
 </div>
-<div class="section" id="id11">
+<div class="section" id="section-5">
 <h3>Дата начала работы над задачей</h3>
 <p>Рассмотрим проектирование тестов для более сложного метода -- метода, который
 определяет дату начала работы над задачей.</p>
@@ -212,7 +212,7 @@ Django использует для импорта в БД), аргументир
 <p>Предыдущая задача имеет статус <em>DONE</em>. В данном случае дата начала задачи
 равна дедлайну предыдущей задачи.</p>
 </div>
-<div class="section" id="id12">
+<div class="section" id="section-6">
 <h4>Правило определения даты</h4>
 <p>Проанализировав вышеперечисленные случаи автор сформулировал правила
 определения даты начала работы над задачей:</p>
@@ -264,7 +264,7 @@ Django использует для импорта в БД), аргументир
 </pre></div>
 </div>
 </div>
-<div class="section" id="id13">
+<div class="section" id="section-7">
 <h3>Заключение</h3>
 <p>Организация библиотеки <em>unittest</em> по классам и методам подходит в случае, когда
 есть потребность в написании тестов, которые используют одинаковый код. Такой
@@ -273,9 +273,9 @@ Django использует для импорта в БД), аргументир
 высокий уровень контроля над средой, в которой происходит выполнение тестов.</p>
 </div>
 </div>
-<div class="section" id="id14">
+<div class="section" id="section-8">
 <h2>Тестирование представлений</h2>
-<p>Для тестирования Django представлений рекомендуется <a class="footnote-reference" href="#korobov" id="id15">[4]</a> использовать
+<p>Для тестирования Django представлений рекомендуется <a class="footnote-reference" href="#korobov" id="footnote-reference-7">[4]</a> использовать
 библиотеку <em>WebTest</em>. Ближайшим аналогом <em>WebTest</em> является <em>twill</em>, но он не
 поддерживает юникод и давно не развивается (последний релиз был в 2007 году).</p>
 <p>В качестве примера приводится тестирование посещения пользователем страницы
@@ -309,30 +309,30 @@ Django использует для импорта в БД), аргументир
 сообщений об исключении, то они уже принесут большую пользу разработчику.</p>
 <p>Представления имеют много связей и зависимостей (шаблоны, база данных,
 конфигурация URL), поэтому их трудно тестировать. Карл Майер рекомендует
-писать как можно меньше кода на уровне представлений <a class="footnote-reference" href="#meyer" id="id16">[2]</a>.</p>
+писать как можно меньше кода на уровне представлений <a class="footnote-reference" href="#meyer" id="footnote-reference-8">[2]</a>.</p>
 <table class="docutils footnote" frame="void" id="mcconnell" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label">[1]</td><td><em>(<a class="fn-backref" href="#id1">1</a>, <a class="fn-backref" href="#id3">2</a>, <a class="fn-backref" href="#id10">3</a>)</em> Макконелл С. Совершенный код. Мастер-класс /
+<tr><td class="label">[1]</td><td><em>(<a class="fn-backref" href="#footnote-reference-1">1</a>, <a class="fn-backref" href="#footnote-reference-2">2</a>, <a class="fn-backref" href="#footnote-reference-6">3</a>)</em> Макконелл С. Совершенный код. Мастер-класс /
 Пер. с англ. – М. : Издательство &quot;Русская редакция&quot;, 2012. – 896 стр. : ил.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="meyer" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label">[2]</td><td><em>(<a class="fn-backref" href="#id4">1</a>, <a class="fn-backref" href="#id16">2</a>)</em> Meyer C. <a class="reference external" href="http://carljm.github.com/django-testing-slides/">Testing and Django</a> at PyCon US 2012.</td></tr>
+<tr><td class="label">[2]</td><td><em>(<a class="fn-backref" href="#footnote-reference-3">1</a>, <a class="fn-backref" href="#footnote-reference-8">2</a>)</em> Meyer C. <a class="reference external" href="http://carljm.github.com/django-testing-slides/">Testing and Django</a> at PyCon US 2012.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="lindsley" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label">[3]</td><td><em>(<a class="fn-backref" href="#id6">1</a>, <a class="fn-backref" href="#id8">2</a>)</em> Линдсли Д. <a class="reference external" href="http://toastdriven.com/blog/2011/apr/10/guide-to-testing-in-django/">Guide to Testing in Django</a>.</td></tr>
+<tr><td class="label">[3]</td><td><em>(<a class="fn-backref" href="#footnote-reference-4">1</a>, <a class="fn-backref" href="#footnote-reference-5">2</a>)</em> Линдсли Д. <a class="reference external" href="http://toastdriven.com/blog/2011/apr/10/guide-to-testing-in-django/">Guide to Testing in Django</a>.</td></tr>
 </tbody>
 </table>
 <table class="docutils footnote" frame="void" id="korobov" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id15">[4]</a></td><td>Коробов М. <a class="reference external" href="http://habrahabr.ru/post/91471/">Пишем функциональные/интеграционные тесты для
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-7">[4]</a></td><td>Коробов М. <a class="reference external" href="http://habrahabr.ru/post/91471/">Пишем функциональные/интеграционные тесты для
 проекта на Django</a>.</td></tr>
 </tbody>
 </table>

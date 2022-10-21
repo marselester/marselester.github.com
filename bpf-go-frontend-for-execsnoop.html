@@ -161,38 +161,38 @@ This file contains kernel's type definitions that can be generated from the inst
 <li><code>./bpf/execsnoop.bpf.c</code> is a path to the BPF C file that is compiled</li>
 <li><code>-- -I../../headers</code> are compiler options that indicate where to find header files</li>
 </ul>
-<div class="highlight"><pre><span></span><code><span class="kn">package</span> <span class="nx">main</span>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
 
-<span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&quot;log&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="s">&quot;log&quot;</span><span class="w"></span>
 
-    <span class="s">&quot;golang.org/x/sys/unix&quot;</span>
-<span class="p">)</span>
+<span class="w">    </span><span class="s">&quot;golang.org/x/sys/unix&quot;</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
 
-<span class="c1">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 ExecSnoop ./bpf/execsnoop.bpf.c -- -I../../headers</span>
+<span class="c1">//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cflags $BPF_CFLAGS -cc clang-12 ExecSnoop ./bpf/execsnoop.bpf.c -- -I../../headers</span><span class="w"></span>
 
-<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="c1">// Increase the resource limit of the current process to provide sufficient space</span>
-    <span class="c1">// for locking memory for the BPF maps.</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">Setrlimit</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIMIT_MEMLOCK</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">Rlimit</span><span class="p">{</span>
-        <span class="nx">Cur</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span>
-        <span class="nx">Max</span><span class="p">:</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span>
-    <span class="p">});</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to set temporary RLIMIT_MEMLOCK: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-        <span class="k">return</span>
-    <span class="p">}</span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Increase the resource limit of the current process to provide sufficient space</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// for locking memory for the BPF maps.</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">Setrlimit</span><span class="p">(</span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIMIT_MEMLOCK</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">Rlimit</span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Cur</span><span class="p">:</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Max</span><span class="p">:</span><span class="w"> </span><span class="nx">unix</span><span class="p">.</span><span class="nx">RLIM_INFINITY</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">});</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to set temporary RLIMIT_MEMLOCK: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="c1">// Load the BPF program into the kernel from an ELF.</span>
-    <span class="c1">// ExecSnoopObjects contains all objects (BPF programs and maps) after they have been loaded into the kernel:</span>
-    <span class="c1">// TracepointSyscallsSysEnterExecve and TracepointSyscallsSysExitExecve BPF programs,</span>
-    <span class="c1">// Events and Execs BPF maps.</span>
-    <span class="nx">objs</span> <span class="o">:=</span> <span class="nx">ExecSnoopObjects</span><span class="p">{}</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">LoadExecSnoopObjects</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF programs and maps: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-        <span class="k">return</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="c1">// Load the BPF program into the kernel from an ELF.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ExecSnoopObjects contains all objects (BPF programs and maps) after they have been loaded into the kernel:</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// TracepointSyscallsSysEnterExecve and TracepointSyscallsSysExitExecve BPF programs,</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Events and Execs BPF maps.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">objs</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">ExecSnoopObjects</span><span class="p">{}</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">LoadExecSnoopObjects</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">objs</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to load BPF programs and maps: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <h2>Tracepoints</h2>
@@ -202,11 +202,11 @@ see <code>/sys/kernel/debug/tracing/events</code> to find available tracepoints.
 <p>From looking at BPF C source file <code>execsnoop.bpf.c</code> we can see two tracepoints instrumented:
 the entry and the return of the <code>execve</code> syscall so that
 the process ID, command name, arguments, and the return value can be printed.</p>
-<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_enter_execve&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">tracepoint__syscalls__sys_enter_execve</span><span class="p">(</span><span class="k">struct</span> <span class="n">trace_event_raw_sys_enter</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_enter_execve&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">tracepoint__syscalls__sys_enter_execve</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">trace_event_raw_sys_enter</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 
-<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_exit_execve&quot;</span><span class="p">)</span>
-<span class="kt">int</span> <span class="n">tracepoint__syscalls__sys_exit_execve</span><span class="p">(</span><span class="k">struct</span> <span class="n">trace_event_raw_sys_exit</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;tracepoint/syscalls/sys_exit_execve&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">tracepoint__syscalls__sys_exit_execve</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">trace_event_raw_sys_exit</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p><code>SEC</code> declares an ELF section named <code>tracepoint/syscalls/sys_enter_execve</code>, followed by a BPF program.
@@ -217,53 +217,53 @@ From the registers, function arguments <code>ctx-&gt;args</code> and return valu
 <p>On Go side I attached the BPF program to <code>syscalls/sys_enter_execve</code> tracepoint using <code>github.com/cilium/ebpf/link</code> package.
 The <code>link.Tracepoint()</code> function returns a link (it represents a program attached to a BPF hook)
 which is later used to detach the program.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">tpEnter</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span> <span class="s">&quot;sys_enter_execve&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysEnterExecve</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_enter_execve tracepoint: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">tpEnter</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><span class="nx">tpEnter</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;sys_enter_execve&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysEnterExecve</span><span class="p">)</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_enter_execve tracepoint: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">tpEnter</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 
-<span class="nx">tpExit</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span> <span class="s">&quot;sys_exit_execve&quot;</span><span class="p">,</span> <span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysExitExecve</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_exit_execve tracepoint: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">tpExit</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<span class="nx">tpExit</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">link</span><span class="p">.</span><span class="nx">Tracepoint</span><span class="p">(</span><span class="s">&quot;syscalls&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;sys_exit_execve&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopPrograms</span><span class="p">.</span><span class="nx">TracepointSyscallsSysExitExecve</span><span class="p">)</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to attach the BPF program to sys_exit_execve tracepoint: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">tpExit</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 </code></pre></div>
 
 <p>The <code>bpf_perf_event_output()</code> C function emits records to user space via a BPF map <code>events</code>
 that accesses perf per-CPU ring buffers.</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_PERF_EVENT_ARRAY</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span>
-<span class="p">}</span> <span class="n">events</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_PERF_EVENT_ARRAY</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">u32</span><span class="p">));</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span><span class="w"></span>
 
-<span class="k">struct</span> <span class="n">event</span> <span class="n">e</span><span class="p">;</span>
-<span class="n">bpf_perf_event_output</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">events</span><span class="p">,</span> <span class="n">BPF_F_CURRENT_CPU</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">e</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="p">));</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">event</span><span class="w"> </span><span class="n">e</span><span class="p">;</span><span class="w"></span>
+<span class="n">bpf_perf_event_output</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">events</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_F_CURRENT_CPU</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">e</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="p">));</span><span class="w"></span>
 </code></pre></div>
 
 <p>In user space the events are read using <code>github.com/cilium/ebpf/perf</code> package.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Open a perf event reader from user space on the PERF_EVENT_ARRAY map</span>
-<span class="c1">// defined in the BPF C program.</span>
-<span class="nx">rd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopMaps</span><span class="p">.</span><span class="nx">Events</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Getpagesize</span><span class="p">())</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to create perf event reader: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="k">return</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Open a perf event reader from user space on the PERF_EVENT_ARRAY map</span><span class="w"></span>
+<span class="c1">// defined in the BPF C program.</span><span class="w"></span>
+<span class="nx">rd</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">perf</span><span class="p">.</span><span class="nx">NewReader</span><span class="p">(</span><span class="nx">objs</span><span class="p">.</span><span class="nx">ExecSnoopMaps</span><span class="p">.</span><span class="nx">Events</span><span class="p">,</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getpagesize</span><span class="p">())</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to create perf event reader: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">defer</span><span class="w"> </span><span class="nx">rd</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span><span class="w"></span>
 
-<span class="k">for</span> <span class="p">{</span>
-    <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">break</span>
-        <span class="p">}</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;received from perf ring buffer: %s&quot;</span><span class="p">,</span> <span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">)</span>
-<span class="p">}</span>
+<span class="k">for</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">record</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">break</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;received from perf ring buffer: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p>In order to verify that the events are captured, I ran the Go program and <code>ls</code> in another terminal.
@@ -275,46 +275,46 @@ Luckily it worked!</p>
 <h2>Decoding events</h2>
 <p>I wanted to match the output of the original execsnoop program, for that I needed to decode <code>record.RawSample</code>
 which contains bytes of the <code>event</code> C struct into a Go struct.</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="p">{</span>
-    <span class="kt">pid_t</span> <span class="n">pid</span><span class="p">;</span>
-    <span class="kt">pid_t</span> <span class="n">ppid</span><span class="p">;</span>
-    <span class="kt">uid_t</span> <span class="n">uid</span><span class="p">;</span>
-    <span class="n">int32</span> <span class="n">retval</span><span class="p">;</span> <span class="c1">// it&#39;s int in https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.h</span>
-    <span class="n">int32</span> <span class="n">args_count</span><span class="p">;</span> <span class="c1">// int</span>
-    <span class="n">u32</span> <span class="n">args_size</span><span class="p">;</span> <span class="c1">// unsigned int</span>
-    <span class="kt">char</span> <span class="n">comm</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span>
-    <span class="kt">char</span> <span class="n">args</span><span class="p">[</span><span class="mi">7680</span><span class="p">];</span>
-<span class="p">};</span>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">event</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">pid_t</span><span class="w"> </span><span class="n">ppid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">uid_t</span><span class="w"> </span><span class="n">uid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">int32</span><span class="w"> </span><span class="n">retval</span><span class="p">;</span><span class="w"> </span><span class="c1">// it&#39;s int in https://raw.githubusercontent.com/iovisor/bcc/master/libbpf-tools/execsnoop.h</span>
+<span class="w">    </span><span class="n">int32</span><span class="w"> </span><span class="n">args_count</span><span class="p">;</span><span class="w"> </span><span class="c1">// int</span>
+<span class="w">    </span><span class="n">u32</span><span class="w"> </span><span class="n">args_size</span><span class="p">;</span><span class="w"> </span><span class="c1">// unsigned int</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">comm</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">args</span><span class="p">[</span><span class="mi">7680</span><span class="p">];</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 </code></pre></div>
 
 <p>Go <code>event</code> struct represents a perf event sent to user space from the BPF program running in the kernel.
 Note, that it should match the C event struct, and both C and Go structs must be aligned the same way.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">type</span> <span class="nx">event</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="c1">// PID is the process ID.</span>
-    <span class="nx">PID</span> <span class="kt">int32</span>
-    <span class="c1">// PPID is the process ID of the parent of this process.</span>
-    <span class="nx">PPID</span> <span class="kt">int32</span>
-    <span class="c1">// UID is the process user ID, e.g., 1000.</span>
-    <span class="nx">UID</span> <span class="kt">uint32</span>
-    <span class="c1">// Retval is the return value of the execve().</span>
-    <span class="nx">Retval</span> <span class="kt">int32</span>
-    <span class="c1">// ArgsCount is a number of arguments.</span>
-    <span class="nx">ArgsCount</span> <span class="kt">int32</span>
-    <span class="c1">// ArgSize is a size of arguments in bytes.</span>
-    <span class="nx">ArgsSize</span> <span class="kt">uint32</span>
-    <span class="c1">// Comm is the parent process/command name, e.g., bash.</span>
-    <span class="nx">Comm</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">event</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// PID is the process ID.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">PID</span><span class="w"> </span><span class="kt">int32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// PPID is the process ID of the parent of this process.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">PPID</span><span class="w"> </span><span class="kt">int32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// UID is the process user ID, e.g., 1000.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">UID</span><span class="w"> </span><span class="kt">uint32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Retval is the return value of the execve().</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Retval</span><span class="w"> </span><span class="kt">int32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ArgsCount is a number of arguments.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">ArgsCount</span><span class="w"> </span><span class="kt">int32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ArgSize is a size of arguments in bytes.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">ArgsSize</span><span class="w"> </span><span class="kt">uint32</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Comm is the parent process/command name, e.g., bash.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">Comm</span><span class="w"> </span><span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p>The variable length <code>args</code> field is omitted on Go side and decoded manually,
 because I kept getting <code>failed to parse perf event: unexpected EOF error</code>.
 Perhaps the Go program got trailing garbage from the ring buffer which couldn't be unmarshalled.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// The data submitted via bpf_perf_event_output.</span>
-<span class="c1">// Due to a kernel bug, this can contain between 0 and 7 bytes of trailing</span>
-<span class="c1">// garbage from the ring depending on the input sample&#39;s length.</span>
-<span class="c1">// See https://pkg.go.dev/github.com/cilium/ebpf/perf#Record.</span>
-<span class="nx">RawSample</span> <span class="p">[]</span><span class="kt">byte</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// The data submitted via bpf_perf_event_output.</span><span class="w"></span>
+<span class="c1">// Due to a kernel bug, this can contain between 0 and 7 bytes of trailing</span><span class="w"></span>
+<span class="c1">// garbage from the ring depending on the input sample&#39;s length.</span><span class="w"></span>
+<span class="c1">// See https://pkg.go.dev/github.com/cilium/ebpf/perf#Record.</span><span class="w"></span>
+<span class="nx">RawSample</span><span class="w"> </span><span class="p">[]</span><span class="kt">byte</span><span class="w"></span>
 </code></pre></div>
 
 <p>Timo Beckers in Cilium's Slack channel recommended to check alignment and hand-write an unmarshaller.
@@ -326,51 +326,51 @@ with alignchecker program.</p>
 </blockquote>
 <p><code>binary.Read()</code> is used to read structured binary data from <code>record.RawSample</code> into the <code>event</code> struct.
 The remaining bytes belong to <code>args</code> field and just printed.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// eventSize is the event struct size in bytes, i.e., unsafe.Sizeof(e).</span>
-<span class="c1">// It&#39;s used to obtain the variable length args from the perf record.</span>
-<span class="kd">const</span> <span class="nx">eventSize</span> <span class="p">=</span> <span class="mi">40</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// eventSize is the event struct size in bytes, i.e., unsafe.Sizeof(e).</span><span class="w"></span>
+<span class="c1">// It&#39;s used to obtain the variable length args from the perf record.</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">eventSize</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">40</span><span class="w"></span>
 
-<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%-16s %-6s %-6s %3s %s\n&quot;</span><span class="p">,</span> <span class="s">&quot;PCOMM&quot;</span><span class="p">,</span> <span class="s">&quot;PID&quot;</span><span class="p">,</span> <span class="s">&quot;PPID&quot;</span><span class="p">,</span> <span class="s">&quot;RET&quot;</span><span class="p">,</span> <span class="s">&quot;ARGS&quot;</span><span class="p">)</span>
-<span class="k">for</span> <span class="p">{</span>
-    <span class="nx">record</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">break</span>
-        <span class="p">}</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%-16s %-6s %-6s %3s %s\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PCOMM&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PID&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PPID&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;RET&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ARGS&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="k">for</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">record</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">rd</span><span class="p">.</span><span class="nx">Read</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">perf</span><span class="p">.</span><span class="nx">IsClosed</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">break</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to read from perf ring buffer: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="k">if</span> <span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;ring event perf buffer is full, dropped %d samples&quot;</span><span class="p">,</span> <span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span><span class="p">)</span>
-        <span class="k">continue</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;ring event perf buffer is full, dropped %d samples&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">record</span><span class="p">.</span><span class="nx">LostSamples</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">continue</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="kd">var</span> <span class="nx">e</span> <span class="nx">event</span>
-    <span class="nx">err</span> <span class="p">=</span> <span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span>
-        <span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">),</span>
-        <span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span>
-        <span class="o">&amp;</span><span class="nx">e</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-        <span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to parse perf event: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-        <span class="k">continue</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">e</span><span class="w"> </span><span class="nx">event</span><span class="w"></span>
+<span class="w">    </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">),</span><span class="w"></span>
+<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">LittleEndian</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="o">&amp;</span><span class="nx">e</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to parse perf event: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">continue</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="nx">args</span> <span class="o">:=</span> <span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">[</span><span class="nx">eventSize</span><span class="p">:]</span>
+<span class="w">    </span><span class="nx">args</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">record</span><span class="p">.</span><span class="nx">RawSample</span><span class="p">[</span><span class="nx">eventSize</span><span class="p">:]</span><span class="w"></span>
 
-    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span>
-        <span class="s">&quot;%-16s %-6d %-6d %3d %s\n&quot;</span><span class="p">,</span>
-        <span class="nx">bytes</span><span class="p">.</span><span class="nx">TrimRight</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Comm</span><span class="p">[:],</span> <span class="s">&quot;\x00&quot;</span><span class="p">),</span>
-        <span class="nx">e</span><span class="p">.</span><span class="nx">PID</span><span class="p">,</span>
-        <span class="nx">e</span><span class="p">.</span><span class="nx">PPID</span><span class="p">,</span>
-        <span class="nx">e</span><span class="p">.</span><span class="nx">Retval</span><span class="p">,</span>
-        <span class="nx">strings</span><span class="p">.</span><span class="nx">ReplaceAll</span><span class="p">(</span>
-            <span class="nb">string</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">Trim</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="s">&quot;\x00&quot;</span><span class="p">)),</span>
-            <span class="s">&quot;\x00&quot;</span><span class="p">,</span>
-            <span class="s">&quot; &quot;</span><span class="p">,</span>
-        <span class="p">),</span>
-    <span class="p">)</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="s">&quot;%-16s %-6d %-6d %3d %s\n&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">bytes</span><span class="p">.</span><span class="nx">TrimRight</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Comm</span><span class="p">[:],</span><span class="w"> </span><span class="s">&quot;\x00&quot;</span><span class="p">),</span><span class="w"></span>
+<span class="w">        </span><span class="nx">e</span><span class="p">.</span><span class="nx">PID</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">e</span><span class="p">.</span><span class="nx">PPID</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">e</span><span class="p">.</span><span class="nx">Retval</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">strings</span><span class="p">.</span><span class="nx">ReplaceAll</span><span class="p">(</span><span class="w"></span>
+<span class="w">            </span><span class="nb">string</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">Trim</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;\x00&quot;</span><span class="p">)),</span><span class="w"></span>
+<span class="w">            </span><span class="s">&quot;\x00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="s">&quot; &quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="p">),</span><span class="w"></span>
+<span class="w">    </span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
 <p>The resulting output of the Go execsnoop program is very close to the original 🎉.</p>
@@ -394,47 +394,47 @@ The <code>execsnoop.bpf.c</code> makes use of the following helpers.</p>
 <em>unsafe_ptr</em> and stores the data in <em>dst</em>.</p>
 <p><code>bpf_get_current_pid_tgid()</code> returns an unsigned 64-bit integer containing the current TGID (what user space calls the PID) in the upper bits
 and the current PID (what user space calls the kernel thread ID) in the lower bits.</p>
-<div class="highlight"><pre><span></span><code><span class="n">u64</span> <span class="n">id</span> <span class="o">=</span> <span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span>
-<span class="kt">pid_t</span> <span class="n">pid</span> <span class="o">=</span> <span class="p">(</span><span class="kt">pid_t</span><span class="p">)</span><span class="n">id</span><span class="p">;</span>
-<span class="kt">pid_t</span> <span class="n">tgid</span> <span class="o">=</span> <span class="n">id</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">;</span>
-<span class="n">e</span><span class="o">-&gt;</span><span class="n">pid</span> <span class="o">=</span> <span class="n">tgid</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="n">u64</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span><span class="w"></span>
+<span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">pid_t</span><span class="p">)</span><span class="n">id</span><span class="p">;</span><span class="w"></span>
+<span class="kt">pid_t</span><span class="w"> </span><span class="n">tgid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w"></span>
+<span class="n">e</span><span class="o">-&gt;</span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tgid</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 
 <p><code>bpf_get_current_uid_gid()</code> returns a u64 integer containing the current GID in the upper bits
 and UID in the lower bits.</p>
-<div class="highlight"><pre><span></span><code><span class="kt">uid_t</span> <span class="n">uid</span> <span class="o">=</span> <span class="p">(</span><span class="n">u32</span><span class="p">)</span><span class="n">bpf_get_current_uid_gid</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kt">uid_t</span><span class="w"> </span><span class="n">uid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">u32</span><span class="p">)</span><span class="n">bpf_get_current_uid_gid</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 
 <p><code>bpf_get_current_task()</code> returns a pointer to the current (on-CPU)
 <a href="https://elixir.bootlin.com/linux/v5.11/source/include/linux/sched.h#L649">task struct</a> (a process).
 This contains many details about the running process and links to other structs containing system state.</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">t</span><span class="p">;</span>
-<span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span><span class="o">*</span><span class="p">)</span><span class="n">bpf_get_current_task</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="o">*</span><span class="n">t</span><span class="p">;</span><span class="w"></span>
+<span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="o">*</span><span class="p">)</span><span class="n">bpf_get_current_task</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 
 <p><code>bpf_get_current_comm(buf, buf_size)</code> copies the task name to the buffer.</p>
-<div class="highlight"><pre><span></span><code><span class="n">bpf_get_current_comm</span><span class="p">(</span><span class="o">&amp;</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">));</span>
+<div class="highlight"><pre><span></span><code><span class="n">bpf_get_current_comm</span><span class="p">(</span><span class="o">&amp;</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">comm</span><span class="p">));</span><span class="w"></span>
 </code></pre></div>
 
 <p><code>bpf_perf_event_output(ctx, map, data, size)</code> writes data to the <code>perf_event</code> ring buffers;
 this is used for per-event output.</p>
 <p><code>bpf_map_lookup_elem(map, key)</code> finds a key in a map and returns its value (pointer).</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span> <span class="n">event</span> <span class="o">*</span><span class="n">e</span><span class="p">;</span>
-<span class="n">e</span> <span class="o">=</span> <span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pid</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">event</span><span class="w"> </span><span class="o">*</span><span class="n">e</span><span class="p">;</span><span class="w"></span>
+<span class="n">e</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">pid</span><span class="p">);</span><span class="w"></span>
 </code></pre></div>
 
 <p><code>bpf_map_update_elem(map, key, value, flags)</code> atomically updates the value of the entry selected by key.</p>
-<div class="highlight"><pre><span></span><code><span class="k">static</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">event</span> <span class="n">empty_event</span> <span class="o">=</span> <span class="p">{};</span>
+<div class="highlight"><pre><span></span><code><span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">event</span><span class="w"> </span><span class="n">empty_event</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span><span class="w"></span>
 
-<span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_HASH</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="mi">10240</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kt">pid_t</span><span class="p">);</span>
-    <span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="k">struct</span> <span class="n">event</span><span class="p">);</span>
-<span class="p">}</span> <span class="n">execs</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+<span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_HASH</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span><span class="w"> </span><span class="mi">10240</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="kt">pid_t</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">event</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="n">execs</span><span class="w"> </span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span><span class="w"></span>
 
-<span class="k">if</span> <span class="p">(</span><span class="n">bpf_map_update_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">empty_event</span><span class="p">,</span> <span class="n">BPF_NOEXIST</span><span class="p">))</span>
-    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bpf_map_update_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">execs</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">empty_event</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_NOEXIST</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 
 <p>The <em>execs</em> is declared of type <code>BPF_MAP_TYPE_HASH</code> (a hash table).

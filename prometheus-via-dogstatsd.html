@@ -94,7 +94,7 @@ but <a class="reference external" href="https://docs.datadoghq.com/guides/dogsta
 Moreover statsd_exporter can convert them into Prometheus labels.</p>
 <p>Let's take it step by step.
 Firstly, we need <a class="reference external" href="https://github.com/DataDog/datadogpy">Datadog Python client</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> pip install <span class="nv">datadog</span><span class="o">==</span><span class="m">0</span>.16.0
+<div class="highlight"><pre><span></span><span class="gp">$ </span>pip install <span class="nv">datadog</span><span class="o">==</span><span class="m">0</span>.16.0
 </pre></div>
 <p>Secondly, we should increment &quot;weatherapi.responses.total&quot; counter.
 For example:</p>
@@ -122,7 +122,7 @@ For example:</p>
 </pre></div>
 <p>And finally, we should run statsd_exporter with disabled &quot;-statsd.add-suffix&quot; flag
 which adds the metric type (counter/gauge/timer) as suffix to the generated Prometheus metric.</p>
-<div class="highlight"><pre><span></span><span class="gp">$</span> statsd_exporter <span class="se">\</span>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>statsd_exporter <span class="se">\</span>
     -statsd.listen-address<span class="o">=</span>:8125 <span class="se">\</span>
     -statsd.add-suffix<span class="o">=</span><span class="nb">false</span>
 </pre></div>

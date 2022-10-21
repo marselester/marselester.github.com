@@ -62,59 +62,59 @@
 распознать нажатие «горячей» комбинации клавиш <tt class="docutils literal">LeftCtrl+RightShift+F3</tt> и
 реагировать на него звуковым сигналом. Информации/примеров по этой теме
 маловато, по этому решил опубликовать свою программку.</p>
-<div class="highlight"><pre><span></span><span class="nf">masm</span>
-<span class="nf">.model</span> <span class="nv">small</span>
-<span class="nf">.stack</span> <span class="mi">256</span>
-<span class="nf">.data</span>
-    <span class="nf">Msg_about</span> <span class="nv">db</span> <span class="s">&#39;Распознать нажатие «горячей» комбинации клавиш&#39;</span><span class="p">,</span> <span class="mh">0Ah</span><span class="p">,</span> <span class="mh">0Dh</span>
-              <span class="kd">db</span> <span class="s">&#39;LeftCtrl+RightShift+F3&#39;</span><span class="p">,</span> <span class="mh">0Ah</span><span class="p">,</span> <span class="mh">0Dh</span>
-              <span class="kd">db</span> <span class="s">&#39;и реагировать на него звуковым сигналом&#39;</span><span class="p">,</span> <span class="mh">0Ah</span><span class="p">,</span> <span class="mh">0Dh</span><span class="p">,</span> <span class="s">&#39;$&#39;</span>
+<div class="highlight"><pre><span></span><span class="nf">masm</span><span class="w"></span>
+<span class="nf">.model</span><span class="w"> </span><span class="nv">small</span><span class="w"></span>
+<span class="nf">.stack</span><span class="w"> </span><span class="mi">256</span><span class="w"></span>
+<span class="nf">.data</span><span class="w"></span>
+<span class="w">    </span><span class="nf">Msg_about</span><span class="w"> </span><span class="nv">db</span><span class="w"> </span><span class="s">&#39;Распознать нажатие «горячей» комбинации клавиш&#39;</span><span class="p">,</span><span class="w"> </span><span class="mh">0Ah</span><span class="p">,</span><span class="w"> </span><span class="mh">0Dh</span><span class="w"></span>
+<span class="w">              </span><span class="kd">db</span><span class="w"> </span><span class="s">&#39;LeftCtrl+RightShift+F3&#39;</span><span class="p">,</span><span class="w"> </span><span class="mh">0Ah</span><span class="p">,</span><span class="w"> </span><span class="mh">0Dh</span><span class="w"></span>
+<span class="w">              </span><span class="kd">db</span><span class="w"> </span><span class="s">&#39;и реагировать на него звуковым сигналом&#39;</span><span class="p">,</span><span class="w"> </span><span class="mh">0Ah</span><span class="p">,</span><span class="w"> </span><span class="mh">0Dh</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;$&#39;</span><span class="w"></span>
 
-<span class="nf">.code</span>
+<span class="nf">.code</span><span class="w"></span>
 
-<span class="nl">start:</span>
-    <span class="c1">; Инициализация сегментного регистра ds</span>
-    <span class="nf">mov</span> <span class="nb">ax</span><span class="p">,</span> <span class="err">@</span><span class="nv">data</span>
-    <span class="nf">mov</span> <span class="nb">ds</span><span class="p">,</span> <span class="nb">ax</span>
+<span class="nl">start:</span><span class="w"></span>
+<span class="w">    </span><span class="c1">; Инициализация сегментного регистра ds</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ax</span><span class="p">,</span><span class="w"> </span><span class="err">@</span><span class="nv">data</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ds</span><span class="p">,</span><span class="w"> </span><span class="nb">ax</span><span class="w"></span>
 
-    <span class="c1">; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)</span>
-    <span class="nf">mov</span> <span class="nb">ax</span><span class="p">,</span> <span class="mh">0003h</span>
-    <span class="nf">int</span> <span class="mh">10h</span>
+<span class="w">    </span><span class="c1">; Видеорежим 3 (очистка экрана и установка курсора в 0, 0)</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ax</span><span class="p">,</span><span class="w"> </span><span class="mh">0003h</span><span class="w"></span>
+<span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">10h</span><span class="w"></span>
 
-    <span class="c1">; Вывод сообщения на экран</span>
-    <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mi">9</span>
-    <span class="nf">mov</span> <span class="nb">dx</span><span class="p">,</span> <span class="nv">offset</span> <span class="nv">Msg_about</span>
-    <span class="nf">int</span> <span class="mh">21h</span>
+<span class="w">    </span><span class="c1">; Вывод сообщения на экран</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ah</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">dx</span><span class="p">,</span><span class="w"> </span><span class="nv">offset</span><span class="w"> </span><span class="nv">Msg_about</span><span class="w"></span>
+<span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">21h</span><span class="w"></span>
 
-    <span class="c1">; Чтение символа с ожиданием</span>
-    <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mi">0</span>
-    <span class="nf">int</span> <span class="mh">16h</span>
+<span class="w">    </span><span class="c1">; Чтение символа с ожиданием</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ah</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">16h</span><span class="w"></span>
 
-    <span class="c1">; Проверка нажатия Ctrl+F3</span>
-    <span class="nf">cmp</span> <span class="nb">ah</span><span class="p">,</span> <span class="mh">60h</span>
-    <span class="nf">jne</span> <span class="nv">exit</span>
+<span class="w">    </span><span class="c1">; Проверка нажатия Ctrl+F3</span><span class="w"></span>
+<span class="w">    </span><span class="nf">cmp</span><span class="w"> </span><span class="nb">ah</span><span class="p">,</span><span class="w"> </span><span class="mh">60h</span><span class="w"></span>
+<span class="w">    </span><span class="nf">jne</span><span class="w"> </span><span class="nv">exit</span><span class="w"></span>
 
-    <span class="c1">; Получение состояния клавиатуры</span>
-    <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mh">12h</span>
-    <span class="nf">int</span> <span class="mh">16h</span>
+<span class="w">    </span><span class="c1">; Получение состояния клавиатуры</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ah</span><span class="p">,</span><span class="w"> </span><span class="mh">12h</span><span class="w"></span>
+<span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">16h</span><span class="w"></span>
 
-    <span class="c1">; Проверка нажатия LeftCtrl</span>
-    <span class="nf">test</span> <span class="nb">ah</span><span class="p">,</span> <span class="mb">1b</span>
-    <span class="nf">jz</span> <span class="nv">exit</span>
+<span class="w">    </span><span class="c1">; Проверка нажатия LeftCtrl</span><span class="w"></span>
+<span class="w">    </span><span class="nf">test</span><span class="w"> </span><span class="nb">ah</span><span class="p">,</span><span class="w"> </span><span class="mb">1b</span><span class="w"></span>
+<span class="w">    </span><span class="nf">jz</span><span class="w"> </span><span class="nv">exit</span><span class="w"></span>
 
-    <span class="c1">; Проверка нажатия RightShift</span>
-    <span class="nf">test</span> <span class="nb">al</span><span class="p">,</span> <span class="mb">1b</span>
-    <span class="nf">jz</span> <span class="nv">exit</span>
+<span class="w">    </span><span class="c1">; Проверка нажатия RightShift</span><span class="w"></span>
+<span class="w">    </span><span class="nf">test</span><span class="w"> </span><span class="nb">al</span><span class="p">,</span><span class="w"> </span><span class="mb">1b</span><span class="w"></span>
+<span class="w">    </span><span class="nf">jz</span><span class="w"> </span><span class="nv">exit</span><span class="w"></span>
 
-    <span class="nf">mov</span> <span class="nb">ah</span><span class="p">,</span> <span class="mi">2</span> <span class="c1">; Вывод символа</span>
-    <span class="nf">mov</span> <span class="nb">dl</span><span class="p">,</span> <span class="mi">7</span> <span class="c1">; Сигнал</span>
-    <span class="nf">int</span> <span class="mh">21h</span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ah</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="c1">; Вывод символа</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">dl</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="c1">; Сигнал</span><span class="w"></span>
+<span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">21h</span><span class="w"></span>
 
-    <span class="c1">; Завершение программы, возврат управления ОС</span>
-    <span class="nl">exit:</span>
-    <span class="nf">mov</span> <span class="nb">ax</span><span class="p">,</span> <span class="mh">4c00h</span>
-    <span class="nf">int</span> <span class="mh">21h</span>
-<span class="nf">end</span> <span class="nv">start</span>
+<span class="w">    </span><span class="c1">; Завершение программы, возврат управления ОС</span><span class="w"></span>
+<span class="w">    </span><span class="nl">exit:</span><span class="w"></span>
+<span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ax</span><span class="p">,</span><span class="w"> </span><span class="mh">4c00h</span><span class="w"></span>
+<span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">21h</span><span class="w"></span>
+<span class="nf">end</span><span class="w"> </span><span class="nv">start</span><span class="w"></span>
 </pre></div>
 <p>Для чтения символа используется функция <tt class="docutils literal">16h BIOS</tt>.</p>
 <p>AH = 0</p>
@@ -125,7 +125,7 @@
 <p>AH = 12h</p>
 <p>На выходе в AX заносится состояние клавиатуры. Нас интересует только первый
 бит AH (LeftCtrl) и первый бит AL (RightShift).</p>
-<div class="section" id="id1">
+<div class="section" id="section-1">
 <h2>Состояние клавиатуры</h2>
 <div class="section" id="al">
 <h3>AL</h3>
