@@ -1,5 +1,174 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Marsel Mavletkulov</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/marsel-mavletkulov.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2022-10-20T00:00:00+07:00</updated><entry><title>DIY CPU profiler: from BPF maps to pprof</title><link href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html" rel="alternate"></link><published>2022-10-20T00:00:00+07:00</published><updated>2022-10-20T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2022-10-20:/diy-cpu-profiler-from-bpf-maps-to-pprof.html</id><summary type="html">&lt;p&gt;&lt;a href="https://marselester.com/continuous-profiling-in-go.html"&gt;In previous post&lt;/a&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Marsel Mavletkulov</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/marsel-mavletkulov.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2023-01-08T00:00:00+07:00</updated><entry><title>Bandwitch 🧙‍♀️ of CPU and storages</title><link href="https://marselester.com/bandwitch-of-cpu-and-storages.html" rel="alternate"></link><published>2023-01-08T00:00:00+07:00</published><updated>2023-01-08T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2023-01-08:/bandwitch-of-cpu-and-storages.html</id><summary type="html">&lt;p&gt;Let us begin with a definition of a CPU clock rate ⏰.
+It refers to the frequency at which the clock generator (an oscillator crystal)
+of a processor can generate pulses, which are used to synchronize the operations of its components.
+For example, 1GHz CPU implies that its clock runs at …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Let us begin with a definition of a CPU clock rate ⏰.
+It refers to the frequency at which the clock generator (an oscillator crystal)
+of a processor can generate pulses, which are used to synchronize the operations of its components.
+For example, 1GHz CPU implies that its clock runs at 10^9 cycles per second,
+therefore the time required for each clock cycle is 1 nanosecond.
+Faster the clock -- more instructions a processor can execute per second.&lt;/p&gt;
+&lt;p&gt;Performance of a program depends on how fast the data gets accessed,
+so the speed of a storage is paramount.
+The CPU has the fastest storage device called the register file
+which consists of 16 word-sized (64 bits) registers.
+The data stored in a register requires 0 cycles to access.&lt;/p&gt;
+&lt;p&gt;The program counter (PC) &lt;code&gt;rip&lt;/code&gt; register contains the memory address of a machine instruction.
+CPU reads the instruction from memory pointed at by the PC,
+executes the instruction, and updates the PC to point to the next instruction.
+In general, CPU performs the following operations as per instruction:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;load -- copy a byte/word from main memory into register&lt;/li&gt;
+&lt;li&gt;store -- copy a byte/word from register into main memory&lt;/li&gt;
+&lt;li&gt;operate -- copy the contents of two registers to the arithmetic/logic unit (ALU),
+  perform an arithmetic operation, and store the result in a register&lt;/li&gt;
+&lt;li&gt;jump -- copy a word from the instruction into the PC&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The memory addresses used by a program are virtual addresses,
+so the main memory appears to be a byte array where array index is a memory address.
+It can range from 0 to 2^63-1, but currently is
+&lt;a href="https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details"&gt;limited to 2^48 or 256TB&lt;/a&gt;.
+The lower-addressed half (user space) is occupied by a process,
+and the rest is left to kernel virtual memory (it is identical for each process).
+Here is how a 4-byte integer might be stored in memory (little endian byte ordering).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;// The variable&amp;#39;s address &amp;amp;x is 0x100.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="kd"&gt;var&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int32&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mh"&gt;0x00001e61&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;memory address&lt;/th&gt;
+&lt;th&gt;byte&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0x100&lt;/td&gt;
+&lt;td&gt;61&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x101&lt;/td&gt;
+&lt;td&gt;1e&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x102&lt;/td&gt;
+&lt;td&gt;00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x103&lt;/td&gt;
+&lt;td&gt;00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Arrays and structures are stored as a contiguous sequence of bytes.
+The smallest memory address of the bytes used is a variable's address.&lt;/p&gt;
+&lt;p&gt;Memory access is often the slowest of CPU operations, as it may take ~200 cycles to access it,
+during which instruction execution has stalled.
+Memory caches blocks of virtual memory (4-KB pages) and parts of files (buffer cache).
+Disk controller caches disk sectors.
+Its access time is ~100,000 cycles, and disk's access time is ~10,000,000 cycles.
+Disks read and write data in sector-size blocks (512 bytes) which takes ~10ms.
+CPU L1-L3 caches cache 64-byte blocks (cache lines) of the main memory
+to significantly reduce the number of cycles needed for memory access.
+L1 cache can be accessed in ~4 clock cycles, L2 in ~10 cycles, and L3's access time is ~50 cycles.&lt;/p&gt;
+&lt;p&gt;Buses transfer word-sized information between CPU, main memory, disk, etc.
+It takes ~256ns for L1 cache to read 512 bytes (access time is ~4ns for a 64-bit word).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Register file -- L1-3 caches -- Bus interface&lt;/span&gt;
+&lt;span class="go"&gt;                                 |&lt;/span&gt;
+&lt;span class="go"&gt;                                 | System bus&lt;/span&gt;
+&lt;span class="go"&gt;                                 |&lt;/span&gt;
+&lt;span class="go"&gt;Disk -- Disk controller --------- I/O bridge&lt;/span&gt;
+&lt;span class="go"&gt;                         I/O bus |&lt;/span&gt;
+&lt;span class="go"&gt;                                 | Memory bus&lt;/span&gt;
+&lt;span class="go"&gt;                                 |&lt;/span&gt;
+&lt;span class="go"&gt;                                Main memory&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Each CPU core has its own L1 and L2 caches.
+L1 is split into i-cache to read recently fetched instructions, and d-cache to read/write data.
+All cores share L3 cache and the interface to main memory.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Registers                  Registers&lt;/span&gt;
+&lt;span class="go"&gt;    |                          |&lt;/span&gt;
+&lt;span class="go"&gt;L1 d-cache  L1 i-cache ... L1 d-cache  L1 i-cache&lt;/span&gt;
+&lt;span class="go"&gt;          \/                         \/&lt;/span&gt;
+&lt;span class="go"&gt;        L2 cache                  L2 cache&lt;/span&gt;
+&lt;span class="go"&gt;                \                /&lt;/span&gt;
+&lt;span class="go"&gt;                 \-- L3 cache --/&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;An instruction requires ~20 clock cycles to execute,
+but a processor manages to execute more of them per clock cycle using instruction pipelining,
+i.e., the actions are partitioned into ~15 steps which are performed in parallel
+working on different instructions, e.g.,&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;fetching the instruction from memory&lt;/li&gt;
+&lt;li&gt;determining the instruction type&lt;/li&gt;
+&lt;li&gt;reading from memory&lt;/li&gt;
+&lt;li&gt;arithmetic operation&lt;/li&gt;
+&lt;li&gt;writing to memory&lt;/li&gt;
+&lt;li&gt;updating the program counter&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;CPU can perform out-of-order execution of the pipeline,
+where later instructions can be completed while earlier instructions are stalled,
+improving instruction throughput.
+The instruction control unit (ICU) fetches instructions from L1 i-cache ahead of time.
+It generates a sequence of primitive operations from instructions
+and sends them to the execution unit (EU).
+EU executes the operations using multiple functional units
+(e.g., store to L1 d-cache) some of which of the same type
+and tells ICU whether branches were correctly predicted.
+Mispredicting a conditional jump can incur ~15-30 clock cycles of wasted effort, hurting performance.&lt;/p&gt;
+&lt;p&gt;Memory management unit (MMU) uses translation look-aside buffer (TLB) which is a cache
+that provides a fast translation (0 cycles access time) from virtual to physical addresses.
+On TLB miss, MMU searches the address mapping in the page table which is maintained by the kernel.
+When it fails, a page fault exception is signalled to get a referenced memory address from the disk.
+The OS's exception handler sets up a transfer from disk to memory (several thousands cycles).
+Once this completes (millions of cycles),
+the OS will return to the original program to retry the instruction that caused a page fault.
+Direct memory access (DMA) technique allows data to travel directly from disk to memory avoiding CPU.&lt;/p&gt;
+&lt;h2&gt;General advice&lt;/h2&gt;
+&lt;p&gt;Intel Vtune defines CPI (cycles per instruction retired) as a metric indicating how much time
+each executed instruction took, in units of cycles.
+The CPU issues up to four instructions per cycle, suggesting a theoretical best CPI of 0.25.
+A CPI &amp;lt; 1 is typical for instruction bound code,
+while a CPI &amp;gt; 1 may show up for a stall cycle bound application, also likely memory bound.
+If you're curious, check out a &lt;a href="https://github.com/klauspost/compress/discussions/717"&gt;Vtune perf report&lt;/a&gt; example.&lt;/p&gt;
+&lt;p&gt;Hyper-threading allows the CPU core to run more than one thread,
+effectively scheduling between them when one instruction stalls on memory I/O.
+Workloads that are stall cycle-heavy (low IPC instructions per cycle)
+could have better performance than those that are instruction-heavy
+because stall cycles reduce core contention.&lt;/p&gt;
+&lt;p&gt;IPC &amp;lt; 1 (or CPI &amp;gt; 1) indicates that the CPU is often stalled,
+typically for memory access, so a general advice is to:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;keep intermediate calculation values in registers (i.e., local variables) instead of the memory
+  and store results in memory when the final value was computed&lt;/li&gt;
+&lt;li&gt;use a value as often as possible once it has been read from memory (temporal locality),
+  i.e., it will be read from L1 cache&lt;/li&gt;
+&lt;li&gt;access data (arrays, structs) sequentially in the order they are stored in memory (spatial locality),
+  so multiple values are read from the same L1 cache line&lt;/li&gt;
+&lt;li&gt;reduce the data dependencies in a loop between different parts of a computation.
+  Otherwise the CPU would have to wait for dependent load/store operations that form a critical path.
+  Similar to databases, partitioning helps, e.g., introduce more variables to accumulate computed values.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Beware of false sharing -- a usage pattern occurring when two CPU cores read from and write to
+unrelated variables that happen to share the same L1 cache line,
+e.g., two pointers declared in the same struct next to each other.
+When write happens in one core,
+the cache controller invalidates that cache line in other cores,
+so they have to reload non-stale data to do their reads.
+The solution is to add 64-byte padding between those variables so they end up in different cache lines.
+Check out an interesting case study:
+&lt;a href="https://surfingcomplexity.blog/2022/11/25/cache-invalidation-really-is-one-of-the-hardest-things-in-computer-science/"&gt;Cache invalidation really is one of the hardest problems in computer science&lt;/a&gt;
+and &lt;a href="https://netflixtechblog.com/seeing-through-hardware-counters-a-journey-to-threefold-performance-increase-2721924a2822"&gt;Seeing through hardware counters: a journey to threefold performance increase&lt;/a&gt;.
+That post also mentions true sharing -- a usage pattern occurring
+when multiple cores read from and write to the same variable.
+The CPU-enforced memory ordering causes slowdown
+(&lt;a href="https://go-talks.appspot.com/github.com/marselester/scalability/scalability.slide#3"&gt;coherency-limited scalability&lt;/a&gt; due to inconsistent copies of data).&lt;/p&gt;
+&lt;p&gt;If you're curious about systems performance, I recommend Brendan Gregg's books,
+Chris Kanich's &lt;a href="https://www.youtube.com/@ChrisKanich"&gt;YouTube channel&lt;/a&gt;,
+Computer Systems book by Bryant and O'Hallaron.&lt;/p&gt;</content><category term="architecture"></category><category term="performance"></category></entry><entry><title>DIY CPU profiler: from BPF maps to pprof</title><link href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html" rel="alternate"></link><published>2022-10-20T00:00:00+07:00</published><updated>2022-10-20T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2022-10-20:/diy-cpu-profiler-from-bpf-maps-to-pprof.html</id><summary type="html">&lt;p&gt;&lt;a href="https://marselester.com/continuous-profiling-in-go.html"&gt;In previous post&lt;/a&gt;
 I had a DIY BPF profiler printing stack trace IDs of a given process,
 though they were not very helpful.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ sudo go run ./cmd/profiler/ -pid 15958&lt;/span&gt;
