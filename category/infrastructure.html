@@ -51,6 +51,377 @@
         
 
             <article>
+                <a href="https://marselester.com/linux-process.html"><h3 class="article-title">Linux process</h3></a>
+<h6 class="subheader" title="2023-01-31T00:00:00+07:00">Tue 31 January 2023
+</h6>
+
+
+<p>Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
+BPF performance tools book aided me to navigate BPF C code.
+For example, it explained that a BPF program has to use helpers because it can't access arbitrary memory (outside of BPF) and can't call arbitrary Linux kernel functions.</p>
+<p>BPF has opened a door into the kernel for me, but I quickly realized that I don't know much about it.
+Take, for example, <code>bpf_get_current_pid_tgid()</code> and <code>bpf_get_current_task()</code> helpers.
+What are <code>tgid</code>, <code>pid</code>, and <code>task</code> in the function names?
+It turns out that <code>tgid</code> is what user space calls a process ID,
+and <code>pid</code> is what user space calls a thread ID.</p>
+<div class="highlight"><pre><span></span><code><span class="n">u64</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span><span class="w"></span>
+<span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">pid_t</span><span class="p">)</span><span class="n">id</span><span class="p">;</span><span class="w"></span>
+<span class="kt">pid_t</span><span class="w"> </span><span class="n">tgid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="o">*</span><span class="n">t</span><span class="p">;</span><span class="w"></span>
+<span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="o">*</span><span class="p">)</span><span class="n">bpf_get_current_task</span><span class="p">();</span><span class="w"></span>
+</code></pre></div>
+
+<p>I found the terminology a bit confusing, so I spent some time trying to clarify it for myself.</p>
+<h2>Task</h2>
+<p>A process is an instance of a program in execution
+that provides a program an illusion that it is the only one currently running
+with exclusive use of CPU and memory.
+A thread (thread of execution) is a unit of execution (sequence of machine instructions)
+that can be managed by an OS scheduler.
+Typically threads share the process's resources, e.g., memory and file descriptors.</p>
+<p>The process and the thread are abstractions whose implementation depends on the OS.
+Linux implements those abstractions with "light weight processes" which can share resources with each other,
+thus in a way blending the process and the thread concepts.
+For example, <code>ps</code> shows parca-agent Go program running as 8 light weight processes (also referred to as threads in the man page).
+As we can see, they all have unique light weight process ID (LWP column), and the same process ID 93015 (PID column).
+Together they form the thread group with ID 93015 which acts as a whole,
+e.g., we can terminate it by sending a TERM signal <code>kill 93015</code>.
+Note, the light weight process whose PID and LWP columns contain 93015 indicates that it was created first (the main thread).</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ ps -aL</span>
+<span class="go">    PID     LWP TTY          TIME CMD</span>
+<span class="go">  93013   93013 pts/0    00:00:00 sudo</span>
+<span class="go">  93015   93015 pts/3    00:00:33 parca-agent</span>
+<span class="go">  93015   93016 pts/3    00:00:24 parca-agent</span>
+<span class="go">  93015   93017 pts/3    00:00:30 parca-agent</span>
+<span class="go">  93015   93018 pts/3    00:00:00 parca-agent</span>
+<span class="go">  93015   93019 pts/3    00:00:00 parca-agent</span>
+<span class="go">  93015   93020 pts/3    00:00:00 parca-agent</span>
+<span class="go">  93015   93021 pts/3    00:00:30 parca-agent</span>
+<span class="go">  93015   93022 pts/3    00:00:32 parca-agent</span>
+<span class="go">  94130   94130 pts/1    00:00:00 ps</span>
+</code></pre></div>
+
+<p>Linux kernel maintains a <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/sched.h#L737">task_struct</a> for each light weight process.
+Therefore there should be 8 such structures with <code>tgid = 93015</code>
+(thread group ID or PID column)
+and <code>pid</code> (LWP column) in a range from 93015 to 93022.
+The maximum PID value is 4194304,
+see <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/threads.h#L34">PID_MAX_LIMIT</a>
+and <code>/proc/sys/kernel/pid_max</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Possible states: running, interruptible (sleeping),</span>
+<span class="w">    </span><span class="c1">// uninterruptible, stopped, traced.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w">                </span><span class="n">__state</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Pointer to kernel stack (each task has one),</span>
+<span class="w">    </span><span class="c1">// see https://www.kernel.org/doc/html/latest/x86/kernel-stacks.html.</span>
+<span class="w">    </span><span class="c1">// General-purpose registers (e.g., rax, rbx)</span>
+<span class="w">    </span><span class="c1">// used by a task in user mode are saved on</span>
+<span class="w">    </span><span class="c1">// the kernel stack before performing process switching.</span>
+<span class="w">    </span><span class="kt">void</span><span class="w">                        </span><span class="o">*</span><span class="n">stack</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the previous and to the next task_struct</span>
+<span class="w">    </span><span class="c1">// thus representing a list of all tasks in the system.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">tasks</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to a structure that describes</span>
+<span class="w">    </span><span class="c1">// the current state of virtual memory.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w">            </span><span class="o">*</span><span class="n">mm</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Possible exit states: zombie, dead.</span>
+<span class="w">    </span><span class="kt">int</span><span class="w">                         </span><span class="n">exit_state</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w">                         </span><span class="n">exit_code</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ID of this light weight process.</span>
+<span class="w">    </span><span class="kt">pid_t</span><span class="w">                       </span><span class="n">pid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ID of the thread group (PID column in ps).</span>
+<span class="w">    </span><span class="kt">pid_t</span><span class="w">                       </span><span class="n">tgid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the task that created this task</span>
+<span class="w">    </span><span class="c1">// or to the init task if the parent no longer exists.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="n">__rcu</span><span class="w">    </span><span class="o">*</span><span class="n">real_parent</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// A list of all children created by this task.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">children</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the next and previous sibling tasks.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">sibling</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the process group leader (PGID),</span>
+<span class="w">    </span><span class="c1">// e.g., of &quot;sleep 10 | sleep 20&quot;.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w">          </span><span class="o">*</span><span class="n">group_leader</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Executable name, excluding path.</span>
+<span class="w">    </span><span class="kt">char</span><span class="w">                        </span><span class="n">comm</span><span class="p">[</span><span class="n">TASK_COMM_LEN</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Open file information (contains pointers to file descriptors).</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">files_struct</span><span class="w">         </span><span class="o">*</span><span class="n">files</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// CPU-specific state of this task is stored here</span>
+<span class="w">    </span><span class="c1">// when the task is being switched out, i.e.,</span>
+<span class="w">    </span><span class="c1">// most of the CPU registers (es, ds, fs, gs, FPU registers),</span>
+<span class="w">    </span><span class="c1">// except the general-purpose registers.</span>
+<span class="w">    </span><span class="c1">// The sp0 and sp fields are the user and</span>
+<span class="w">    </span><span class="c1">// kernel stack pointers respectively.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">thread_struct</span><span class="w">        </span><span class="kr">thread</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>All <code>task_struct</code> that currently present in the system are linked using a double linked list.
+When we run <code>kill 93015</code> to terminate 8 light weight processes by <code>tgid</code>,
+the kernel looks up the thread group's leader by ID in
+a <a href="https://elixir.bootlin.com/linux/v3.19.8/source/kernel/pid.c#L44">hash table</a>
+and then walks the list of the group.
+That applies at least to the kernel v3, and the v6 seems to be using a radix tree,
+see <a href="https://elixir.bootlin.com/linux/v6.1.8/source/kernel/pid.c">pid.c</a>,
+<a href="https://elixir.bootlin.com/linux/v6.1.8/source/lib/idr.c">idr.c</a>,
+<a href="https://www.kernel.org/doc/html/latest/core-api/idr.html">ID allocation</a>.</p>
+<p>With namespaces each PID may have several values, with each one being valid in one namespace.
+Linux kernel has a <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/pid.h">pid</a> structure
+that refers to individual tasks, process groups, and sessions.
+Check out <a href="https://stackoverflow.com/questions/26779416/what-is-the-relation-between-task-struct-and-pid-namespace">#26779416</a> stackoverflow answer for more details.</p>
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="cm">/*</span>
+<span class="cm"> * struct upid is used to get the id of the struct pid, as it is</span>
+<span class="cm"> * seen in particular namespace. Later the struct pid is found with</span>
+<span class="cm"> * find_pid_ns() using the int nr and struct pid_namespace *ns.</span>
+<span class="cm"> */</span><span class="w"></span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">upid</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The pid value.</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">nr</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The namespace this value is visible in.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">pid_namespace</span><span class="w"> </span><span class="o">*</span><span class="n">ns</span><span class="p">;</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="cm">/*</span>
+<span class="cm"> * What is struct pid?</span>
+<span class="cm"> *</span>
+<span class="cm"> * A struct pid is the kernel&#39;s internal notion of a process identifier.</span>
+<span class="cm"> * It refers to individual tasks, process groups, and sessions.  While</span>
+<span class="cm"> * there are processes attached to it the struct pid lives in a hash</span>
+<span class="cm"> * table, so it and then the processes that it refers to can be found</span>
+<span class="cm"> * quickly from the numeric pid value.  The attached processes may be</span>
+<span class="cm"> * quickly accessed by following pointers from struct pid.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Storing pid_t values in the kernel and referring to them later has a</span>
+<span class="cm"> * problem.  The process originally with that pid may have exited and the</span>
+<span class="cm"> * pid allocator wrapped, and another process could have come along</span>
+<span class="cm"> * and been assigned that pid.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Referring to user space processes by holding a reference to struct</span>
+<span class="cm"> * task_struct has a problem.  When the user space process exits</span>
+<span class="cm"> * the now useless task_struct is still kept.  A task_struct plus a</span>
+<span class="cm"> * stack consumes around 10K of low kernel memory.  More precisely</span>
+<span class="cm"> * this is THREAD_SIZE + sizeof(struct task_struct).  By comparison</span>
+<span class="cm"> * a struct pid is about 64 bytes.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Holding a reference to struct pid solves both of these problems.</span>
+<span class="cm"> * It is small so holding a reference does not consume a lot of</span>
+<span class="cm"> * resources, and since a new struct pid is allocated when the numeric pid</span>
+<span class="cm"> * value is reused (when pids wrap around) we don&#39;t mistakenly refer to new</span>
+<span class="cm"> * processes.</span>
+<span class="cm"> */</span><span class="w"></span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">pid</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Reference counter.</span>
+<span class="w">    </span><span class="n">refcount_t</span><span class="w"> </span><span class="n">count</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The number of upids.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Lists of tasks that use this pid.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">hlist_head</span><span class="w"> </span><span class="n">tasks</span><span class="p">[</span><span class="n">PIDTYPE_MAX</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">hlist_head</span><span class="w"> </span><span class="n">inodes</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">upid</span><span class="w"> </span><span class="n">numbers</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<h2>Address space</h2>
+<p>A process provides a program an illusion that
+it has exclusive use of the whole memory address space in the system
+using virtual memory abstraction.</p>
+<p>Physical memory is organized as an array of bytes and
+it's partitioned into fixed-size blocks
+(usually 4KB depending on CPU architecture) called page frames.
+A virtual page can be:</p>
+<ul>
+<li>cached in DRAM — backed by a page frame, i.e.,
+  4KB of data is already loaded to physical memory from disk</li>
+<li>uncached in DRAM — doesn't occupy physical memory yet,
+  but is already associated with a 4KB part of a file on disk.
+  Once some virtual address within this virtual page is accessed by the CPU
+  causing a page fault exception (DRAM cache miss),
+  the 4KB of data will be loaded from disk to memory.</li>
+<li>unallocated — NULL, doesn't point to physical memory or to disk</li>
+</ul>
+<p>This mapping is stored in a data structure called page table.
+A memory management unit (MMU) relies on page tables
+to translate virtual addresses to physical addresses.
+Here is how a process's virtual address space could approximately look.</p>
+<div class="highlight"><pre><span></span><code><span class="go"> _________________________</span>
+<span class="go">| page tables,            |</span>
+<span class="go">| task and mm structs     |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| kernel stack            | ⬇️</span>
+<span class="go">|-------------------------| rsp (stack pointer in kernel mode)</span>
+<span class="go">| thread info struct      |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| physical memory         |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| kernel code &amp; data      |</span>
+<span class="go">|_________________________| top part is reserved for the kernel</span>
+<span class="go">| arg, env                |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| stack for main thread   | ⬇️</span>
+<span class="go">|-------------------------| rsp (stack pointer in user mode)</span>
+<span class="go">| ...                     |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| stack for thread 3      | ⬇️</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| stack for thread 2      | ⬇️</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| stack for thread 1      | ⬇️</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| shared libraries        |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| ...                     |</span>
+<span class="go">|-------------------------| brk (top of the heap)</span>
+<span class="go">| heap                    | ⬆️</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| uninitialized data .bss |</span>
+<span class="go">|-------------------------| vm_end</span>
+<span class="go">| initialized data .data  |</span>
+<span class="go">|-------------------------| vm_start</span>
+<span class="go">| code .text              | thread 3 executing</span>
+<span class="go">|                         | main thread executing</span>
+<span class="go">|                         | thread 1 executing</span>
+<span class="go">|                         | thread 2 executing</span>
+<span class="go">|                         |</span>
+<span class="go">|-------------------------| 0x400000</span>
+<span class="go">| ...                     |</span>
+<span class="go">|_________________________| 0</span>
+</code></pre></div>
+
+<p>The bottom part describes user space addresses of a process.
+The top part is a kernel virtual memory:</p>
+<ul>
+<li>process-specific structures such as page tables, task and mm structs,
+  kernel stack, thread info structure.</li>
+<li>physical memory part which is identical for each process.
+  Linux maps a set of virtual pages equal in size to DRAM
+  to the corresponding set of physical pages
+  to access any specific location in physical memory,
+  e.g., to access page tables.</li>
+<li>kernel code and data which is identical for each process</li>
+</ul>
+<p>Linux organizes the virtual memory as a collection of areas (segments)
+where an area is a chunk of related pages, e.g., code, data,
+heap, shared libraries, user stack segments.
+A process can create arbitrary number of areas using <code>mmap</code> function.</p>
+<p>The <code>vm_area_struct</code> structures keep track of virtual memory areas of a task.
+They can be reached via <code>task-&gt;mm-&gt;mm_mt</code> tree.
+The fields <code>vma.vm_start</code> and <code>vma.vm_end</code> point to the beginning and the end of an area.</p>
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="c1">// See https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/mm_types.h#L512.</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// A tree to look up vm_area_struct by user address.</span>
+<span class="w">        </span><span class="k">struct</span><span class="w"> </span><span class="nc">maple_tree</span><span class="w"> </span><span class="n">mm_mt</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Memory mapping.</span>
+<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">mmap_base</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Points to a page global directory,</span>
+<span class="w">        </span><span class="c1">// i.e., to the first entry of the level 1 page table.</span>
+<span class="w">        </span><span class="c1">// The physical address of PGD in use is stored in the cr3 control register.</span>
+<span class="w">        </span><span class="n">pgd_t</span><span class="w"> </span><span class="o">*</span><span class="n">pgd</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Addresses of text and data segments.</span>
+<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start_code</span><span class="p">,</span><span class="w"> </span><span class="n">end_code</span><span class="p">,</span><span class="w"> </span><span class="n">start_data</span><span class="p">,</span><span class="w"> </span><span class="n">end_data</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Addresses of heap and stack segments.</span>
+<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start_brk</span><span class="p">,</span><span class="w"> </span><span class="n">brk</span><span class="p">,</span><span class="w"> </span><span class="n">start_stack</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">arg_start</span><span class="p">,</span><span class="w"> </span><span class="n">arg_end</span><span class="p">,</span><span class="w"> </span><span class="n">env_start</span><span class="p">,</span><span class="w"> </span><span class="n">env_end</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="cm">/*</span>
+<span class="cm"> * This struct describes a virtual memory area. There is one of these</span>
+<span class="cm"> * per VM-area/task. A VM area is any part of the process virtual memory</span>
+<span class="cm"> * space that has a special rule for the page-fault handlers (ie a shared</span>
+<span class="cm"> * library, the executable area).</span>
+<span class="cm"> */</span><span class="w"></span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">vm_area_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the beginning of the area within vm_mm.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_start</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the end of the area within vm_mm.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_end</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the address space this area belongs to.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w"> </span><span class="o">*</span><span class="n">vm_mm</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Access permissions of this VMA, e.g., read/write.</span>
+<span class="w">    </span><span class="n">pgprot_t</span><span class="w"> </span><span class="n">vm_page_prot</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Describes whether the pages in the area are shared with other tasks</span>
+<span class="w">    </span><span class="c1">// or private to this task.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_flags</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The offset (within vm_file) in PAGE_SIZE units (number of pages).</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_pgoff</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The file backing this mapping.</span>
+<span class="w">    </span><span class="c1">// It can be NULL, e.g., anonymous mapping (stack, heap, bss).</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">file</span><span class="w"> </span><span class="o">*</span><span class="n">vm_file</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<p>Linux can associate a virtual memory area with a contiguous section of a file,
+e.g., executable object file.
+That section (e.g., code segment) is divided into page-size chunks.
+When the CPU accesses a virtual address that is within some page's region,
+that virtual page (e.g., some content of an executable file)
+is loaded to the physical memory from disk.
+You can check out an example of a memory mapping in the context of
+<a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">CPU profiler</a>.</p>
+<p>An area can also be mapped (associated) to
+an anonymous file (it doesn't exist on disk).
+When the CPU accesses a virtual page within that area (e.g., heap or user stack),
+the kernel finds a free page in physical memory, zeroes it,
+and marks it as resident in the page table.
+If no free pages exist (run out of physical memory),
+then some dirty page gets swapped out to disk.</p>
+<p>A file can be mapped as the shared object into areas of different processes.
+The memory mappings are unique for each process, but the underlying physical pages are the same.
+So if one process writes to its area, the changes are visible to other processes,
+and the file is updated on disk as well.
+Shared libraries are mapped as shared objects by many processes thus saving physical memory pages.</p>
+<p>If a file is mapped as the private object,
+the writes to that area are not visible to other processes and
+the changes are not written to disk.
+For example, two processes mapped a private object into their areas of virtual memories.
+The same physical memory pages will be used as long as both processes only read data from those areas.
+Once a process writes to its area, a new copy of pages is created in physical memory.
+This copy-on-write allows to save memory, e.g., multiple processes share .text segment which is never modified
+(recall 8 parca-agent light weight processes).</p>
+<hr>
+<p>To wrap up, I must say that I might have misunderstood some of the parts
+and posted inaccurate information, sorry about that.
+The Linux kernel is a complicated project 🐧,
+and I wouldn't be able to navigate it without books such as:</p>
+<ul>
+<li>Computer Systems, Randal E. Bryant, David R. O'Hallaron</li>
+<li>Understanding the Linux Kernel, Daniel P. Bovet, Marco Cesati</li>
+<li>The Linux Programming Interface: A Linux and UNIX System Programming Handbook, Michael Kerrisk</li>
+</ul><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/architecture.html">architecture </a>
+    <a href="https://marselester.com/tag/linux.html">linux </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/linux-process.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/apigate-ambassador.html"><h3 class="article-title">Ambassador as API Gateway</h3></a>
 <h6 class="subheader" title="2019-03-13T00:00:00+07:00">Wed 13 March 2019
 </h6>
@@ -60,308 +431,7 @@
 acts as a reverse proxy, routing API requests from clients to services.
 Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
 In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://getambassador.io/">Ambassador</a>.</p>
-<p>The demo is based on a dummy <a class="reference external" href="https://traveling.docs.apiary.io/">Traveling project</a>
-where we have services to rent a car and book a hotel.</p>
-<p>Firstly, we shall install Ambassador on <a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minikube</a>
-by following <a class="reference external" href="https://www.getambassador.io/user-guide/getting-started/">Ambassador user guide</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>minikube start
-<span class="go">Starting local Kubernetes v1.13.2 cluster...</span>
-<span class="gp">$ </span>kubectl apply -f https://www.getambassador.io/yaml/ambassador/ambassador-rbac.yaml
-</pre></div>
-<p>Next, create Kubernetes service for Ambassador deployment of type NodePort, so it's easily accessible outside of the cluster.
-It will be the entry point of our API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f - <span class="o">&lt;&lt;&lt;</span><span class="err">&#39;</span>
-<span class="go">apiVersion: v1</span>
-<span class="go">kind: Service</span>
-<span class="go">metadata:</span>
-<span class="go">  name: ambassador</span>
-<span class="go">spec:</span>
-<span class="go">  selector:</span>
-<span class="go">    service: ambassador</span>
-<span class="go">  type: NodePort</span>
-<span class="go">  ports:</span>
-<span class="go">    - port: 80</span>
-<span class="gp">  # </span>Propagate the original <span class="nb">source</span> IP of the client.
-<span class="go">  externalTrafficPolicy: Local</span>
-<span class="go">&#39;</span>
-<span class="gp">$ </span><span class="nv">AMBASSADORURL</span><span class="o">=</span><span class="k">$(</span>minikube service --url ambassador<span class="k">)</span>
-</pre></div>
-<p>Note, there is a diagnostic web UI at <cite>$AMBASSADORURL/ambassador/v0/diag/</cite>.
-You should restrict access to it from your custom auth service.</p>
-<div class="section" id="travel-apps">
-<h2>Travel Apps</h2>
-<p>Let's deploy the travel apps on Kubernetes. For simplicity, you can use the images uploaded to Docker Hub.
-If you prefer to build Docker images yourself, make sure they are accessible from Minikube:
-configure Docker client to communicate with the Minikube Docker daemon.
-Note, you can restore your local Docker environment with <cite>eval $(minikube docker-env --unset)</cite> later on.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>git clone https://github.com/marselester/apigate.git
-<span class="gp">$ </span><span class="nb">cd</span> ./apigate/
-<span class="gp">$ </span><span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
-<span class="gp">$ </span>docker build --tag<span class="o">=</span>marselester/travel-hotel:v1.0.0 --file<span class="o">=</span>docker/hotel.Dockerfile .
-<span class="gp">$ </span>kubectl apply -f k8s-ambassador/hotel/deployment.yml
-<span class="gp">$ </span>kubectl apply -f k8s-ambassador/hotel/service.yml
-</pre></div>
-<p>The hotel app should be running:</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl get pods -l <span class="nv">app</span><span class="o">=</span>hotel
-<span class="go">hotel-api-8d7d59b69-bcsvh</span>
-<span class="gp">$ </span>kubectl port-forward hotel-api-8d7d59b69-bcsvh <span class="m">8000</span>
-<span class="gp">$ </span>curl localhost:8000/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>Now, it's time to put the <cite>hotel</cite> Service behind the gateway by adding annotations to the service.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
-<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
-<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hotel</span><span class="w"></span>
-<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
-<span class="w">      </span><span class="no">---</span><span class="w"></span>
-<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
-<span class="w">      </span><span class="no">kind: Mapping</span><span class="w"></span>
-<span class="w">      </span><span class="no">name: hotel_mapping</span><span class="w"></span>
-<span class="w">      </span><span class="no">prefix: /v1/hotels</span><span class="w"></span>
-<span class="w">      </span><span class="no">rewrite: &quot;&quot;</span><span class="w"></span>
-<span class="w">      </span><span class="no">service: hotel</span><span class="w"></span>
-<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hotel</span><span class="w"></span>
-<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
-<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
-<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span><span class="w"></span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f k8s-ambassador/hotel/service-gate.yml
-</pre></div>
-<p>By default, Ambassador would rewrite <cite>/v1/hotels</cite> prefix to <cite>/</cite>.
-With <cite>rewrite: &quot;&quot;</cite> directive we configure Ambassador to not change the prefix as
-it forwards a request to the <cite>hotel</cite> service.
-Let's confirm that hotel booking requests are routed to the hotel app:</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>curl <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>The car rental app is deployed similarly.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
-<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
-<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">car</span><span class="w"></span>
-<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
-<span class="w">      </span><span class="no">---</span><span class="w"></span>
-<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
-<span class="w">      </span><span class="no">kind: Mapping</span><span class="w"></span>
-<span class="w">      </span><span class="no">name: car_mapping</span><span class="w"></span>
-<span class="w">      </span><span class="no">prefix: /v1/cars</span><span class="w"></span>
-<span class="w">      </span><span class="no">rewrite: &quot;&quot;</span><span class="w"></span>
-<span class="w">      </span><span class="no">service: car</span><span class="w"></span>
-<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">car</span><span class="w"></span>
-<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
-<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
-<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span><span class="w"></span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>docker build --tag<span class="o">=</span>marselester/travel-car:v1.0.0 --file<span class="o">=</span>docker/car.Dockerfile .
-<span class="gp">$ </span>kubectl apply -f k8s-ambassador/car/deployment.yml
-<span class="gp">$ </span>kubectl apply -f k8s-ambassador/car/service-gate.yml
-</pre></div>
-<p>You can see that the car booking is available at the gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>curl <span class="nv">$AMBASSADORURL</span>/v1/cars/bookings/9e0d65f5-9de2-4428-9bee-1f3967f05129
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;9e0d65f5-9de2-4428-9bee-1f3967f05129&quot;,</span>
-<span class="go">    &quot;car_id&quot;: &quot;cfb6f7a5-4591-4f5c-8b17-9a1b10f98ada&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-</div>
-<div class="section" id="authentication-service">
-<h2>Authentication Service</h2>
-<p>API requests must be authenticated before reaching the Travel apps.
-This work is delegated to <cite>travelauth</cite> Service that performs HTTP Basic authentication
-and returns a username in <cite>X-Travel-User</cite> header if credentials matched.
-We shall start from deploying it on the cluster.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>docker build --tag<span class="o">=</span>marselester/travel-auth:v1.0.0 --file<span class="o">=</span>docker/auth.Dockerfile .
-<span class="gp">$ </span>kubectl apply -f k8s-ambassador/auth/deployment.yml
-<span class="gp">$ </span>kubectl apply -f k8s-ambassador/auth/service.yml
-</pre></div>
-<p>If the auth server is properly deployed, it will prompt for username/password.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl get pods -l <span class="nv">app</span><span class="o">=</span>auth
-<span class="go">auth-api-556685f658-h9qb4</span>
-<span class="gp">$ </span>kubectl port-forward auth-api-556685f658-h9qb4 <span class="m">8000</span>
-<span class="gp">$ </span>curl -i -u bob:bob localhost:8000/v1/hotels
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">X-Travel-User: bob</span>
-</pre></div>
-<p>Let's tell Ambassador to
-<a class="reference external" href="https://www.getambassador.io/reference/services/auth-service/">forward all requests to the auth server</a>
-and copy <cite>X-Travel-User</cite> response header from the auth server to the routed request.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
-<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
-<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">travelauth</span><span class="w"></span>
-<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
-<span class="w">      </span><span class="no">---</span><span class="w"></span>
-<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
-<span class="w">      </span><span class="no">kind: AuthService</span><span class="w"></span>
-<span class="w">      </span><span class="no">name: gate_auth</span><span class="w"></span>
-<span class="w">      </span><span class="no"># This is k8s service name; all API requests are sent there. For example,</span><span class="w"></span>
-<span class="w">      </span><span class="no"># API request /v1/hotels will be sent to http://travelauth:80/v1/hotels.</span><span class="w"></span>
-<span class="w">      </span><span class="no">auth_service: travelauth</span><span class="w"></span>
-<span class="w">      </span><span class="no">proto: http</span><span class="w"></span>
-<span class="w">      </span><span class="no"># The travelauth service adds a username into a header after successful authentication,</span><span class="w"></span>
-<span class="w">      </span><span class="no"># so all the other services know who the user is (ratelimit, hotel, car services).</span><span class="w"></span>
-<span class="w">      </span><span class="no">allowed_authorization_headers:</span><span class="w"></span>
-<span class="w">        </span><span class="no">- &quot;X-Travel-User&quot;</span><span class="w"></span>
-<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auth</span><span class="w"></span>
-<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
-<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
-<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span><span class="w"></span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f k8s-ambassador/auth/service-auth.yml
-</pre></div>
-<p>With updated config Ambassador should enforce authentication on API gateway.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>curl -i <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">HTTP/1.1 401 Unauthorized</span>
-<span class="gp">$ </span>curl -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels/bookings/7b4fc183-ee67-494d-9715-3510c6d8f2ef
-<span class="go">HTTP/1.1 200 OK</span>
-<span class="go">{</span>
-<span class="go">    &quot;id&quot;: &quot;7b4fc183-ee67-494d-9715-3510c6d8f2ef&quot;,</span>
-<span class="go">    &quot;hotel_id&quot;: &quot;046d471d-70c7-4595-80cc-266d3e6e07fa&quot;,</span>
-<span class="go">    &quot;status&quot;: &quot;confirmed&quot;</span>
-<span class="go">}</span>
-</pre></div>
-</div>
-<div class="section" id="rate-limiting-service">
-<h2>Rate Limiting Service</h2>
-<p>With Ambassador, individual requests can be annotated with metadata, called labels.
-These labels can then be passed to a third party rate limiting service through a gRPC interface
-which implements actual rate limit logic.
-Check out <a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Node.js</a> and
-<a class="reference external" href="https://blog.getambassador.io/designing-a-rate-limiting-service-for-ambassador-f460e9fabedb">Java</a> based examples.</p>
-<p>In order to build such service, it must support Envoy's <a class="reference external" href="https://github.com/datawire/ambassador/blob/master/ambassador/common/ratelimit/ratelimit.proto">ratelimit.proto</a> interface.
-The protocol buffer definition of RateLimitService service is described in <cite>./internal/pb/ratelimit.proto</cite>.
-You need to <a class="reference external" href="https://grpc.io/docs/quickstart/go.html">install</a> protoc compiler and protoc plugin for Go
-(beware of <a class="reference external" href="https://github.com/golang/protobuf/issues/763">ProtoPackageIsVersion3 issue</a>)
-to generate gRPC service code.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>brew install protobuf
-<span class="gp">$ </span>go get -u github.com/golang/protobuf/protoc-gen-go
-<span class="gp">$ </span><span class="nb">cd</span> <span class="nv">$GOPATH</span>/src/github.com/golang/protobuf/protoc-gen-go
-<span class="gp">$ </span>git checkout v1.2.0
-<span class="gp">$ </span>go install
-</pre></div>
-<p>The arguments tell protoc to use <cite>ratelimit.proto</cite> definition,
-search for imports in <cite>./internal/pb/</cite> dir, generate Go code using gprc plugin,
-and place the result in <cite>./internal/pb/</cite> dir.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>protoc ratelimit.proto -I internal/pb/ --go_out<span class="o">=</span><span class="nv">plugins</span><span class="o">=</span>grpc:internal/pb/
-</pre></div>
-<p>We now have a newly generated gRPC server and client code in <cite>./internal/pb/ratelimit.pb.go</cite>.
-Our ratelimit server already implements <cite>RateLimitServiceServer</cite> interface.</p>
-<div class="highlight"><pre><span></span><span class="c1">// ShouldRateLimit must respond to the request with an OK or OVER_LIMIT code.</span><span class="w"></span>
-<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">server</span><span class="p">)</span><span class="w"> </span><span class="nx">ShouldRateLimit</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="w"> </span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitRequest</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Descriptors is a list of labels on which the rate limit service can base</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// its decision to accept or reject the request.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s: %+v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">.</span><span class="nx">GetDomain</span><span class="p">(),</span><span class="w"> </span><span class="nx">req</span><span class="p">.</span><span class="nx">GetDescriptors</span><span class="p">())</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">resp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse</span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">OverallCode</span><span class="p">:</span><span class="w"> </span><span class="nx">pb</span><span class="p">.</span><span class="nx">RateLimitResponse_OVER_LIMIT</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">resp</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-<p>Let's deploy it on the cluster and send a few requests using
-<a class="reference external" href="https://github.com/fullstorydev/grpcurl">grpcurl</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>docker build --tag<span class="o">=</span>marselester/travel-ratelimit:v1.0.0 --file<span class="o">=</span>docker/ratelimit.Dockerfile .
-<span class="gp">$ </span>kubectl apply -f k8s-ambassador/ratelimit/deployment.yml
-<span class="gp">$ </span>kubectl apply -f k8s-ambassador/ratelimit/service.yml
-<span class="gp">$ </span>kubectl get pods -l <span class="nv">app</span><span class="o">=</span>ratelimit
-<span class="go">ratelimit-api-5554898589-4gmv5</span>
-<span class="gp">$ </span>kubectl port-forward ratelimit-api-5554898589-4gmv5 <span class="m">5000</span>
-</pre></div>
-<p>As we can see the server exposes RateLimitService.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>grpcurl -plaintext localhost:5000 list
-<span class="go">grpc.reflection.v1alpha.ServerReflection</span>
-<span class="go">pb.lyft.ratelimit.RateLimitService</span>
-</pre></div>
-<p>Its ShouldRateLimit method should return <cite>OK</cite> or <cite>OVER_LIMIT</cite> reply.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>grpcurl -d <span class="s1">&#39;{&quot;domain&quot;:&quot;envoy&quot;}&#39;</span> -plaintext localhost:5000 pb.lyft.ratelimit.RateLimitService/ShouldRateLimit
-<span class="go">{</span>
-<span class="go">  &quot;overallCode&quot;: &quot;OVER_LIMIT&quot;</span>
-<span class="go">}</span>
-</pre></div>
-<p>Now we shall introduce the ratelimit service to Ambassador.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
-<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
-<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">travelratelimit</span><span class="w"></span>
-<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
-<span class="w">      </span><span class="no">---</span><span class="w"></span>
-<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
-<span class="w">      </span><span class="no">kind: RateLimitService</span><span class="w"></span>
-<span class="w">      </span><span class="no">name: gate_ratelimit</span><span class="w"></span>
-<span class="w">      </span><span class="no">service: travelratelimit</span><span class="w"></span>
-<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ratelimit</span><span class="w"></span>
-<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
-<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
-<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5000</span><span class="w"></span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f k8s-ambassador/ratelimit/service-rate.yml
-</pre></div>
-<p>Finally, I am going to add <cite>labels</cite> to attach rate limiting descriptors as shown in
-<a class="reference external" href="https://www.getambassador.io/user-guide/rate-limiting-tutorial/">Rate Limiting tutorial</a>.</p>
-<div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w"></span>
-<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span><span class="w"></span>
-<span class="nt">metadata</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hotel</span><span class="w"></span>
-<span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">getambassador.io/config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"></span>
-<span class="w">      </span><span class="no">---</span><span class="w"></span>
-<span class="w">      </span><span class="no">apiVersion: ambassador/v1</span><span class="w"></span>
-<span class="w">      </span><span class="no">kind: Mapping</span><span class="w"></span>
-<span class="w">      </span><span class="no">name: hotel_mapping</span><span class="w"></span>
-<span class="w">      </span><span class="no">prefix: /v1/hotels</span><span class="w"></span>
-<span class="w">      </span><span class="no">rewrite: &quot;&quot;</span><span class="w"></span>
-<span class="w">      </span><span class="no">service: hotel</span><span class="w"></span>
-<span class="w">      </span><span class="no">labels:</span><span class="w"></span>
-<span class="w">        </span><span class="no">ambassador:</span><span class="w"></span>
-<span class="w">          </span><span class="no">- request_label_group:</span><span class="w"></span>
-<span class="w">            </span><span class="no">- x-ambassador-test-allow:</span><span class="w"></span>
-<span class="w">                </span><span class="no">header: &quot;x-ambassador-test-allow&quot;</span><span class="w"></span>
-<span class="w">                </span><span class="no">omit_if_not_present: true</span><span class="w"></span>
-<span class="nt">spec</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">selector</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hotel</span><span class="w"></span>
-<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NodePort</span><span class="w"></span>
-<span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w"></span>
-<span class="w">      </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span><span class="w"></span>
-</pre></div>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl apply -f k8s-ambassador/hotel/service-rate.yml
-</pre></div>
-<p>If a request made to the hotel API has header <cite>X-Ambassador-Test-Allow</cite>,
-it should be eligible for rate limiting.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>curl -H <span class="s2">&quot;x-ambassador-test-allow: probably&quot;</span> -i -u bob:bob <span class="nv">$AMBASSADORURL</span>/v1/hotels
-<span class="go">HTTP/1.1 200 OK</span>
-</pre></div>
-<p>Unfortunately I have not been able to make rate limiting work yet.
-Here is the corresponding <a class="reference external" href="https://github.com/datawire/ambassador/issues/1144">GitHub issue</a>.</p>
-</div>
-<p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+<p>The demo is based on a dummy …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/ambassador.html">ambassador </a>
@@ -373,11 +443,9 @@ Here is the corresponding <a class="reference external" href="https://github.com
 
 
 
-<p><a href="https://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/apigate-ambassador.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

@@ -51,6 +51,377 @@
         
 
             <article>
+                <a href="https://marselester.com/linux-process.html"><h3 class="article-title">Linux process</h3></a>
+<h6 class="subheader" title="2023-01-31T00:00:00+07:00">Tue 31 January 2023
+</h6>
+
+
+<p>Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
+BPF performance tools book aided me to navigate BPF C code.
+For example, it explained that a BPF program has to use helpers because it can't access arbitrary memory (outside of BPF) and can't call arbitrary Linux kernel functions.</p>
+<p>BPF has opened a door into the kernel for me, but I quickly realized that I don't know much about it.
+Take, for example, <code>bpf_get_current_pid_tgid()</code> and <code>bpf_get_current_task()</code> helpers.
+What are <code>tgid</code>, <code>pid</code>, and <code>task</code> in the function names?
+It turns out that <code>tgid</code> is what user space calls a process ID,
+and <code>pid</code> is what user space calls a thread ID.</p>
+<div class="highlight"><pre><span></span><code><span class="n">u64</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span><span class="w"></span>
+<span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">pid_t</span><span class="p">)</span><span class="n">id</span><span class="p">;</span><span class="w"></span>
+<span class="kt">pid_t</span><span class="w"> </span><span class="n">tgid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w"></span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="o">*</span><span class="n">t</span><span class="p">;</span><span class="w"></span>
+<span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="o">*</span><span class="p">)</span><span class="n">bpf_get_current_task</span><span class="p">();</span><span class="w"></span>
+</code></pre></div>
+
+<p>I found the terminology a bit confusing, so I spent some time trying to clarify it for myself.</p>
+<h2>Task</h2>
+<p>A process is an instance of a program in execution
+that provides a program an illusion that it is the only one currently running
+with exclusive use of CPU and memory.
+A thread (thread of execution) is a unit of execution (sequence of machine instructions)
+that can be managed by an OS scheduler.
+Typically threads share the process's resources, e.g., memory and file descriptors.</p>
+<p>The process and the thread are abstractions whose implementation depends on the OS.
+Linux implements those abstractions with "light weight processes" which can share resources with each other,
+thus in a way blending the process and the thread concepts.
+For example, <code>ps</code> shows parca-agent Go program running as 8 light weight processes (also referred to as threads in the man page).
+As we can see, they all have unique light weight process ID (LWP column), and the same process ID 93015 (PID column).
+Together they form the thread group with ID 93015 which acts as a whole,
+e.g., we can terminate it by sending a TERM signal <code>kill 93015</code>.
+Note, the light weight process whose PID and LWP columns contain 93015 indicates that it was created first (the main thread).</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ ps -aL</span>
+<span class="go">    PID     LWP TTY          TIME CMD</span>
+<span class="go">  93013   93013 pts/0    00:00:00 sudo</span>
+<span class="go">  93015   93015 pts/3    00:00:33 parca-agent</span>
+<span class="go">  93015   93016 pts/3    00:00:24 parca-agent</span>
+<span class="go">  93015   93017 pts/3    00:00:30 parca-agent</span>
+<span class="go">  93015   93018 pts/3    00:00:00 parca-agent</span>
+<span class="go">  93015   93019 pts/3    00:00:00 parca-agent</span>
+<span class="go">  93015   93020 pts/3    00:00:00 parca-agent</span>
+<span class="go">  93015   93021 pts/3    00:00:30 parca-agent</span>
+<span class="go">  93015   93022 pts/3    00:00:32 parca-agent</span>
+<span class="go">  94130   94130 pts/1    00:00:00 ps</span>
+</code></pre></div>
+
+<p>Linux kernel maintains a <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/sched.h#L737">task_struct</a> for each light weight process.
+Therefore there should be 8 such structures with <code>tgid = 93015</code>
+(thread group ID or PID column)
+and <code>pid</code> (LWP column) in a range from 93015 to 93022.
+The maximum PID value is 4194304,
+see <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/threads.h#L34">PID_MAX_LIMIT</a>
+and <code>/proc/sys/kernel/pid_max</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Possible states: running, interruptible (sleeping),</span>
+<span class="w">    </span><span class="c1">// uninterruptible, stopped, traced.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w">                </span><span class="n">__state</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Pointer to kernel stack (each task has one),</span>
+<span class="w">    </span><span class="c1">// see https://www.kernel.org/doc/html/latest/x86/kernel-stacks.html.</span>
+<span class="w">    </span><span class="c1">// General-purpose registers (e.g., rax, rbx)</span>
+<span class="w">    </span><span class="c1">// used by a task in user mode are saved on</span>
+<span class="w">    </span><span class="c1">// the kernel stack before performing process switching.</span>
+<span class="w">    </span><span class="kt">void</span><span class="w">                        </span><span class="o">*</span><span class="n">stack</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the previous and to the next task_struct</span>
+<span class="w">    </span><span class="c1">// thus representing a list of all tasks in the system.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">tasks</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to a structure that describes</span>
+<span class="w">    </span><span class="c1">// the current state of virtual memory.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w">            </span><span class="o">*</span><span class="n">mm</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Possible exit states: zombie, dead.</span>
+<span class="w">    </span><span class="kt">int</span><span class="w">                         </span><span class="n">exit_state</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w">                         </span><span class="n">exit_code</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ID of this light weight process.</span>
+<span class="w">    </span><span class="kt">pid_t</span><span class="w">                       </span><span class="n">pid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ID of the thread group (PID column in ps).</span>
+<span class="w">    </span><span class="kt">pid_t</span><span class="w">                       </span><span class="n">tgid</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the task that created this task</span>
+<span class="w">    </span><span class="c1">// or to the init task if the parent no longer exists.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="n">__rcu</span><span class="w">    </span><span class="o">*</span><span class="n">real_parent</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// A list of all children created by this task.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">children</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the next and previous sibling tasks.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">sibling</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the process group leader (PGID),</span>
+<span class="w">    </span><span class="c1">// e.g., of &quot;sleep 10 | sleep 20&quot;.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w">          </span><span class="o">*</span><span class="n">group_leader</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Executable name, excluding path.</span>
+<span class="w">    </span><span class="kt">char</span><span class="w">                        </span><span class="n">comm</span><span class="p">[</span><span class="n">TASK_COMM_LEN</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Open file information (contains pointers to file descriptors).</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">files_struct</span><span class="w">         </span><span class="o">*</span><span class="n">files</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// CPU-specific state of this task is stored here</span>
+<span class="w">    </span><span class="c1">// when the task is being switched out, i.e.,</span>
+<span class="w">    </span><span class="c1">// most of the CPU registers (es, ds, fs, gs, FPU registers),</span>
+<span class="w">    </span><span class="c1">// except the general-purpose registers.</span>
+<span class="w">    </span><span class="c1">// The sp0 and sp fields are the user and</span>
+<span class="w">    </span><span class="c1">// kernel stack pointers respectively.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">thread_struct</span><span class="w">        </span><span class="kr">thread</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>All <code>task_struct</code> that currently present in the system are linked using a double linked list.
+When we run <code>kill 93015</code> to terminate 8 light weight processes by <code>tgid</code>,
+the kernel looks up the thread group's leader by ID in
+a <a href="https://elixir.bootlin.com/linux/v3.19.8/source/kernel/pid.c#L44">hash table</a>
+and then walks the list of the group.
+That applies at least to the kernel v3, and the v6 seems to be using a radix tree,
+see <a href="https://elixir.bootlin.com/linux/v6.1.8/source/kernel/pid.c">pid.c</a>,
+<a href="https://elixir.bootlin.com/linux/v6.1.8/source/lib/idr.c">idr.c</a>,
+<a href="https://www.kernel.org/doc/html/latest/core-api/idr.html">ID allocation</a>.</p>
+<p>With namespaces each PID may have several values, with each one being valid in one namespace.
+Linux kernel has a <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/pid.h">pid</a> structure
+that refers to individual tasks, process groups, and sessions.
+Check out <a href="https://stackoverflow.com/questions/26779416/what-is-the-relation-between-task-struct-and-pid-namespace">#26779416</a> stackoverflow answer for more details.</p>
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="cm">/*</span>
+<span class="cm"> * struct upid is used to get the id of the struct pid, as it is</span>
+<span class="cm"> * seen in particular namespace. Later the struct pid is found with</span>
+<span class="cm"> * find_pid_ns() using the int nr and struct pid_namespace *ns.</span>
+<span class="cm"> */</span><span class="w"></span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">upid</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The pid value.</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">nr</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The namespace this value is visible in.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">pid_namespace</span><span class="w"> </span><span class="o">*</span><span class="n">ns</span><span class="p">;</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="cm">/*</span>
+<span class="cm"> * What is struct pid?</span>
+<span class="cm"> *</span>
+<span class="cm"> * A struct pid is the kernel&#39;s internal notion of a process identifier.</span>
+<span class="cm"> * It refers to individual tasks, process groups, and sessions.  While</span>
+<span class="cm"> * there are processes attached to it the struct pid lives in a hash</span>
+<span class="cm"> * table, so it and then the processes that it refers to can be found</span>
+<span class="cm"> * quickly from the numeric pid value.  The attached processes may be</span>
+<span class="cm"> * quickly accessed by following pointers from struct pid.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Storing pid_t values in the kernel and referring to them later has a</span>
+<span class="cm"> * problem.  The process originally with that pid may have exited and the</span>
+<span class="cm"> * pid allocator wrapped, and another process could have come along</span>
+<span class="cm"> * and been assigned that pid.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Referring to user space processes by holding a reference to struct</span>
+<span class="cm"> * task_struct has a problem.  When the user space process exits</span>
+<span class="cm"> * the now useless task_struct is still kept.  A task_struct plus a</span>
+<span class="cm"> * stack consumes around 10K of low kernel memory.  More precisely</span>
+<span class="cm"> * this is THREAD_SIZE + sizeof(struct task_struct).  By comparison</span>
+<span class="cm"> * a struct pid is about 64 bytes.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Holding a reference to struct pid solves both of these problems.</span>
+<span class="cm"> * It is small so holding a reference does not consume a lot of</span>
+<span class="cm"> * resources, and since a new struct pid is allocated when the numeric pid</span>
+<span class="cm"> * value is reused (when pids wrap around) we don&#39;t mistakenly refer to new</span>
+<span class="cm"> * processes.</span>
+<span class="cm"> */</span><span class="w"></span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">pid</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Reference counter.</span>
+<span class="w">    </span><span class="n">refcount_t</span><span class="w"> </span><span class="n">count</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The number of upids.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Lists of tasks that use this pid.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">hlist_head</span><span class="w"> </span><span class="n">tasks</span><span class="p">[</span><span class="n">PIDTYPE_MAX</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">hlist_head</span><span class="w"> </span><span class="n">inodes</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">upid</span><span class="w"> </span><span class="n">numbers</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<h2>Address space</h2>
+<p>A process provides a program an illusion that
+it has exclusive use of the whole memory address space in the system
+using virtual memory abstraction.</p>
+<p>Physical memory is organized as an array of bytes and
+it's partitioned into fixed-size blocks
+(usually 4KB depending on CPU architecture) called page frames.
+A virtual page can be:</p>
+<ul>
+<li>cached in DRAM — backed by a page frame, i.e.,
+  4KB of data is already loaded to physical memory from disk</li>
+<li>uncached in DRAM — doesn't occupy physical memory yet,
+  but is already associated with a 4KB part of a file on disk.
+  Once some virtual address within this virtual page is accessed by the CPU
+  causing a page fault exception (DRAM cache miss),
+  the 4KB of data will be loaded from disk to memory.</li>
+<li>unallocated — NULL, doesn't point to physical memory or to disk</li>
+</ul>
+<p>This mapping is stored in a data structure called page table.
+A memory management unit (MMU) relies on page tables
+to translate virtual addresses to physical addresses.
+Here is how a process's virtual address space could approximately look.</p>
+<div class="highlight"><pre><span></span><code><span class="go"> _________________________</span>
+<span class="go">| page tables,            |</span>
+<span class="go">| task and mm structs     |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| kernel stack            | ⬇️</span>
+<span class="go">|-------------------------| rsp (stack pointer in kernel mode)</span>
+<span class="go">| thread info struct      |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| physical memory         |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| kernel code &amp; data      |</span>
+<span class="go">|_________________________| top part is reserved for the kernel</span>
+<span class="go">| arg, env                |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| stack for main thread   | ⬇️</span>
+<span class="go">|-------------------------| rsp (stack pointer in user mode)</span>
+<span class="go">| ...                     |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| stack for thread 3      | ⬇️</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| stack for thread 2      | ⬇️</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| stack for thread 1      | ⬇️</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| shared libraries        |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| ...                     |</span>
+<span class="go">|-------------------------| brk (top of the heap)</span>
+<span class="go">| heap                    | ⬆️</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| uninitialized data .bss |</span>
+<span class="go">|-------------------------| vm_end</span>
+<span class="go">| initialized data .data  |</span>
+<span class="go">|-------------------------| vm_start</span>
+<span class="go">| code .text              | thread 3 executing</span>
+<span class="go">|                         | main thread executing</span>
+<span class="go">|                         | thread 1 executing</span>
+<span class="go">|                         | thread 2 executing</span>
+<span class="go">|                         |</span>
+<span class="go">|-------------------------| 0x400000</span>
+<span class="go">| ...                     |</span>
+<span class="go">|_________________________| 0</span>
+</code></pre></div>
+
+<p>The bottom part describes user space addresses of a process.
+The top part is a kernel virtual memory:</p>
+<ul>
+<li>process-specific structures such as page tables, task and mm structs,
+  kernel stack, thread info structure.</li>
+<li>physical memory part which is identical for each process.
+  Linux maps a set of virtual pages equal in size to DRAM
+  to the corresponding set of physical pages
+  to access any specific location in physical memory,
+  e.g., to access page tables.</li>
+<li>kernel code and data which is identical for each process</li>
+</ul>
+<p>Linux organizes the virtual memory as a collection of areas (segments)
+where an area is a chunk of related pages, e.g., code, data,
+heap, shared libraries, user stack segments.
+A process can create arbitrary number of areas using <code>mmap</code> function.</p>
+<p>The <code>vm_area_struct</code> structures keep track of virtual memory areas of a task.
+They can be reached via <code>task-&gt;mm-&gt;mm_mt</code> tree.
+The fields <code>vma.vm_start</code> and <code>vma.vm_end</code> point to the beginning and the end of an area.</p>
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="c1">// See https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/mm_types.h#L512.</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// A tree to look up vm_area_struct by user address.</span>
+<span class="w">        </span><span class="k">struct</span><span class="w"> </span><span class="nc">maple_tree</span><span class="w"> </span><span class="n">mm_mt</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Memory mapping.</span>
+<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">mmap_base</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Points to a page global directory,</span>
+<span class="w">        </span><span class="c1">// i.e., to the first entry of the level 1 page table.</span>
+<span class="w">        </span><span class="c1">// The physical address of PGD in use is stored in the cr3 control register.</span>
+<span class="w">        </span><span class="n">pgd_t</span><span class="w"> </span><span class="o">*</span><span class="n">pgd</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Addresses of text and data segments.</span>
+<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start_code</span><span class="p">,</span><span class="w"> </span><span class="n">end_code</span><span class="p">,</span><span class="w"> </span><span class="n">start_data</span><span class="p">,</span><span class="w"> </span><span class="n">end_data</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Addresses of heap and stack segments.</span>
+<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start_brk</span><span class="p">,</span><span class="w"> </span><span class="n">brk</span><span class="p">,</span><span class="w"> </span><span class="n">start_stack</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">arg_start</span><span class="p">,</span><span class="w"> </span><span class="n">arg_end</span><span class="p">,</span><span class="w"> </span><span class="n">env_start</span><span class="p">,</span><span class="w"> </span><span class="n">env_end</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="cm">/*</span>
+<span class="cm"> * This struct describes a virtual memory area. There is one of these</span>
+<span class="cm"> * per VM-area/task. A VM area is any part of the process virtual memory</span>
+<span class="cm"> * space that has a special rule for the page-fault handlers (ie a shared</span>
+<span class="cm"> * library, the executable area).</span>
+<span class="cm"> */</span><span class="w"></span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">vm_area_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the beginning of the area within vm_mm.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_start</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the end of the area within vm_mm.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_end</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Points to the address space this area belongs to.</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w"> </span><span class="o">*</span><span class="n">vm_mm</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Access permissions of this VMA, e.g., read/write.</span>
+<span class="w">    </span><span class="n">pgprot_t</span><span class="w"> </span><span class="n">vm_page_prot</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Describes whether the pages in the area are shared with other tasks</span>
+<span class="w">    </span><span class="c1">// or private to this task.</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_flags</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The offset (within vm_file) in PAGE_SIZE units (number of pages).</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_pgoff</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// The file backing this mapping.</span>
+<span class="w">    </span><span class="c1">// It can be NULL, e.g., anonymous mapping (stack, heap, bss).</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">file</span><span class="w"> </span><span class="o">*</span><span class="n">vm_file</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<p>Linux can associate a virtual memory area with a contiguous section of a file,
+e.g., executable object file.
+That section (e.g., code segment) is divided into page-size chunks.
+When the CPU accesses a virtual address that is within some page's region,
+that virtual page (e.g., some content of an executable file)
+is loaded to the physical memory from disk.
+You can check out an example of a memory mapping in the context of
+<a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">CPU profiler</a>.</p>
+<p>An area can also be mapped (associated) to
+an anonymous file (it doesn't exist on disk).
+When the CPU accesses a virtual page within that area (e.g., heap or user stack),
+the kernel finds a free page in physical memory, zeroes it,
+and marks it as resident in the page table.
+If no free pages exist (run out of physical memory),
+then some dirty page gets swapped out to disk.</p>
+<p>A file can be mapped as the shared object into areas of different processes.
+The memory mappings are unique for each process, but the underlying physical pages are the same.
+So if one process writes to its area, the changes are visible to other processes,
+and the file is updated on disk as well.
+Shared libraries are mapped as shared objects by many processes thus saving physical memory pages.</p>
+<p>If a file is mapped as the private object,
+the writes to that area are not visible to other processes and
+the changes are not written to disk.
+For example, two processes mapped a private object into their areas of virtual memories.
+The same physical memory pages will be used as long as both processes only read data from those areas.
+Once a process writes to its area, a new copy of pages is created in physical memory.
+This copy-on-write allows to save memory, e.g., multiple processes share .text segment which is never modified
+(recall 8 parca-agent light weight processes).</p>
+<hr>
+<p>To wrap up, I must say that I might have misunderstood some of the parts
+and posted inaccurate information, sorry about that.
+The Linux kernel is a complicated project 🐧,
+and I wouldn't be able to navigate it without books such as:</p>
+<ul>
+<li>Computer Systems, Randal E. Bryant, David R. O'Hallaron</li>
+<li>Understanding the Linux Kernel, Daniel P. Bovet, Marco Cesati</li>
+<li>The Linux Programming Interface: A Linux and UNIX System Programming Handbook, Michael Kerrisk</li>
+</ul><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/architecture.html">architecture </a>
+    <a href="https://marselester.com/tag/linux.html">linux </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/linux-process.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/bandwitch-of-cpu-and-storages.html"><h3 class="article-title">Bandwitch 🧙‍♀️ of CPU and storages</h3></a>
 <h6 class="subheader" title="2023-01-08T00:00:00+07:00">Sun 08 January 2023
 </h6>
@@ -59,170 +430,7 @@
 <p>Let us begin with a definition of a CPU clock rate ⏰.
 It refers to the frequency at which the clock generator (an oscillator crystal)
 of a processor can generate pulses, which are used to synchronize the operations of its components.
-For example, 1GHz CPU implies that its clock runs at 10^9 cycles per second,
-therefore the time required for each clock cycle is 1 nanosecond.
-Faster the clock -- more instructions a processor can execute per second.</p>
-<p>Performance of a program depends on how fast the data gets accessed,
-so the speed of a storage is paramount.
-The CPU has the fastest storage device called the register file
-which consists of 16 word-sized (64 bits) registers.
-The data stored in a register requires 0 cycles to access.</p>
-<p>The program counter (PC) <code>rip</code> register contains the memory address of a machine instruction.
-CPU reads the instruction from memory pointed at by the PC,
-executes the instruction, and updates the PC to point to the next instruction.
-In general, CPU performs the following operations as per instruction:</p>
-<ul>
-<li>load -- copy a byte/word from main memory into register</li>
-<li>store -- copy a byte/word from register into main memory</li>
-<li>operate -- copy the contents of two registers to the arithmetic/logic unit (ALU),
-  perform an arithmetic operation, and store the result in a register</li>
-<li>jump -- copy a word from the instruction into the PC</li>
-</ul>
-<p>The memory addresses used by a program are virtual addresses,
-so the main memory appears to be a byte array where array index is a memory address.
-It can range from 0 to 2^63-1, but currently is
-<a href="https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details">limited to 2^48 or 256TB</a>.
-The lower-addressed half (user space) is occupied by a process,
-and the rest is left to kernel virtual memory (it is identical for each process).
-Here is how a 4-byte integer might be stored in memory (little endian byte ordering).</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// The variable&#39;s address &amp;x is 0x100.</span><span class="w"></span>
-<span class="kd">var</span><span class="w"> </span><span class="nx">x</span><span class="w"> </span><span class="kt">int32</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x00001e61</span><span class="w"></span>
-</code></pre></div>
-
-<table>
-<thead>
-<tr>
-<th>memory address</th>
-<th>byte</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0x100</td>
-<td>61</td>
-</tr>
-<tr>
-<td>0x101</td>
-<td>1e</td>
-</tr>
-<tr>
-<td>0x102</td>
-<td>00</td>
-</tr>
-<tr>
-<td>0x103</td>
-<td>00</td>
-</tr>
-</tbody>
-</table>
-<p>Arrays and structures are stored as a contiguous sequence of bytes.
-The smallest memory address of the bytes used is a variable's address.</p>
-<p>Memory access is often the slowest of CPU operations, as it may take ~200 cycles to access it,
-during which instruction execution has stalled.
-Memory caches blocks of virtual memory (4-KB pages) and parts of files (buffer cache).
-Disk controller caches disk sectors.
-Its access time is ~100,000 cycles, and disk's access time is ~10,000,000 cycles.
-Disks read and write data in sector-size blocks (512 bytes) which takes ~10ms.
-CPU L1-L3 caches cache 64-byte blocks (cache lines) of the main memory
-to significantly reduce the number of cycles needed for memory access.
-L1 cache can be accessed in ~4 clock cycles, L2 in ~10 cycles, and L3's access time is ~50 cycles.</p>
-<p>Buses transfer word-sized information between CPU, main memory, disk, etc.
-It takes ~256ns for L1 cache to read 512 bytes (access time is ~4ns for a 64-bit word).</p>
-<div class="highlight"><pre><span></span><code><span class="go">Register file -- L1-3 caches -- Bus interface</span>
-<span class="go">                                 |</span>
-<span class="go">                                 | System bus</span>
-<span class="go">                                 |</span>
-<span class="go">Disk -- Disk controller --------- I/O bridge</span>
-<span class="go">                         I/O bus |</span>
-<span class="go">                                 | Memory bus</span>
-<span class="go">                                 |</span>
-<span class="go">                                Main memory</span>
-</code></pre></div>
-
-<p>Each CPU core has its own L1 and L2 caches.
-L1 is split into i-cache to read recently fetched instructions, and d-cache to read/write data.
-All cores share L3 cache and the interface to main memory.</p>
-<div class="highlight"><pre><span></span><code><span class="go">Registers                  Registers</span>
-<span class="go">    |                          |</span>
-<span class="go">L1 d-cache  L1 i-cache ... L1 d-cache  L1 i-cache</span>
-<span class="go">          \/                         \/</span>
-<span class="go">        L2 cache                  L2 cache</span>
-<span class="go">                \                /</span>
-<span class="go">                 \-- L3 cache --/</span>
-</code></pre></div>
-
-<p>An instruction requires ~20 clock cycles to execute,
-but a processor manages to execute more of them per clock cycle using instruction pipelining,
-i.e., the actions are partitioned into ~15 steps which are performed in parallel
-working on different instructions, e.g.,</p>
-<ul>
-<li>fetching the instruction from memory</li>
-<li>determining the instruction type</li>
-<li>reading from memory</li>
-<li>arithmetic operation</li>
-<li>writing to memory</li>
-<li>updating the program counter</li>
-</ul>
-<p>CPU can perform out-of-order execution of the pipeline,
-where later instructions can be completed while earlier instructions are stalled,
-improving instruction throughput.
-The instruction control unit (ICU) fetches instructions from L1 i-cache ahead of time.
-It generates a sequence of primitive operations from instructions
-and sends them to the execution unit (EU).
-EU executes the operations using multiple functional units
-(e.g., store to L1 d-cache) some of which of the same type
-and tells ICU whether branches were correctly predicted.
-Mispredicting a conditional jump can incur ~15-30 clock cycles of wasted effort, hurting performance.</p>
-<p>Memory management unit (MMU) uses translation look-aside buffer (TLB) which is a cache
-that provides a fast translation (0 cycles access time) from virtual to physical addresses.
-On TLB miss, MMU searches the address mapping in the page table which is maintained by the kernel.
-When it fails, a page fault exception is signalled to get a referenced memory address from the disk.
-The OS's exception handler sets up a transfer from disk to memory (several thousands cycles).
-Once this completes (millions of cycles),
-the OS will return to the original program to retry the instruction that caused a page fault.
-Direct memory access (DMA) technique allows data to travel directly from disk to memory avoiding CPU.</p>
-<h2>General advice</h2>
-<p>Intel Vtune defines CPI (cycles per instruction retired) as a metric indicating how much time
-each executed instruction took, in units of cycles.
-The CPU issues up to four instructions per cycle, suggesting a theoretical best CPI of 0.25.
-A CPI &lt; 1 is typical for instruction bound code,
-while a CPI &gt; 1 may show up for a stall cycle bound application, also likely memory bound.
-If you're curious, check out a <a href="https://github.com/klauspost/compress/discussions/717">Vtune perf report</a> example.</p>
-<p>Hyper-threading allows the CPU core to run more than one thread,
-effectively scheduling between them when one instruction stalls on memory I/O.
-Workloads that are stall cycle-heavy (low IPC instructions per cycle)
-could have better performance than those that are instruction-heavy
-because stall cycles reduce core contention.</p>
-<p>IPC &lt; 1 (or CPI &gt; 1) indicates that the CPU is often stalled,
-typically for memory access, so a general advice is to:</p>
-<ul>
-<li>keep intermediate calculation values in registers (i.e., local variables) instead of the memory
-  and store results in memory when the final value was computed</li>
-<li>use a value as often as possible once it has been read from memory (temporal locality),
-  i.e., it will be read from L1 cache</li>
-<li>access data (arrays, structs) sequentially in the order they are stored in memory (spatial locality),
-  so multiple values are read from the same L1 cache line</li>
-<li>reduce the data dependencies in a loop between different parts of a computation.
-  Otherwise the CPU would have to wait for dependent load/store operations that form a critical path.
-  Similar to databases, partitioning helps, e.g., introduce more variables to accumulate computed values.</li>
-</ul>
-<p>Beware of false sharing -- a usage pattern occurring when two CPU cores read from and write to
-unrelated variables that happen to share the same L1 cache line,
-e.g., two pointers declared in the same struct next to each other.
-When write happens in one core,
-the cache controller invalidates that cache line in other cores,
-so they have to reload non-stale data to do their reads.
-The solution is to add 64-byte padding between those variables so they end up in different cache lines.
-Check out an interesting case study:
-<a href="https://surfingcomplexity.blog/2022/11/25/cache-invalidation-really-is-one-of-the-hardest-things-in-computer-science/">Cache invalidation really is one of the hardest problems in computer science</a>
-and <a href="https://netflixtechblog.com/seeing-through-hardware-counters-a-journey-to-threefold-performance-increase-2721924a2822">Seeing through hardware counters: a journey to threefold performance increase</a>.
-That post also mentions true sharing -- a usage pattern occurring
-when multiple cores read from and write to the same variable.
-The CPU-enforced memory ordering causes slowdown
-(<a href="https://go-talks.appspot.com/github.com/marselester/scalability/scalability.slide#3">coherency-limited scalability</a> due to inconsistent copies of data).</p>
-<p>If you're curious about systems performance, I recommend Brendan Gregg's books,
-Chris Kanich's <a href="https://www.youtube.com/@ChrisKanich">YouTube channel</a>,
-Computer Systems book by Bryant and O'Hallaron.</p><p class="subheader">Category: <a href="https://marselester.com/category/performance.html">Performance</a>
+For example, 1GHz CPU implies that its clock runs at …</p><p class="subheader">Category: <a href="https://marselester.com/category/performance.html">Performance</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/architecture.html">architecture </a>
@@ -231,11 +439,9 @@ Computer Systems book by Bryant and O'Hallaron.</p><p class="subheader">Category
 
 
 
-<p><a href="https://marselester.com/bandwitch-of-cpu-and-storages.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/bandwitch-of-cpu-and-storages.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bandwitch-of-cpu-and-storages.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

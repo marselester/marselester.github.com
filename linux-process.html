@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - architecture</title>
+    <title>Linux process</title>
 
     <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/linux-process.html" rel="bookmark"
+        title="Permalink to Linux process">Linux process</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="https://marselester.com/linux-process.html"><h3 class="article-title">Linux process</h3></a>
 <h6 class="subheader" title="2023-01-31T00:00:00+07:00">Tue 31 January 2023
 </h6>
 
 
-<p>Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
+    <p>Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
 BPF performance tools book aided me to navigate BPF C code.
 For example, it explained that a BPF program has to use helpers because it can't access arbitrary memory (outside of BPF) and can't call arbitrary Linux kernel functions.</p>
 <p>BPF has opened a door into the kernel for me, but I quickly realized that I don't know much about it.
@@ -403,7 +405,8 @@ and I wouldn't be able to navigate it without books such as:</p>
 <li>Computer Systems, Randal E. Bryant, David R. O'Hallaron</li>
 <li>Understanding the Linux Kernel, Daniel P. Bovet, Marco Cesati</li>
 <li>The Linux Programming Interface: A Linux and UNIX System Programming Handbook, Michael Kerrisk</li>
-</ul><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+</ul>
+<p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/architecture.html">architecture </a>
@@ -412,69 +415,22 @@ and I wouldn't be able to navigate it without books such as:</p>
 
 
 
-<p><a href="https://marselester.com/linux-process.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "linux-process.html";
+        var disqus_url = "https://marselester.com/linux-process.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/bandwitch-of-cpu-and-storages.html"><h3 class="article-title">Bandwitch 🧙‍♀️ of CPU and storages</h3></a>
-<h6 class="subheader" title="2023-01-08T00:00:00+07:00">Sun 08 January 2023
-</h6>
-
-
-<p>Let us begin with a definition of a CPU clock rate ⏰.
-It refers to the frequency at which the clock generator (an oscillator crystal)
-of a processor can generate pulses, which are used to synchronize the operations of its components.
-For example, 1GHz CPU implies that its clock runs at …</p><p class="subheader">Category: <a href="https://marselester.com/category/performance.html">Performance</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/architecture.html">architecture </a>
-    <a href="https://marselester.com/tag/performance.html">performance </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/bandwitch-of-cpu-and-storages.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bandwitch-of-cpu-and-storages.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
-<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
-</h6>
-
-
-<p>Следующим этапом разработки системы является проектирование архитектуры.</p>
-<p>Архитектура должна быть продуманным концептуальным целым. Главный тезис самой
-популярной книги по разработке ПО &quot;Мифический человеко-месяц&quot; гласит, что
-основной проблемой, характерной для крупных систем, является поддержание их
-концептуальной целостности. Хорошая архитектура должна соответствовать
-проблеме <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
-<p>Разделение системы на подсистемы на уровне архитектуры, позволяет …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/python.html">python </a>
-    <a href="https://marselester.com/tag/django.html">django </a>
-    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
-    <a href="https://marselester.com/tag/architecture.html">architecture </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/django-todo-design-architecture.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-design-architecture.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 
