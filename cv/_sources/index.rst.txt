@@ -4,22 +4,21 @@
 Marsel Mavletkulov
 ==================
 
-I find professional satisfaction in building reliable services, reasoning about their boundaries,
-writing documentation and clear code.
-I would like to learn more about systems performance, databases and distributed systems.
+I find professional satisfaction in building reliable services,
+writing documentation and clear Go code.
 
-- https://github.com/marselester
 - https://marselester.com
-- https://angel.co/u/marselester
+- https://github.com/marselester
 - https://twitter.com/marselester
+- https://angel.co/u/marselester
 
-I prefer Go, PostgreSQL, Kafka, Kubernetes.
+I would like to learn more about systems performance.
 
 Work Experience
 ---------------
 
 **Site Reliability Engineer** at fintech startup Coins.ph_ 🚀
-February 2021 — present
+February 2021 — December 2022
 **Software Architect**
 August 2017 — September 2020
 **Senior Software Engineer**
@@ -52,11 +51,14 @@ To try something different I joined infrastructure team as an SRE
   increased resiliency of our services,
   helped to **handle x2 traffic, reduced infrastructure costs by 20%**;
 - rewrote parts of 5 Django/Celery core services in Go to reduce memory (tens of gigabytes)
-  and CPU consumption in Kubernetes cluster;
+  and CPU consumption in Kubernetes cluster,
+  see `gopher-celery <https://github.com/marselester/gopher-celery>`_;
 - improved internal tooling, e.g., wrote a Terraform plugin to rotate PostgreSQL roles,
   implemented observability tool for Celery queues in Go,
   a dynamic service configuration based AWS SSM and Kafka,
   introduced `continuous profiling <https://marselester.com/continuous-profiling-in-go.html>`_;
+- investigated and resolved API latency outliers, e.g.,
+  `AWS SDK latency <https://github.com/marselester/awscreds>`_;
 
 **Python Developer** contractor at icon fonts generator Fontastic_ (Webalys_) 🤌
 January 2014 — July 2014
