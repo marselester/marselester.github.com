@@ -6,13 +6,14 @@ Marsel Mavletkulov
 
 I find professional satisfaction in building reliable services,
 writing documentation and clear Go code.
+I would like to learn more about systems performance.
 
 - https://marselester.com
 - https://github.com/marselester
 - https://twitter.com/marselester
 - https://angel.co/u/marselester
 
-I would like to learn more about systems performance.
+Based in Montreal, Canada.
 
 Work Experience
 ---------------
