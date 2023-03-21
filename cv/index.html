@@ -82,10 +82,13 @@ and CPU consumption in Kubernetes cluster,
 see <a class="reference external" href="https://github.com/marselester/gopher-celery">gopher-celery</a>;</p></li>
 <li><p>improved internal tooling, e.g., wrote a Terraform plugin to rotate PostgreSQL roles,
 implemented observability tool for Celery queues in Go,
-a dynamic service configuration based AWS SSM and Kafka,
-introduced <a class="reference external" href="https://marselester.com/continuous-profiling-in-go.html">continuous profiling</a>;</p></li>
+a dynamic service configuration based on AWS SSM, EventBridge, Kafka;</p></li>
+<li><p>introduced <a class="reference external" href="https://marselester.com/continuous-profiling-in-go.html">continuous profiling</a>
+and reconstructed a <a class="reference external" href="https://github.com/marselester/diy-parca-agent">BPF agent</a> for fun;</p></li>
 <li><p>investigated and resolved API latency outliers, e.g.,
-<a class="reference external" href="https://github.com/marselester/awscreds">AWS SDK latency</a>;</p></li>
+<a class="reference external" href="https://github.com/marselester/awscreds">AWS SDK latency</a>
+due to AWS STS requests going to the global endpoint,
+and misconfigured SNS retry policy;</p></li>
 </ul>
 <p><strong>Python Developer</strong> contractor at icon fonts generator <a class="reference external" href="http://fontastic.me">Fontastic</a> (<a class="reference external" href="http://www.webalys.com">Webalys</a>) 🤌
 January 2014 — July 2014</p>

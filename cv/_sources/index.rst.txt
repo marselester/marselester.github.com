@@ -56,10 +56,13 @@ To try something different I joined infrastructure team as an SRE
   see `gopher-celery <https://github.com/marselester/gopher-celery>`_;
 - improved internal tooling, e.g., wrote a Terraform plugin to rotate PostgreSQL roles,
   implemented observability tool for Celery queues in Go,
-  a dynamic service configuration based AWS SSM and Kafka,
-  introduced `continuous profiling <https://marselester.com/continuous-profiling-in-go.html>`_;
+  a dynamic service configuration based on AWS SSM, EventBridge, Kafka;
+- introduced `continuous profiling <https://marselester.com/continuous-profiling-in-go.html>`_
+  and reconstructed a `BPF agent <https://github.com/marselester/diy-parca-agent>`_ for fun;
 - investigated and resolved API latency outliers, e.g.,
-  `AWS SDK latency <https://github.com/marselester/awscreds>`_;
+  `AWS SDK latency <https://github.com/marselester/awscreds>`_
+  due to AWS STS requests going to the global endpoint,
+  and misconfigured SNS retry policy;
 
 **Python Developer** contractor at icon fonts generator Fontastic_ (Webalys_) 🤌
 January 2014 — July 2014
