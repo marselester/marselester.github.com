@@ -1,7 +1,7 @@
 title: DIY CPU profiler: from BPF maps to pprof
 date: 2022-10-20
-tags: bpf, golang, monitoring
-category: Go
+tags: bpf, golang, profiling
+category: Profiler
 slug: diy-cpu-profiler-from-bpf-maps-to-pprof
 
 [In previous post](https://marselester.com/continuous-profiling-in-go.html)

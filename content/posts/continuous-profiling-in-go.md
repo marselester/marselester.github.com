@@ -1,7 +1,7 @@
 title: Continuous profiling in Go
 date: 2022-04-22
-tags: bpf, golang, monitoring
-category: Go
+tags: bpf, golang, monitoring, profiling
+category: Profiler
 slug: continuous-profiling-in-go
 
 In this post I explore possibilities of continuous profiling of Go programs

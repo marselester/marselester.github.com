@@ -51,6 +51,856 @@
         
 
             <article>
+                <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"><h3 class="article-title">DIY CPU profiler: the simplest case of symbolization</h3></a>
+<h6 class="subheader" title="2023-03-23T00:00:00+07:00">Thu 23 March 2023
+</h6>
+
+
+<p>In the <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">BPF maps to pprof</a> post
+we managed to collect CPU samples and store them in pprof format.
+Here I would like to explore the simplest case of symbolization
+and put shared libraries aside.</p>
+<p>Symbolization is resolving sampled memory addresses to function names (symbols).
+In our case, simply searching for an address in <code>.symtab</code> ELF section.</p>
+<h2>What's in the profile?</h2>
+<p>Let's profile a C program that ensures we'll get lots of CPU samples.
+It computes Fibonacci numbers naively (without caching),
+so <code>fibNaive</code> function should dominate the profile.</p>
+<div class="highlight"><pre><span></span><code><span class="kt">long</span><span class="w"> </span><span class="nf">fibNaive</span><span class="p">(</span><span class="kt">long</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">fibNaive</span><span class="p">(</span><span class="n">n</span><span class="mi">-2</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">fibNaive</span><span class="p">(</span><span class="n">n</span><span class="mi">-1</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+
+<span class="c1">// fibNaive calculates a Fibonacci number n,</span>
+<span class="c1">// e.g., when n=7, the result is 13: 1 1 2 3 5 8 13.</span>
+<span class="c1">//</span>
+<span class="c1">// The running time complexity is exponential 2**n,</span>
+<span class="c1">// the space complexity is n because</span>
+<span class="c1">// when we descend the binary tree recursively,</span>
+<span class="c1">// we use number of stacks equal to its height which is n</span>
+<span class="c1">// (the stack frames n=7-&gt;5-&gt;3-&gt;1).</span>
+<span class="kt">long</span><span class="w"> </span><span class="nf">fibNaive</span><span class="p">(</span><span class="kt">long</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">fibNaive</span><span class="p">(</span><span class="n">n</span><span class="mi">-2</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">fibNaive</span><span class="p">(</span><span class="n">n</span><span class="mi">-1</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Calculating 50th Fibonacci number will keep CPU busy</span>
+<span class="w">    </span><span class="c1">// and give us time to run a CPU profiler.</span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">50</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">res</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fibNaive</span><span class="p">(</span><span class="n">n</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fibonacci number %li: %li</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">res</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">﹩ # For reference, I used gcc 11.3.0 and Ubuntu 22.04.</span>
+<span class="go">﹩ gcc -Og -fno-pie -no-pie -fcf-protection=none -o fib main.c</span>
+<span class="go">﹩ ./fib &amp;</span>
+<span class="go">﹩ sudo go run ./cmd/profiler3 -pid=$(pidof fib)</span>
+<span class="go">/proc/14548/maps</span>
+<span class="go">start=0x401000 limit=0x402000 offset=0x1000 /vagrant/diy-parca-agent/fib</span>
+<span class="go">start=0x7f3cd28ac000 limit=0x7f3cd2a41000 offset=0x28000 /usr/lib/x86_64-linux-gnu/libc.so.6</span>
+<span class="go">start=0x7f3cd2ab6000 limit=0x7f3cd2ae0000 offset=0x2000 /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span>
+<span class="go">start=0x7ffc69d62000 limit=0x7ffc69d64000 offset=0x0 [vdso]</span>
+<span class="go">start=0xffffffffff600000 limit=0xffffffffff601000 offset=0x0 [vsyscall]</span>
+
+<span class="go">Waiting for stack traces for 10s...</span>
+</code></pre></div>
+
+<p>After ten seconds the profiler will terminate leaving us with <code>cpu.pprof</code> file.
+Let's inspect it with
+<a href="https://github.com/DataDog/go-profiler-notes/blob/main/pprof.md#using-protoc">protoc</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ git clone https://github.com/google/pprof.git</span>
+<span class="go">﹩ sudo snap install protobuf --classic</span>
+<span class="go">﹩ zcat cpu.pprof | \</span>
+<span class="go">    protoc --decode perftools.profiles.Profile ./pprof/proto/profile.proto</span>
+
+<span class="go">...</span>
+<span class="go">sample {</span>
+<span class="go">  location_id: 10</span>
+<span class="go">  value: 138</span>
+<span class="go">}</span>
+<span class="go">...</span>
+<span class="go">mapping {</span>
+<span class="go">  id: 1</span>
+<span class="go">  memory_start: 4198400</span>
+<span class="go">  memory_limit: 4202496</span>
+<span class="go">  file_offset: 4096</span>
+<span class="go">  filename: 3</span>
+<span class="go">}</span>
+<span class="go">...</span>
+<span class="go">location {</span>
+<span class="go">  id: 10</span>
+<span class="go">  mapping_id: 1</span>
+<span class="go">  address: 4198694</span>
+<span class="go">}</span>
+<span class="go">...</span>
+<span class="go">string_table: &quot;&quot;</span>
+<span class="go">string_table: &quot;samples&quot;</span>
+<span class="go">string_table: &quot;count&quot;</span>
+<span class="go">string_table: &quot;/vagrant/diy-parca-agent/fib&quot;</span>
+<span class="go">string_table: &quot;/usr/lib/x86_64-linux-gnu/libc.so.6&quot;</span>
+<span class="go">string_table: &quot;/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2&quot;</span>
+<span class="go">string_table: &quot;[vdso]&quot;</span>
+<span class="go">string_table: &quot;[vsyscall]&quot;</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="n">sample_type</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">type</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">unit</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">27</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">286</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">111</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">79</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">29</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">138</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">36</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">34</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">22</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">37</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">105</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">54</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">4198400</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">4202496</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">139899207073792</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">139899208732672</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">163840</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">139899209211904</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">139899209383936</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">140722084126720</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">140722084134912</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">18446744073699065856</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">18446744073699069952</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198715</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198705</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198700</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198724</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198706</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198708</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198727</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198736</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198745</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198694</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198712</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198707</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198739</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198743</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198744</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">4198719</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;samples&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;count&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/vagrant/diy-parca-agent/fib&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/libc.so.6&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;[vdso]&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;[vsyscall]&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cpu&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;nanoseconds&quot;</span><span class="w"></span>
+<span class="n">time_nanos</span><span class="p">:</span><span class="w"> </span><span class="mi">1679419143530427477</span><span class="w"></span>
+<span class="n">duration_nanos</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000000</span><span class="w"></span>
+<span class="n">period_type</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">type</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">unit</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">period</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<p>The example above shows a pprof sample that tells us
+that some function (its memory <code>address: 4198694</code>) has been seen 138 times in stack traces.
+That function is located in the mapping id 1 according to location id 10,
+somewhere between <code>memory_start: 4198400</code> and <code>memory_limit: 4202496</code> addresses.
+The mapping points to <code>file_offset: 4096</code> within some file whose path is defined by <code>filename: 3</code>.
+I assume it's the third value in the pprof string table counting from zero:
+<code>string_table: "/vagrant/diy-parca-agent/fib"</code>.</p>
+<p>What does it all mean?
+If we recall from <a href="https://marselester.com/linux-process.html">Linux process</a> post,
+Linux organizes the virtual memory of a process as a collection of areas (segments)
+where an area is a chunk of related virtual pages.
+An area can be associated (mapped) with a contiguous chunk of a file,
+in this case it is <code>fib</code> executable object file starting at file offset 4096.
+Let's look at the file's segments and find the one mentioned in the sample.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --segments --wide fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">Elf file type is EXEC (Executable file)</span>
+<span class="go">Entry point 0x401040</span>
+<span class="go">There are 13 program headers, starting at offset 64</span>
+
+<span class="go">Program Headers:</span>
+<span class="go">  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align</span>
+<span class="go">  PHDR           0x000040 0x0000000000400040 0x0000000000400040 0x0002d8 0x0002d8 R   0x8</span>
+<span class="go">  INTERP         0x000318 0x0000000000400318 0x0000000000400318 0x00001c 0x00001c R   0x1</span>
+<span class="go">      [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]</span>
+<span class="go">  LOAD           0x000000 0x0000000000400000 0x0000000000400000 0x0004f0 0x0004f0 R   0x1000</span>
+<span class="go">  LOAD           0x001000 0x0000000000401000 0x0000000000401000 0x00019d 0x00019d R E 0x1000</span>
+<span class="go">  LOAD           0x002000 0x0000000000402000 0x0000000000402000 0x000104 0x000104 R   0x1000</span>
+<span class="go">  LOAD           0x002e10 0x0000000000403e10 0x0000000000403e10 0x000220 0x000228 RW  0x1000</span>
+<span class="go">  DYNAMIC        0x002e20 0x0000000000403e20 0x0000000000403e20 0x0001d0 0x0001d0 RW  0x8</span>
+<span class="go">  NOTE           0x000338 0x0000000000400338 0x0000000000400338 0x000020 0x000020 R   0x8</span>
+<span class="go">  NOTE           0x000358 0x0000000000400358 0x0000000000400358 0x000044 0x000044 R   0x4</span>
+<span class="go">  GNU_PROPERTY   0x000338 0x0000000000400338 0x0000000000400338 0x000020 0x000020 R   0x8</span>
+<span class="go">  GNU_EH_FRAME   0x002020 0x0000000000402020 0x0000000000402020 0x000034 0x000034 R   0x4</span>
+<span class="go">  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x10</span>
+<span class="go">  GNU_RELRO      0x002e10 0x0000000000403e10 0x0000000000403e10 0x0001f0 0x0001f0 R   0x1</span>
+
+<span class="go"> Section to Segment mapping:</span>
+<span class="go">  Segment Sections...</span>
+<span class="go">   00</span>
+<span class="go">   01     .interp</span>
+<span class="go">   02     .interp .note.gnu.property .note.gnu.build-id .note.ABI-tag .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rela.dyn .rela.plt</span>
+<span class="go">   03     .init .plt .text .fini</span>
+<span class="go">   04     .rodata .eh_frame_hdr .eh_frame</span>
+<span class="go">   05     .init_array .fini_array .dynamic .got .got.plt .data .bss</span>
+<span class="go">   06     .dynamic</span>
+<span class="go">   07     .note.gnu.property</span>
+<span class="go">   08     .note.gnu.build-id .note.ABI-tag</span>
+<span class="go">   09     .note.gnu.property</span>
+<span class="go">   10     .eh_frame_hdr</span>
+<span class="go">   11</span>
+<span class="go">   12     .init_array .fini_array .dynamic .got</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Program Headers:</span>
+<span class="go">  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align</span>
+<span class="go">  ...</span>
+<span class="go">  LOAD           0x001000 0x0000000000401000 0x0000000000401000 0x00019d 0x00019d R E 0x1000</span>
+<span class="go">  ...</span>
+
+<span class="go"> Section to Segment mapping:</span>
+<span class="go">  Segment Sections...</span>
+<span class="go">   ...</span>
+<span class="go">   03     .init .plt .text .fini</span>
+</code></pre></div>
+
+<p>As we can see the ELF program header describes
+<code>Flg=R E</code> readable and executable segment
+loaded from <code>Offset=0x001000</code> (that's hex of <code>file_offset: 4096</code>) within the file
+into memory starting at <code>0x0000000000401000</code> virtual address (that's hex of <code>memory_start: 4198400</code>).
+According to <code>FileSiz=0x00019d</code> only 413 bytes are loaded from the file.
+Given the alignment requirement <code>Align=0x1000</code>,
+the memory area ends at <code>0x0000000000402000</code> virtual address (that's hex of <code>memory_limit: 4202496</code>).
+So the area consists of a single page, i.e., 4096 bytes = memory_limit - memory_start.</p>
+<p>Here is how a process's virtual address space looks
+when the executable file is mapped.</p>
+<div class="highlight"><pre><span></span><code><span class="go">Executable object file        Virtual address space</span>
+<span class="go"> _______                       _______</span>
+<span class="go">|       | 0x3def              |       | N</span>
+<span class="go">|       |                     |       |</span>
+<span class="go">| ...   | 0x2000              | ...   | 0x402000</span>
+<span class="go">|-------| -----------&gt; vm_end |-------|</span>
+<span class="go">| .fini | 0x1190              | .fini | 0x401190</span>
+<span class="go">| .text | 0x1040              | .text | 0x401040</span>
+<span class="go">| .plt  | 0x1020              | .plt  | 0x401020</span>
+<span class="go">| .init | 0x1000              | .init | 0x401000</span>
+<span class="go">|-------| ---------&gt; vm_start |-------|</span>
+<span class="go">| ...   |                     | ...   |</span>
+<span class="go">|_______| 0                   |_______| 0</span>
+</code></pre></div>
+
+<p>We can also see which ELF sections are placed within the segment: <code>.init .plt .text .fini</code>.
+Our function in question should be somewhere in <code>.text</code> section,
+because it's where machine code of the compiled program lives.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --sections --wide fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">There are 30 section headers, starting at offset 0x3670:</span>
+
+<span class="go">Section Headers:</span>
+<span class="go">  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al</span>
+<span class="go">  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0</span>
+<span class="go">  [ 1] .interp           PROGBITS        0000000000400318 000318 00001c 00   A  0   0  1</span>
+<span class="go">  [ 2] .note.gnu.property NOTE            0000000000400338 000338 000020 00   A  0   0  8</span>
+<span class="go">  [ 3] .note.gnu.build-id NOTE            0000000000400358 000358 000024 00   A  0   0  4</span>
+<span class="go">  [ 4] .note.ABI-tag     NOTE            000000000040037c 00037c 000020 00   A  0   0  4</span>
+<span class="go">  [ 5] .gnu.hash         GNU_HASH        00000000004003a0 0003a0 00001c 00   A  6   0  8</span>
+<span class="go">  [ 6] .dynsym           DYNSYM          00000000004003c0 0003c0 000060 18   A  7   1  8</span>
+<span class="go">  [ 7] .dynstr           STRTAB          0000000000400420 000420 000050 00   A  0   0  1</span>
+<span class="go">  [ 8] .gnu.version      VERSYM          0000000000400470 000470 000008 02   A  6   0  2</span>
+<span class="go">  [ 9] .gnu.version_r    VERNEED         0000000000400478 000478 000030 00   A  7   1  8</span>
+<span class="go">  [10] .rela.dyn         RELA            00000000004004a8 0004a8 000030 18   A  6   0  8</span>
+<span class="go">  [11] .rela.plt         RELA            00000000004004d8 0004d8 000018 18  AI  6  23  8</span>
+<span class="go">  [12] .init             PROGBITS        0000000000401000 001000 00001b 00  AX  0   0  4</span>
+<span class="go">  [13] .plt              PROGBITS        0000000000401020 001020 000020 10  AX  0   0 16</span>
+<span class="go">  [14] .text             PROGBITS        0000000000401040 001040 00014e 00  AX  0   0 16</span>
+<span class="go">  [15] .fini             PROGBITS        0000000000401190 001190 00000d 00  AX  0   0  4</span>
+<span class="go">  [16] .rodata           PROGBITS        0000000000402000 002000 00001f 00   A  0   0  4</span>
+<span class="go">  [17] .eh_frame_hdr     PROGBITS        0000000000402020 002020 000034 00   A  0   0  4</span>
+<span class="go">  [18] .eh_frame         PROGBITS        0000000000402058 002058 0000ac 00   A  0   0  8</span>
+<span class="go">  [19] .init_array       INIT_ARRAY      0000000000403e10 002e10 000008 08  WA  0   0  8</span>
+<span class="go">  [20] .fini_array       FINI_ARRAY      0000000000403e18 002e18 000008 08  WA  0   0  8</span>
+<span class="go">  [21] .dynamic          DYNAMIC         0000000000403e20 002e20 0001d0 10  WA  7   0  8</span>
+<span class="go">  [22] .got              PROGBITS        0000000000403ff0 002ff0 000010 08  WA  0   0  8</span>
+<span class="go">  [23] .got.plt          PROGBITS        0000000000404000 003000 000020 08  WA  0   0  8</span>
+<span class="go">  [24] .data             PROGBITS        0000000000404020 003020 000010 00  WA  0   0  8</span>
+<span class="go">  [25] .bss              NOBITS          0000000000404030 003030 000008 00  WA  0   0  1</span>
+<span class="go">  [26] .comment          PROGBITS        0000000000000000 003030 00002b 01  MS  0   0  1</span>
+<span class="go">  [27] .symtab           SYMTAB          0000000000000000 003060 000348 18     28  18  8</span>
+<span class="go">  [28] .strtab           STRTAB          0000000000000000 0033a8 0001b1 00      0   0  1</span>
+<span class="go">  [29] .shstrtab         STRTAB          0000000000000000 003559 000116 00      0   0  1</span>
+<span class="go">Key to Flags:</span>
+<span class="go">  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),</span>
+<span class="go">  L (link order), O (extra OS processing required), G (group), T (TLS),</span>
+<span class="go">  C (compressed), x (unknown), o (OS specific), E (exclude),</span>
+<span class="go">  D (mbind), l (large), p (processor specific)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Section Headers:</span>
+<span class="go">  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al</span>
+<span class="go">  ...</span>
+<span class="go">  [12] .init             PROGBITS        0000000000401000 001000 00001b 00  AX  0   0  4</span>
+<span class="go">  [13] .plt              PROGBITS        0000000000401020 001020 000020 10  AX  0   0 16</span>
+<span class="go">  [14] .text             PROGBITS        0000000000401040 001040 00014e 00  AX  0   0 16</span>
+<span class="go">  [15] .fini             PROGBITS        0000000000401190 001190 00000d 00  AX  0   0  4</span>
+<span class="go">  ...</span>
+</code></pre></div>
+
+<h2>Symbol table</h2>
+<p>Information about functions and global variables (aka symbols)
+defined and referenced in our program lives in a symbol table in <code>.symtab</code> section.</p>
+<blockquote>
+<p>An object file's symbol table holds information needed to locate and relocate a program's symbolic definitions and references. https://www.man7.org/linux/man-pages/man5/elf.5.html</p>
+</blockquote>
+<p>This implies that we should be able to find
+which symbol corresponds to memory <code>address: 4198694</code> or <code>0x401126</code> in hexadecimal form.
+Let's inspect the symbol table.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --symbols fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">Symbol table &#39;.dynsym&#39; contains 4 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND</span>
+<span class="go">     1: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND _[...]@GLIBC_2.34 (2)</span>
+<span class="go">     2: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__</span>
+<span class="go">     3: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND [...]@GLIBC_2.3.4 (3)</span>
+
+<span class="go">Symbol table &#39;.symtab&#39; contains 35 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND</span>
+<span class="go">     1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crt1.o</span>
+<span class="go">     2: 000000000040037c    32 OBJECT  LOCAL  DEFAULT    4 __abi_tag</span>
+<span class="go">     3: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c</span>
+<span class="go">     4: 0000000000401080     0 FUNC    LOCAL  DEFAULT   14 deregister_tm_clones</span>
+<span class="go">     5: 00000000004010b0     0 FUNC    LOCAL  DEFAULT   14 register_tm_clones</span>
+<span class="go">     6: 00000000004010f0     0 FUNC    LOCAL  DEFAULT   14 __do_global_dtors_aux</span>
+<span class="go">     7: 0000000000404030     1 OBJECT  LOCAL  DEFAULT   25 completed.0</span>
+<span class="go">     8: 0000000000403e18     0 OBJECT  LOCAL  DEFAULT   20 __do_global_dtor[...]</span>
+<span class="go">     9: 0000000000401120     0 FUNC    LOCAL  DEFAULT   14 frame_dummy</span>
+<span class="go">    10: 0000000000403e10     0 OBJECT  LOCAL  DEFAULT   19 __frame_dummy_in[...]</span>
+<span class="go">    11: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS main.c</span>
+<span class="go">    12: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c</span>
+<span class="go">    13: 0000000000402100     0 OBJECT  LOCAL  DEFAULT   18 __FRAME_END__</span>
+<span class="go">    14: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS</span>
+<span class="go">    15: 0000000000403e20     0 OBJECT  LOCAL  DEFAULT   21 _DYNAMIC</span>
+<span class="go">    16: 0000000000402020     0 NOTYPE  LOCAL  DEFAULT   17 __GNU_EH_FRAME_HDR</span>
+<span class="go">    17: 0000000000404000     0 OBJECT  LOCAL  DEFAULT   23 _GLOBAL_OFFSET_TABLE_</span>
+<span class="go">    18: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __libc_start_mai[...]</span>
+<span class="go">    19: 0000000000404020     0 NOTYPE  WEAK   DEFAULT   24 data_start</span>
+<span class="go">    20: 0000000000404030     0 NOTYPE  GLOBAL DEFAULT   24 _edata</span>
+<span class="go">    21: 0000000000401190     0 FUNC    GLOBAL HIDDEN    15 _fini</span>
+<span class="go">    22: 0000000000404020     0 NOTYPE  GLOBAL DEFAULT   24 __data_start</span>
+<span class="go">    23: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__</span>
+<span class="go">    24: 0000000000404028     0 OBJECT  GLOBAL HIDDEN    24 __dso_handle</span>
+<span class="go">    25: 0000000000402000     4 OBJECT  GLOBAL DEFAULT   16 _IO_stdin_used</span>
+<span class="go">    26: 0000000000404038     0 NOTYPE  GLOBAL DEFAULT   25 _end</span>
+<span class="go">    27: 0000000000401070     5 FUNC    GLOBAL HIDDEN    14 _dl_relocate_sta[...]</span>
+<span class="go">    28: 0000000000401040    38 FUNC    GLOBAL DEFAULT   14 _start</span>
+<span class="go">    29: 0000000000404030     0 NOTYPE  GLOBAL DEFAULT   25 __bss_start</span>
+<span class="go">    30: 000000000040115a    52 FUNC    GLOBAL DEFAULT   14 main</span>
+<span class="go">    31: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __printf_chk@GLI[...]</span>
+<span class="go">    32: 0000000000404030     0 OBJECT  GLOBAL HIDDEN    24 __TMC_END__</span>
+<span class="go">    33: 0000000000401000     0 FUNC    GLOBAL HIDDEN    12 _init</span>
+<span class="go">    34: 0000000000401126    52 FUNC    GLOBAL DEFAULT   14 fibNaive</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Symbol table &#39;.symtab&#39; contains 35 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">   ...</span>
+<span class="go">    34: 0000000000401126    52 FUNC    GLOBAL DEFAULT   14 fibNaive</span>
+</code></pre></div>
+
+<p>So here you go, <strong>fibNaive</strong> C function we were looking for:</p>
+<ul>
+<li><code>Value=0000000000401126</code> The symbol's absolute run-time address
+  since it's an executable object file.
+  For relocatable object files, it would be an offset from
+  the beginning of the section defined by <code>Ndx=14</code>.</li>
+<li><code>Size=52</code> The size of the function's code is 52 bytes.</li>
+<li><code>Type=FUNC</code> The symbol is associated with a function.</li>
+<li><code>Bind=GLOBAL</code> This indicates that the symbol is global,
+  i.e., it can be referenced by other modules.</li>
+<li><code>Vis=DEFAULT</code> Default symbol visibility rules apply:
+  strong (functions and initialized global vars)
+  and weak symbols (uninitialized global vars) are available to other modules.</li>
+<li><code>Ndx=14</code> A symbol is "defined" in relation to <code>.text</code> section
+  according to section header table index, see <code>readelf --sections fib</code>.</li>
+<li><code>Name=fibNaive</code> The symbol name <code>fibNaive</code> was taken from
+  string table in section <code>.strtab</code>, see <code>readelf --string-dump .strtab fib</code>.</li>
+</ul>
+<p>😌</p>
+<p>Great, let's check the remaining memory addresses we've got in the pprof file
+(I've sorted them for our convenience).
+Unfortunately, I couldn't find corresponding symbols in <code>.symtab</code> section.</p>
+<div class="highlight"><pre><span></span><code><span class="go">4198694 = 0x401126 fibNaive</span>
+<span class="go">4198700 = 0x40112c ?</span>
+<span class="go">4198705 = 0x401131 ?</span>
+<span class="go">4198706 = 0x401132 ?</span>
+<span class="go">4198707 = 0x401133 ?</span>
+<span class="go">4198708 = 0x401134 ?</span>
+<span class="go">4198712 = 0x401138 ?</span>
+<span class="go">4198715 = 0x40113b ?</span>
+<span class="go">4198719 = 0x40113f ?</span>
+<span class="go">4198724 = 0x401144 ?</span>
+<span class="go">4198727 = 0x401147 ?</span>
+<span class="go">4198736 = 0x401150 ?</span>
+<span class="go">4198739 = 0x401153 ?</span>
+<span class="go">4198743 = 0x401157 ?</span>
+<span class="go">4198744 = 0x401158 ?</span>
+<span class="go">4198745 = 0x401159 ?</span>
+</code></pre></div>
+
+<p>What's interesting is that these addresses are within <code>Size=52</code> bytes
+from <code>fibNaive</code> memory address, e.g.,
+the distance to the highest address is 51 bytes = 4198745 - 4198694.</p>
+<p>If we sort the symbols from <code>.symtab</code> section by <code>Value</code>,
+we'll see that <code>fibNaive</code> is between <code>frame_dummy</code> and <code>main</code> symbols.
+The rest of unresolved memory addresses from the samples
+fit in between <code>fibNaive</code> and <code>main</code> symbols.</p>
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">0000000 = 0x000000 crt1.o</span>
+<span class="go">0000000 = 0x000000 crtstuff.c</span>
+<span class="go">0000000 = 0x000000 main.c</span>
+<span class="go">0000000 = 0x000000 crtstuff.c</span>
+<span class="go">0000000 = 0x000000</span>
+<span class="go">0000000 = 0x000000 __libc_start_main@GLIBC_2.34</span>
+<span class="go">0000000 = 0x000000 __gmon_start__</span>
+<span class="go">0000000 = 0x000000 __printf_chk@GLIBC_2.3.4</span>
+<span class="go">4195196 = 0x40037c __abi_tag</span>
+<span class="go">4198400 = 0x401000 _init</span>
+<span class="go">4198464 = 0x401040 _start</span>
+<span class="go">4198512 = 0x401070 _dl_relocate_static_pie</span>
+<span class="go">4198528 = 0x401080 deregister_tm_clones</span>
+<span class="go">4198576 = 0x4010b0 register_tm_clones</span>
+<span class="go">4198640 = 0x4010f0 __do_global_dtors_aux</span>
+<span class="go">4198688 = 0x401120 frame_dummy</span>
+<span class="go">4198694 = 0x401126 fibNaive</span>
+<span class="go">4198746 = 0x40115a main</span>
+<span class="go">4198800 = 0x401190 _fini</span>
+<span class="go">4202496 = 0x402000 _IO_stdin_used</span>
+<span class="go">4202528 = 0x402020 __GNU_EH_FRAME_HDR</span>
+<span class="go">4202752 = 0x402100 __FRAME_END__</span>
+<span class="go">4210192 = 0x403e10 __frame_dummy_init_array_entry</span>
+<span class="go">4210200 = 0x403e18 __do_global_dtors_aux_fini_array_entry</span>
+<span class="go">4210208 = 0x403e20 _DYNAMIC</span>
+<span class="go">4210688 = 0x404000 _GLOBAL_OFFSET_TABLE_</span>
+<span class="go">4210720 = 0x404020 data_start</span>
+<span class="go">4210720 = 0x404020 __data_start</span>
+<span class="go">4210728 = 0x404028 __dso_handle</span>
+<span class="go">4210736 = 0x404030 completed.0</span>
+<span class="go">4210736 = 0x404030 _edata</span>
+<span class="go">4210736 = 0x404030 __bss_start</span>
+<span class="go">4210736 = 0x404030 __TMC_END__</span>
+<span class="go">4210744 = 0x404038 _end</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">0x401120 frame_dummy</span>
+<span class="go">0x401126 fibNaive</span>
+<span class="go">0x40112c ?</span>
+<span class="go">0x401131 ?</span>
+<span class="go">0x401132 ?</span>
+<span class="go">0x401133 ?</span>
+<span class="go">0x401134 ?</span>
+<span class="go">0x401138 ?</span>
+<span class="go">0x40113b ?</span>
+<span class="go">0x40113f ?</span>
+<span class="go">0x401144 ?</span>
+<span class="go">0x401147 ?</span>
+<span class="go">0x401150 ?</span>
+<span class="go">0x401153 ?</span>
+<span class="go">0x401157 ?</span>
+<span class="go">0x401158 ?</span>
+<span class="go">0x401159 ?</span>
+<span class="go">0x40115a main</span>
+</code></pre></div>
+
+<p>Disassembling the program confirms that memory addresses in question
+correspond to instructions of <code>fibNaive</code> function.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ objdump --disassemble fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="x">...</span>
+
+<span class="mh">0000000000401120</span><span class="w"> </span><span class="p">&lt;</span><span class="nf">frame_dummy</span><span class="p">&gt;:</span>
+<span class="x">  401120:   f3 0f 1e fa             endbr64</span>
+<span class="x">  401124:   eb 8a                   jmp    4010b0 &lt;register_tm_clones&gt;</span>
+
+<span class="mh">0000000000401126</span><span class="w"> </span><span class="p">&lt;</span><span class="nf">fibNaive</span><span class="p">&gt;:</span>
+<span class="x">  401126:   48 83 ff 02             cmp    $0x2,%rdi</span>
+<span class="x">  40112a:   7f 06                   jg     401132 &lt;fibNaive+0xc&gt;</span>
+<span class="x">  40112c:   b8 01 00 00 00          mov    $0x1,%eax</span>
+<span class="x">  401131:   c3                      ret</span>
+<span class="x">  401132:   55                      push   %rbp</span>
+<span class="x">  401133:   53                      push   %rbx</span>
+<span class="x">  401134:   48 83 ec 08             sub    $0x8,%rsp</span>
+<span class="x">  401138:   48 89 fb                mov    %rdi,%rbx</span>
+<span class="x">  40113b:   48 8d 7f fe             lea    -0x2(%rdi),%rdi</span>
+<span class="x">  40113f:   e8 e2 ff ff ff          call   401126 &lt;fibNaive&gt;</span>
+<span class="x">  401144:   48 89 c5                mov    %rax,%rbp</span>
+<span class="x">  401147:   48 8d 7b ff             lea    -0x1(%rbx),%rdi</span>
+<span class="x">  40114b:   e8 d6 ff ff ff          call   401126 &lt;fibNaive&gt;</span>
+<span class="x">  401150:   48 01 e8                add    %rbp,%rax</span>
+<span class="x">  401153:   48 83 c4 08             add    $0x8,%rsp</span>
+<span class="x">  401157:   5b                      pop    %rbx</span>
+<span class="x">  401158:   5d                      pop    %rbp</span>
+<span class="x">  401159:   c3                      ret</span>
+
+<span class="mh">000000000040115a</span><span class="w"> </span><span class="p">&lt;</span><span class="nf">main</span><span class="p">&gt;:</span>
+<span class="x">  40115a:   48 83 ec 08             sub    $0x8,%rsp</span>
+<span class="x">  40115e:   bf 32 00 00 00          mov    $0x32,%edi</span>
+<span class="x">  401163:   e8 be ff ff ff          call   401126 &lt;fibNaive&gt;</span>
+<span class="x">  401168:   48 89 c1                mov    %rax,%rcx</span>
+<span class="x">  40116b:   ba 32 00 00 00          mov    $0x32,%edx</span>
+<span class="x">  401170:   be 04 20 40 00          mov    $0x402004,%esi</span>
+<span class="x">  401175:   bf 01 00 00 00          mov    $0x1,%edi</span>
+<span class="x">  40117a:   b8 00 00 00 00          mov    $0x0,%eax</span>
+<span class="x">  40117f:   e8 ac fe ff ff          call   401030 &lt;__printf_chk@plt&gt;</span>
+<span class="x">  401184:   b8 00 00 00 00          mov    $0x0,%eax</span>
+<span class="x">  401189:   48 83 c4 08             add    $0x8,%rsp</span>
+<span class="x">  40118d:   c3                      ret</span>
+
+<span class="x">...</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="mh">0000000000401126</span><span class="w"> </span><span class="p">&lt;</span><span class="nf">fibNaive</span><span class="p">&gt;:</span>
+<span class="x">  401126:   48 83 ff 02             cmp    $0x2,%rdi</span>
+<span class="x">  40112a:   7f 06                   jg     401132 &lt;fibNaive+0xc&gt;</span>
+<span class="x">  40112c:   b8 01 00 00 00          mov    $0x1,%eax</span>
+<span class="x">  401131:   c3                      ret</span>
+<span class="x">  401132:   55                      push   %rbp</span>
+<span class="x">  401133:   53                      push   %rbx</span>
+<span class="x">  401134:   48 83 ec 08             sub    $0x8,%rsp</span>
+<span class="x">  401138:   48 89 fb                mov    %rdi,%rbx</span>
+<span class="x">  40113b:   48 8d 7f fe             lea    -0x2(%rdi),%rdi</span>
+<span class="x">  40113f:   e8 e2 ff ff ff          call   401126 &lt;fibNaive&gt;</span>
+<span class="x">  401144:   48 89 c5                mov    %rax,%rbp</span>
+<span class="x">  401147:   48 8d 7b ff             lea    -0x1(%rbx),%rdi</span>
+<span class="x">  40114b:   e8 d6 ff ff ff          call   401126 &lt;fibNaive&gt;</span>
+<span class="x">  401150:   48 01 e8                add    %rbp,%rax</span>
+<span class="x">  401153:   48 83 c4 08             add    $0x8,%rsp</span>
+<span class="x">  401157:   5b                      pop    %rbx</span>
+<span class="x">  401158:   5d                      pop    %rbp</span>
+<span class="x">  401159:   c3                      ret</span>
+</code></pre></div>
+
+<p>It means that <code>bpf_get_stackid</code> we used in
+<a href="https://github.com/marselester/diy-parca-agent/blob/main/cmd/profiler/bpf/parca-agent.bpf.c">profiler</a>
+collected values stored in <code>rip</code> register,
+i.e., memory addresses of machine instructions.</p>
+<h2>PC to symbol address</h2>
+<p>Since we have sorted symbol addresses from <code>.symtab</code>,
+we can binary search them to find
+whose instructions were executing when a sample was taken.</p>
+<div class="highlight"><pre><span></span><code><span class="go">0x401120 frame_dummy</span>
+<span class="go">0x401126 fibNaive</span>
+<span class="go">0x40112c ?</span>
+<span class="go">0x40115a main</span>
+</code></pre></div>
+
+<p>When the program counter (PC) contains instruction address <code>0x401126</code>,
+then <code>fibNaive</code> function symbol is found in the symbol table.
+When PC points to <code>0x40112c</code> instruction,
+there is no match in the symbol table,
+so the <code>main</code> symbol's predecessor is resolved
+because binary search stops at <code>0x40115a</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">PC2SymbolAddress</span><span class="p">(</span><span class="nx">symbols</span><span class="w"> </span><span class="p">[]</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="nx">pc</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">lft</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">mid</span><span class="w"> </span><span class="kt">int</span><span class="w"></span>
+<span class="w">    </span><span class="nx">rgt</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">symbols</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">lft</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nx">rgt</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">mid</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">lft</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="nx">rgt</span><span class="o">-</span><span class="nx">lft</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="w"></span>
+<span class="w">        </span><span class="nx">symAddr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">symbols</span><span class="p">[</span><span class="nx">mid</span><span class="p">]</span><span class="w"></span>
+
+<span class="w">        </span><span class="k">switch</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="nx">symAddr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">pc</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nx">symAddr</span><span class="w"></span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="nx">symAddr</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">pc</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nx">lft</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">mid</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="nx">symAddr</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">pc</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nx">rgt</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">mid</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// Since pc wasn&#39;t found in the array,</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// now mid points to symbol address &gt; pc, i.e., 0x40115a.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 0x401120 frame_dummy</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 0x401126 fibNaive</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 0x40112c ?</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 0x40115a main</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Therefore the desired symbol&#39;s address is 0x401126.</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">mid</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">symbols</span><span class="p">[</span><span class="nx">mid</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>In reality symbolization is much more complicated.
+Most likely you would have to resolve symbols in shared libraries,
+and also deal with things like:</p>
+<ul>
+<li>Frame pointer or DWARF's Call Frame Information based stack walking, see
+  <a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">Reducing Go Execution Tracer Overhead With Frame Pointer Unwinding</a> and
+  <a href="https://www.polarsignals.com/blog/posts/2022/11/29/profiling-without-frame-pointers/">DWARF-based Stack Walking Using eBPF</a>.
+  Alas, frame pointers are disabled by default in gcc,
+  but you can enable them with the <code>-fno-omit-frame-pointer</code> flag.</li>
+<li>Looking for symbols formatted in DWARF
+  which could be part of an executable file or distributed separately,
+  see <a href="https://www.polarsignals.com/blog/posts/2022/01/13/fantastic-symbols-and-where-to-find-them/">Fantastic Symbols and Where to Find Them</a>.
+  The <code>-g</code> gcc flag produces debugging information in DWARF format.</li>
+</ul>
+<p>When profiling JIT-compiled code you would have to
+look for symbols in <code>/tmp/perf-$PID.map</code> file, see
+<a href="https://www.polarsignals.com/blog/posts/2022/01/27/fantastic-symbols-and-where-to-find-them-part-2/">Fantastic Symbols and Where to Find Them - Part 2</a>.</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/linux-process.html"><h3 class="article-title">Linux process</h3></a>
 <h6 class="subheader" title="2023-01-31T00:00:00+07:00">Tue 31 January 2023
 </h6>
@@ -58,352 +908,7 @@
 
 <p>Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
 BPF performance tools book aided me to navigate BPF C code.
-For example, it explained that a BPF program has to use helpers because it can't access arbitrary memory (outside of BPF) and can't call arbitrary Linux kernel functions.</p>
-<p>BPF has opened a door into the kernel for me, but I quickly realized that I don't know much about it.
-Take, for example, <code>bpf_get_current_pid_tgid()</code> and <code>bpf_get_current_task()</code> helpers.
-What are <code>tgid</code>, <code>pid</code>, and <code>task</code> in the function names?
-It turns out that <code>tgid</code> is what user space calls a process ID,
-and <code>pid</code> is what user space calls a thread ID.</p>
-<div class="highlight"><pre><span></span><code><span class="n">u64</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_get_current_pid_tgid</span><span class="p">();</span><span class="w"></span>
-<span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">pid_t</span><span class="p">)</span><span class="n">id</span><span class="p">;</span><span class="w"></span>
-<span class="kt">pid_t</span><span class="w"> </span><span class="n">tgid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w"></span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="o">*</span><span class="n">t</span><span class="p">;</span><span class="w"></span>
-<span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="o">*</span><span class="p">)</span><span class="n">bpf_get_current_task</span><span class="p">();</span><span class="w"></span>
-</code></pre></div>
-
-<p>I found the terminology a bit confusing, so I spent some time trying to clarify it for myself.</p>
-<h2>Task</h2>
-<p>A process is an instance of a program in execution
-that provides a program an illusion that it is the only one currently running
-with exclusive use of CPU and memory.
-A thread (thread of execution) is a unit of execution (sequence of machine instructions)
-that can be managed by an OS scheduler.
-Typically threads share the process's resources, e.g., memory and file descriptors.</p>
-<p>The process and the thread are abstractions whose implementation depends on the OS.
-Linux implements those abstractions with "light weight processes" which can share resources with each other,
-thus in a way blending the process and the thread concepts.
-For example, <code>ps</code> shows parca-agent Go program running as 8 light weight processes (also referred to as threads in the man page).
-As we can see, they all have unique light weight process ID (LWP column), and the same process ID 93015 (PID column).
-Together they form the thread group with ID 93015 which acts as a whole,
-e.g., we can terminate it by sending a TERM signal <code>kill 93015</code>.
-Note, the light weight process whose PID and LWP columns contain 93015 indicates that it was created first (the main thread).</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ ps -aL</span>
-<span class="go">    PID     LWP TTY          TIME CMD</span>
-<span class="go">  93013   93013 pts/0    00:00:00 sudo</span>
-<span class="go">  93015   93015 pts/3    00:00:33 parca-agent</span>
-<span class="go">  93015   93016 pts/3    00:00:24 parca-agent</span>
-<span class="go">  93015   93017 pts/3    00:00:30 parca-agent</span>
-<span class="go">  93015   93018 pts/3    00:00:00 parca-agent</span>
-<span class="go">  93015   93019 pts/3    00:00:00 parca-agent</span>
-<span class="go">  93015   93020 pts/3    00:00:00 parca-agent</span>
-<span class="go">  93015   93021 pts/3    00:00:30 parca-agent</span>
-<span class="go">  93015   93022 pts/3    00:00:32 parca-agent</span>
-<span class="go">  94130   94130 pts/1    00:00:00 ps</span>
-</code></pre></div>
-
-<p>Linux kernel maintains a <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/sched.h#L737">task_struct</a> for each light weight process.
-Therefore there should be 8 such structures with <code>tgid = 93015</code>
-(thread group ID or PID column)
-and <code>pid</code> (LWP column) in a range from 93015 to 93022.
-The maximum PID value is 4194304,
-see <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/threads.h#L34">PID_MAX_LIMIT</a>
-and <code>/proc/sys/kernel/pid_max</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Possible states: running, interruptible (sleeping),</span>
-<span class="w">    </span><span class="c1">// uninterruptible, stopped, traced.</span>
-<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w">                </span><span class="n">__state</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Pointer to kernel stack (each task has one),</span>
-<span class="w">    </span><span class="c1">// see https://www.kernel.org/doc/html/latest/x86/kernel-stacks.html.</span>
-<span class="w">    </span><span class="c1">// General-purpose registers (e.g., rax, rbx)</span>
-<span class="w">    </span><span class="c1">// used by a task in user mode are saved on</span>
-<span class="w">    </span><span class="c1">// the kernel stack before performing process switching.</span>
-<span class="w">    </span><span class="kt">void</span><span class="w">                        </span><span class="o">*</span><span class="n">stack</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Points to the previous and to the next task_struct</span>
-<span class="w">    </span><span class="c1">// thus representing a list of all tasks in the system.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">tasks</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Points to a structure that describes</span>
-<span class="w">    </span><span class="c1">// the current state of virtual memory.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w">            </span><span class="o">*</span><span class="n">mm</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Possible exit states: zombie, dead.</span>
-<span class="w">    </span><span class="kt">int</span><span class="w">                         </span><span class="n">exit_state</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="kt">int</span><span class="w">                         </span><span class="n">exit_code</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ID of this light weight process.</span>
-<span class="w">    </span><span class="kt">pid_t</span><span class="w">                       </span><span class="n">pid</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ID of the thread group (PID column in ps).</span>
-<span class="w">    </span><span class="kt">pid_t</span><span class="w">                       </span><span class="n">tgid</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Points to the task that created this task</span>
-<span class="w">    </span><span class="c1">// or to the init task if the parent no longer exists.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w"> </span><span class="n">__rcu</span><span class="w">    </span><span class="o">*</span><span class="n">real_parent</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// A list of all children created by this task.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">children</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Points to the next and previous sibling tasks.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w">            </span><span class="n">sibling</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Points to the process group leader (PGID),</span>
-<span class="w">    </span><span class="c1">// e.g., of &quot;sleep 10 | sleep 20&quot;.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">task_struct</span><span class="w">          </span><span class="o">*</span><span class="n">group_leader</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Executable name, excluding path.</span>
-<span class="w">    </span><span class="kt">char</span><span class="w">                        </span><span class="n">comm</span><span class="p">[</span><span class="n">TASK_COMM_LEN</span><span class="p">];</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Open file information (contains pointers to file descriptors).</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">files_struct</span><span class="w">         </span><span class="o">*</span><span class="n">files</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// CPU-specific state of this task is stored here</span>
-<span class="w">    </span><span class="c1">// when the task is being switched out, i.e.,</span>
-<span class="w">    </span><span class="c1">// most of the CPU registers (es, ds, fs, gs, FPU registers),</span>
-<span class="w">    </span><span class="c1">// except the general-purpose registers.</span>
-<span class="w">    </span><span class="c1">// The sp0 and sp fields are the user and</span>
-<span class="w">    </span><span class="c1">// kernel stack pointers respectively.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">thread_struct</span><span class="w">        </span><span class="kr">thread</span><span class="p">;</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>All <code>task_struct</code> that currently present in the system are linked using a double linked list.
-When we run <code>kill 93015</code> to terminate 8 light weight processes by <code>tgid</code>,
-the kernel looks up the thread group's leader by ID in
-a <a href="https://elixir.bootlin.com/linux/v3.19.8/source/kernel/pid.c#L44">hash table</a>
-and then walks the list of the group.
-That applies at least to the kernel v3, and the v6 seems to be using a radix tree,
-see <a href="https://elixir.bootlin.com/linux/v6.1.8/source/kernel/pid.c">pid.c</a>,
-<a href="https://elixir.bootlin.com/linux/v6.1.8/source/lib/idr.c">idr.c</a>,
-<a href="https://www.kernel.org/doc/html/latest/core-api/idr.html">ID allocation</a>.</p>
-<p>With namespaces each PID may have several values, with each one being valid in one namespace.
-Linux kernel has a <a href="https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/pid.h">pid</a> structure
-that refers to individual tasks, process groups, and sessions.
-Check out <a href="https://stackoverflow.com/questions/26779416/what-is-the-relation-between-task-struct-and-pid-namespace">#26779416</a> stackoverflow answer for more details.</p>
-<details>
-
-
-<div class="highlight"><pre><span></span><code><span class="cm">/*</span>
-<span class="cm"> * struct upid is used to get the id of the struct pid, as it is</span>
-<span class="cm"> * seen in particular namespace. Later the struct pid is found with</span>
-<span class="cm"> * find_pid_ns() using the int nr and struct pid_namespace *ns.</span>
-<span class="cm"> */</span><span class="w"></span>
-<span class="k">struct</span><span class="w"> </span><span class="nc">upid</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// The pid value.</span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">nr</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// The namespace this value is visible in.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">pid_namespace</span><span class="w"> </span><span class="o">*</span><span class="n">ns</span><span class="p">;</span><span class="w"></span>
-<span class="p">};</span><span class="w"></span>
-
-<span class="cm">/*</span>
-<span class="cm"> * What is struct pid?</span>
-<span class="cm"> *</span>
-<span class="cm"> * A struct pid is the kernel&#39;s internal notion of a process identifier.</span>
-<span class="cm"> * It refers to individual tasks, process groups, and sessions.  While</span>
-<span class="cm"> * there are processes attached to it the struct pid lives in a hash</span>
-<span class="cm"> * table, so it and then the processes that it refers to can be found</span>
-<span class="cm"> * quickly from the numeric pid value.  The attached processes may be</span>
-<span class="cm"> * quickly accessed by following pointers from struct pid.</span>
-<span class="cm"> *</span>
-<span class="cm"> * Storing pid_t values in the kernel and referring to them later has a</span>
-<span class="cm"> * problem.  The process originally with that pid may have exited and the</span>
-<span class="cm"> * pid allocator wrapped, and another process could have come along</span>
-<span class="cm"> * and been assigned that pid.</span>
-<span class="cm"> *</span>
-<span class="cm"> * Referring to user space processes by holding a reference to struct</span>
-<span class="cm"> * task_struct has a problem.  When the user space process exits</span>
-<span class="cm"> * the now useless task_struct is still kept.  A task_struct plus a</span>
-<span class="cm"> * stack consumes around 10K of low kernel memory.  More precisely</span>
-<span class="cm"> * this is THREAD_SIZE + sizeof(struct task_struct).  By comparison</span>
-<span class="cm"> * a struct pid is about 64 bytes.</span>
-<span class="cm"> *</span>
-<span class="cm"> * Holding a reference to struct pid solves both of these problems.</span>
-<span class="cm"> * It is small so holding a reference does not consume a lot of</span>
-<span class="cm"> * resources, and since a new struct pid is allocated when the numeric pid</span>
-<span class="cm"> * value is reused (when pids wrap around) we don&#39;t mistakenly refer to new</span>
-<span class="cm"> * processes.</span>
-<span class="cm"> */</span><span class="w"></span>
-<span class="k">struct</span><span class="w"> </span><span class="nc">pid</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Reference counter.</span>
-<span class="w">    </span><span class="n">refcount_t</span><span class="w"> </span><span class="n">count</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// The number of upids.</span>
-<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Lists of tasks that use this pid.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">hlist_head</span><span class="w"> </span><span class="n">tasks</span><span class="p">[</span><span class="n">PIDTYPE_MAX</span><span class="p">];</span><span class="w"></span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">hlist_head</span><span class="w"> </span><span class="n">inodes</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">upid</span><span class="w"> </span><span class="n">numbers</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"></span>
-<span class="p">};</span><span class="w"></span>
-</code></pre></div>
-
-
-
-</details>
-
-<h2>Address space</h2>
-<p>A process provides a program an illusion that
-it has exclusive use of the whole memory address space in the system
-using virtual memory abstraction.</p>
-<p>Physical memory is organized as an array of bytes and
-it's partitioned into fixed-size blocks
-(usually 4KB depending on CPU architecture) called page frames.
-A virtual page can be:</p>
-<ul>
-<li>cached in DRAM — backed by a page frame, i.e.,
-  4KB of data is already loaded to physical memory from disk</li>
-<li>uncached in DRAM — doesn't occupy physical memory yet,
-  but is already associated with a 4KB part of a file on disk.
-  Once some virtual address within this virtual page is accessed by the CPU
-  causing a page fault exception (DRAM cache miss),
-  the 4KB of data will be loaded from disk to memory.</li>
-<li>unallocated — NULL, doesn't point to physical memory or to disk</li>
-</ul>
-<p>This mapping is stored in a data structure called page table.
-A memory management unit (MMU) relies on page tables
-to translate virtual addresses to physical addresses.
-Here is how a process's virtual address space could approximately look.</p>
-<div class="highlight"><pre><span></span><code><span class="go"> _________________________</span>
-<span class="go">| page tables,            |</span>
-<span class="go">| task and mm structs     |</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| kernel stack            | ⬇️</span>
-<span class="go">|-------------------------| rsp (stack pointer in kernel mode)</span>
-<span class="go">| thread info struct      |</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| physical memory         |</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| kernel code &amp; data      |</span>
-<span class="go">|_________________________| top part is reserved for the kernel</span>
-<span class="go">| arg, env                |</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| stack for main thread   | ⬇️</span>
-<span class="go">|-------------------------| rsp (stack pointer in user mode)</span>
-<span class="go">| ...                     |</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| stack for thread 3      | ⬇️</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| stack for thread 2      | ⬇️</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| stack for thread 1      | ⬇️</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| shared libraries        |</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| ...                     |</span>
-<span class="go">|-------------------------| brk (top of the heap)</span>
-<span class="go">| heap                    | ⬆️</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| uninitialized data .bss |</span>
-<span class="go">|-------------------------| vm_end</span>
-<span class="go">| initialized data .data  |</span>
-<span class="go">|-------------------------| vm_start</span>
-<span class="go">| code .text              | thread 3 executing</span>
-<span class="go">|                         | main thread executing</span>
-<span class="go">|                         | thread 1 executing</span>
-<span class="go">|                         | thread 2 executing</span>
-<span class="go">|                         |</span>
-<span class="go">|-------------------------| 0x400000</span>
-<span class="go">| ...                     |</span>
-<span class="go">|_________________________| 0</span>
-</code></pre></div>
-
-<p>The bottom part describes user space addresses of a process.
-The top part is a kernel virtual memory:</p>
-<ul>
-<li>process-specific structures such as page tables, task and mm structs,
-  kernel stack, thread info structure.</li>
-<li>physical memory part which is identical for each process.
-  Linux maps a set of virtual pages equal in size to DRAM
-  to the corresponding set of physical pages
-  to access any specific location in physical memory,
-  e.g., to access page tables.</li>
-<li>kernel code and data which is identical for each process</li>
-</ul>
-<p>Linux organizes the virtual memory as a collection of areas (segments)
-where an area is a chunk of related pages, e.g., code, data,
-heap, shared libraries, user stack segments.
-A process can create arbitrary number of areas using <code>mmap</code> function.</p>
-<p>The <code>vm_area_struct</code> structures keep track of virtual memory areas of a task.
-They can be reached via <code>task-&gt;mm-&gt;mm_mt</code> tree.
-The fields <code>vma.vm_start</code> and <code>vma.vm_end</code> point to the beginning and the end of an area.</p>
-<details>
-
-
-<div class="highlight"><pre><span></span><code><span class="c1">// See https://elixir.bootlin.com/linux/v6.1.8/source/include/linux/mm_types.h#L512.</span>
-
-<span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// A tree to look up vm_area_struct by user address.</span>
-<span class="w">        </span><span class="k">struct</span><span class="w"> </span><span class="nc">maple_tree</span><span class="w"> </span><span class="n">mm_mt</span><span class="p">;</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// Memory mapping.</span>
-<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">mmap_base</span><span class="p">;</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// Points to a page global directory,</span>
-<span class="w">        </span><span class="c1">// i.e., to the first entry of the level 1 page table.</span>
-<span class="w">        </span><span class="c1">// The physical address of PGD in use is stored in the cr3 control register.</span>
-<span class="w">        </span><span class="n">pgd_t</span><span class="w"> </span><span class="o">*</span><span class="n">pgd</span><span class="p">;</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// Addresses of text and data segments.</span>
-<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start_code</span><span class="p">,</span><span class="w"> </span><span class="n">end_code</span><span class="p">,</span><span class="w"> </span><span class="n">start_data</span><span class="p">,</span><span class="w"> </span><span class="n">end_data</span><span class="p">;</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// Addresses of heap and stack segments.</span>
-<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start_brk</span><span class="p">,</span><span class="w"> </span><span class="n">brk</span><span class="p">,</span><span class="w"> </span><span class="n">start_stack</span><span class="p">;</span><span class="w"></span>
-<span class="w">        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">arg_start</span><span class="p">,</span><span class="w"> </span><span class="n">arg_end</span><span class="p">,</span><span class="w"> </span><span class="n">env_start</span><span class="p">,</span><span class="w"> </span><span class="n">env_end</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-
-<span class="cm">/*</span>
-<span class="cm"> * This struct describes a virtual memory area. There is one of these</span>
-<span class="cm"> * per VM-area/task. A VM area is any part of the process virtual memory</span>
-<span class="cm"> * space that has a special rule for the page-fault handlers (ie a shared</span>
-<span class="cm"> * library, the executable area).</span>
-<span class="cm"> */</span><span class="w"></span>
-<span class="k">struct</span><span class="w"> </span><span class="nc">vm_area_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Points to the beginning of the area within vm_mm.</span>
-<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_start</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Points to the end of the area within vm_mm.</span>
-<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_end</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Points to the address space this area belongs to.</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">mm_struct</span><span class="w"> </span><span class="o">*</span><span class="n">vm_mm</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Access permissions of this VMA, e.g., read/write.</span>
-<span class="w">    </span><span class="n">pgprot_t</span><span class="w"> </span><span class="n">vm_page_prot</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Describes whether the pages in the area are shared with other tasks</span>
-<span class="w">    </span><span class="c1">// or private to this task.</span>
-<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_flags</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// The offset (within vm_file) in PAGE_SIZE units (number of pages).</span>
-<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vm_pgoff</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// The file backing this mapping.</span>
-<span class="w">    </span><span class="c1">// It can be NULL, e.g., anonymous mapping (stack, heap, bss).</span>
-<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">file</span><span class="w"> </span><span class="o">*</span><span class="n">vm_file</span><span class="p">;</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-
-
-</details>
-
-<p>Linux can associate a virtual memory area with a contiguous section of a file,
-e.g., executable object file.
-That section (e.g., code segment) is divided into page-size chunks.
-When the CPU accesses a virtual address that is within some page's region,
-that virtual page (e.g., some content of an executable file)
-is loaded to the physical memory from disk.
-You can check out an example of a memory mapping in the context of
-<a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">CPU profiler</a>.</p>
-<p>An area can also be mapped (associated) to
-an anonymous file (it doesn't exist on disk).
-When the CPU accesses a virtual page within that area (e.g., heap or user stack),
-the kernel finds a free page in physical memory, zeroes it,
-and marks it as resident in the page table.
-If no free pages exist (run out of physical memory),
-then some dirty page gets swapped out to disk.</p>
-<p>A file can be mapped as the shared object into areas of different processes.
-The memory mappings are unique for each process, but the underlying physical pages are the same.
-So if one process writes to its area, the changes are visible to other processes,
-and the file is updated on disk as well.
-Shared libraries are mapped as shared objects by many processes thus saving physical memory pages.</p>
-<p>If a file is mapped as the private object,
-the writes to that area are not visible to other processes and
-the changes are not written to disk.
-For example, two processes mapped a private object into their areas of virtual memories.
-The same physical memory pages will be used as long as both processes only read data from those areas.
-Once a process writes to its area, a new copy of pages is created in physical memory.
-This copy-on-write allows to save memory, e.g., multiple processes share .text segment which is never modified
-(recall 8 parca-agent light weight processes).</p>
-<hr>
-<p>To wrap up, I must say that I might have misunderstood some of the parts
-and posted inaccurate information, sorry about that.
-The Linux kernel is a complicated project 🐧,
-and I wouldn't be able to navigate it without books such as:</p>
-<ul>
-<li>Computer Systems, Randal E. Bryant, David R. O'Hallaron</li>
-<li>Understanding the Linux Kernel, Daniel P. Bovet, Marco Cesati</li>
-<li>The Linux Programming Interface: A Linux and UNIX System Programming Handbook, Michael Kerrisk</li>
-</ul><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+For example, it explained that a BPF program has to use helpers because it can't access arbitrary memory (outside of BPF) and can't call …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/architecture.html">architecture </a>
@@ -412,11 +917,9 @@ and I wouldn't be able to navigate it without books such as:</p>
 
 
 
-<p><a href="https://marselester.com/linux-process.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/linux-process.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/linux-process.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 
@@ -460,12 +963,12 @@ though they were not very helpful.</p>
 <span class="go">{PID:15958 UserStackID:132 KernelStackID:114} seen 1 times</span>
 </code></pre></div>
 
-<p>Let's try to show more useful information …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+<p>Let's try to show more useful information …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/bpf.html">bpf </a>
     <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
 </p>
 
 
@@ -488,12 +991,13 @@ using Parca and also peek under the hood of its BPF agent.
 You can find the results of my experiments in
 <a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
 <h2>Ad hoc profiling</h2>
-<p>I was looking for a way to profile Go programs …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+<p>I was looking for a way to profile Go programs …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/bpf.html">bpf </a>
     <a href="https://marselester.com/tag/golang.html">golang </a>
     <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
 </p>
 
 
@@ -1290,6 +1794,7 @@ settings/
             <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
             <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
             <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
             <li><a href="https://marselester.com/category/python.html">Python</a></li>
    
         </ul>
