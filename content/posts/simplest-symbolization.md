@@ -72,6 +72,9 @@ start=0x7ffc69d62000 limit=0x7ffc69d64000 offset=0x0 [vdso]
 start=0xffffffffff600000 limit=0xffffffffff601000 offset=0x0 [vsyscall]
 
 Waiting for stack traces for 10s...
+{PID:14548 UserStackID:535 KernelStackID:-14} seen 138 times
+	535 [401126]
+...
 ```
 
 After ten seconds the profiler will terminate leaving us with `cpu.pprof` file.
@@ -781,6 +784,12 @@ It means that `bpf_get_stackid` we used in
 collected values stored in `rip` register,
 i.e., memory addresses of machine instructions.
 
+If we compiled the program with frame pointers,
+`bpf_get_stackid` would have additionally unwound a stack which
+could look like `[401126, ..., 40115a]` (fibNaive, ..., main)
+instead of `[401126]` when frame pointers are disabled (only `rip` value is stored),
+see [Javier's explanation](https://github.com/parca-dev/parca-agent/pull/1489#issuecomment-1488182745).
+
 ## PC to symbol address
 
 Since we have sorted symbol addresses from `.symtab`,
@@ -842,9 +851,7 @@ In reality symbolization is much more complicated.
 Most likely you would have to resolve symbols in shared libraries,
 and also deal with things like:
 
-- Frame pointer or DWARF's Call Frame Information based stack walking, see
-  [Reducing Go Execution Tracer Overhead With Frame Pointer Unwinding](https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/) and
-  [DWARF-based Stack Walking Using eBPF](https://www.polarsignals.com/blog/posts/2022/11/29/profiling-without-frame-pointers/).
+- [DWARF-based Stack Walking Using eBPF](https://www.polarsignals.com/blog/posts/2022/11/29/profiling-without-frame-pointers/).
   Alas, frame pointers are disabled by default in gcc,
   but you can enable them with the `-fno-omit-frame-pointer` flag.
 - Looking for symbols formatted in DWARF
