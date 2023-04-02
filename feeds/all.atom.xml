@@ -1,5 +1,655 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/all.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2023-03-23T00:00:00+07:00</updated><entry><title>DIY CPU profiler: the simplest case of symbolization</title><link href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html" rel="alternate"></link><published>2023-03-23T00:00:00+07:00</published><updated>2023-03-23T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2023-03-23:/diy-cpu-profiler-the-simplest-case-of-symbolization.html</id><summary type="html">&lt;p&gt;In the &lt;a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"&gt;BPF maps to pprof&lt;/a&gt; post
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/all.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2023-04-02T00:00:00+07:00</updated><entry><title>DIY CPU profiler: position independent executable 🥧</title><link href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html" rel="alternate"></link><published>2023-04-02T00:00:00+07:00</published><updated>2023-04-02T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2023-04-02:/diy-cpu-profiler-position-independent-executable.html</id><summary type="html">&lt;p&gt;In the &lt;a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"&gt;simplest case of symbolization&lt;/a&gt;
+we used &lt;code&gt;-fno-pie -no-pie&lt;/code&gt; flags, so
+gcc wouldn't produce a position independent executable (PIE).
+It is produced by default for security measures such as
+address space layout randomization (ASLR).
+That means each time the program runs,
+its segments are loaded into different regions of …&lt;/p&gt;</summary><content type="html">&lt;p&gt;In the &lt;a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"&gt;simplest case of symbolization&lt;/a&gt;
+we used &lt;code&gt;-fno-pie -no-pie&lt;/code&gt; flags, so
+gcc wouldn't produce a position independent executable (PIE).
+It is produced by default for security measures such as
+address space layout randomization (ASLR).
+That means each time the program runs,
+its segments are loaded into different regions of virtual memory,
+but their relative positions stay the same.&lt;/p&gt;
+&lt;p&gt;Let's see what happens when those flags are omitted.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ gcc -Og -fcf-protection=none -o fib main.c&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./fib &amp;amp;&lt;/span&gt;
+&lt;span class="go"&gt;﹩ sudo go run ./cmd/profiler3 -pid=$(pidof fib)&lt;/span&gt;
+&lt;span class="go"&gt;/proc/19978/maps&lt;/span&gt;
+&lt;span class="go"&gt;start=0x555806f2c000 limit=0x555806f2d000 offset=0x1000 /vagrant/diy-parca-agent/fib&lt;/span&gt;
+&lt;span class="go"&gt;start=0x7f4e21595000 limit=0x7f4e2172a000 offset=0x28000 /usr/lib/x86_64-linux-gnu/libc.so.6&lt;/span&gt;
+&lt;span class="go"&gt;start=0x7f4e2179f000 limit=0x7f4e217c9000 offset=0x2000 /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2&lt;/span&gt;
+&lt;span class="go"&gt;start=0x7fffe4d9e000 limit=0x7fffe4da0000 offset=0x0 [vdso]&lt;/span&gt;
+&lt;span class="go"&gt;start=0xffffffffff600000 limit=0xffffffffff601000 offset=0x0 [vsyscall]&lt;/span&gt;
+
+&lt;span class="go"&gt;Waiting for stack traces for 10s...&lt;/span&gt;
+&lt;span class="go"&gt;{PID:19978 UserStackID:288 KernelStackID:-14} seen 254 times&lt;/span&gt;
+&lt;span class="go"&gt;    288 [555806f2c139]&lt;/span&gt;
+&lt;span class="go"&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The first thing I noticed when looking at samples is much higher addresses,
+e.g., we've just sampled &lt;code&gt;93836562055481&lt;/code&gt; address vs &lt;code&gt;4198694&lt;/code&gt; from
+the &lt;a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"&gt;previous post&lt;/a&gt;.
+The size of the mapping id 1 is still one page,
+i.e., 4096 bytes = memory_limit - memory_start.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ zcat cpu.pprof | protoc --decode perftools.profiles.Profile ./pprof/proto/profile.proto&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;details&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;sample_type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;unit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;75&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;26&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;48&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;6&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;79&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;9&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;11&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;99&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;12&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;23&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;13&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;9&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;87&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;203&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;61&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;254&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;14&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;14&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;15&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;15&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;sample&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;location_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;14&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;value&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;mapping&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_start&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055168&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562059264&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;file_offset&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4096&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;mapping&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_start&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;139973543677952&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;139973545336832&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;file_offset&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;163840&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;mapping&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_start&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;139973545816064&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;139973545988096&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;file_offset&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;8192&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;mapping&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_start&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;140737032871936&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;140737032880128&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;6&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;mapping&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_start&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;18446744073699065856&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;18446744073699069952&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055526&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055495&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055506&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055494&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055499&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;6&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055487&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055481&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055531&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;9&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055523&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055511&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;11&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055493&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;12&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055518&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;13&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055492&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;14&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055502&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;15&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055530&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;samples&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;count&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/vagrant/diy-parca-agent/fib&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/usr/lib/x86_64-linux-gnu/libc.so.6&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;[vdso]&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;[vsyscall]&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;cpu&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;string_table&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;nanoseconds&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;time_nanos&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1680393594260736123&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;duration_nanos&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;10000000000&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;period_type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;unit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;9&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;period&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;10000000&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+
+&lt;/details&gt;
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;mapping&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_start&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055168&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;# 4198400 before&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;memory_limit&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562059264&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;# 4202496 before&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;file_offset&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4096&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="n"&gt;location&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;mapping_id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;93836562055481&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="c1"&gt;# 4198694 before&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The second thing is a mismatch between
+where the segment should be loaded &lt;code&gt;VirtAddr=0x0000000000001000&lt;/code&gt;
+and where it was actually loaded &lt;code&gt;memory_start: 93836562055168&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ readelf --segments --wide fib&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;details&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Elf file type is DYN (Position-Independent Executable file)&lt;/span&gt;
+&lt;span class="go"&gt;Entry point 0x1050&lt;/span&gt;
+&lt;span class="go"&gt;There are 13 program headers, starting at offset 64&lt;/span&gt;
+
+&lt;span class="go"&gt;Program Headers:&lt;/span&gt;
+&lt;span class="go"&gt;  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align&lt;/span&gt;
+&lt;span class="go"&gt;  PHDR           0x000040 0x0000000000000040 0x0000000000000040 0x0002d8 0x0002d8 R   0x8&lt;/span&gt;
+&lt;span class="go"&gt;  INTERP         0x000318 0x0000000000000318 0x0000000000000318 0x00001c 0x00001c R   0x1&lt;/span&gt;
+&lt;span class="go"&gt;      [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]&lt;/span&gt;
+&lt;span class="go"&gt;  LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x000638 0x000638 R   0x1000&lt;/span&gt;
+&lt;span class="go"&gt;  LOAD           0x001000 0x0000000000001000 0x0000000000001000 0x0001b1 0x0001b1 R E 0x1000&lt;/span&gt;
+&lt;span class="go"&gt;  LOAD           0x002000 0x0000000000002000 0x0000000000002000 0x00010c 0x00010c R   0x1000&lt;/span&gt;
+&lt;span class="go"&gt;  LOAD           0x002db8 0x0000000000003db8 0x0000000000003db8 0x000258 0x000260 RW  0x1000&lt;/span&gt;
+&lt;span class="go"&gt;  DYNAMIC        0x002dc8 0x0000000000003dc8 0x0000000000003dc8 0x0001f0 0x0001f0 RW  0x8&lt;/span&gt;
+&lt;span class="go"&gt;  NOTE           0x000338 0x0000000000000338 0x0000000000000338 0x000020 0x000020 R   0x8&lt;/span&gt;
+&lt;span class="go"&gt;  NOTE           0x000358 0x0000000000000358 0x0000000000000358 0x000044 0x000044 R   0x4&lt;/span&gt;
+&lt;span class="go"&gt;  GNU_PROPERTY   0x000338 0x0000000000000338 0x0000000000000338 0x000020 0x000020 R   0x8&lt;/span&gt;
+&lt;span class="go"&gt;  GNU_EH_FRAME   0x002020 0x0000000000002020 0x0000000000002020 0x000034 0x000034 R   0x4&lt;/span&gt;
+&lt;span class="go"&gt;  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x10&lt;/span&gt;
+&lt;span class="go"&gt;  GNU_RELRO      0x002db8 0x0000000000003db8 0x0000000000003db8 0x000248 0x000248 R   0x1&lt;/span&gt;
+
+&lt;span class="go"&gt; Section to Segment mapping:&lt;/span&gt;
+&lt;span class="go"&gt;  Segment Sections...&lt;/span&gt;
+&lt;span class="go"&gt;   00&lt;/span&gt;
+&lt;span class="go"&gt;   01     .interp&lt;/span&gt;
+&lt;span class="go"&gt;   02     .interp .note.gnu.property .note.gnu.build-id .note.ABI-tag .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rela.dyn .rela.plt&lt;/span&gt;
+&lt;span class="go"&gt;   03     .init .plt .plt.got .text .fini&lt;/span&gt;
+&lt;span class="go"&gt;   04     .rodata .eh_frame_hdr .eh_frame&lt;/span&gt;
+&lt;span class="go"&gt;   05     .init_array .fini_array .dynamic .got .data .bss&lt;/span&gt;
+&lt;span class="go"&gt;   06     .dynamic&lt;/span&gt;
+&lt;span class="go"&gt;   07     .note.gnu.property&lt;/span&gt;
+&lt;span class="go"&gt;   08     .note.gnu.build-id .note.ABI-tag&lt;/span&gt;
+&lt;span class="go"&gt;   09     .note.gnu.property&lt;/span&gt;
+&lt;span class="go"&gt;   10     .eh_frame_hdr&lt;/span&gt;
+&lt;span class="go"&gt;   11&lt;/span&gt;
+&lt;span class="go"&gt;   12     .init_array .fini_array .dynamic .got&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+
+&lt;/details&gt;
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Program Headers:&lt;/span&gt;
+&lt;span class="go"&gt;  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align&lt;/span&gt;
+&lt;span class="go"&gt;  ...&lt;/span&gt;
+&lt;span class="go"&gt;  LOAD           0x001000 0x0000000000001000 0x0000000000001000 0x0001b1 0x0001b1 R E 0x1000&lt;/span&gt;
+&lt;span class="go"&gt;  ...&lt;/span&gt;
+
+&lt;span class="go"&gt; Section to Segment mapping:&lt;/span&gt;
+&lt;span class="go"&gt;  Segment Sections...&lt;/span&gt;
+&lt;span class="go"&gt;   ...&lt;/span&gt;
+&lt;span class="go"&gt;   03     .init .plt .plt.got .text .fini&lt;/span&gt;
+&lt;span class="go"&gt;   ...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The third thing is a difference in the segment's sections: the &lt;code&gt;.plt.got&lt;/code&gt; section was added.&lt;/p&gt;
+&lt;h2&gt;How PIE affects symbolization&lt;/h2&gt;
+&lt;p&gt;Clearly none of the sampled addresses matches &lt;code&gt;fibNaive&lt;/code&gt; function
+when we look at the symbol table.
+The function's address &lt;code&gt;0x1139&lt;/code&gt; is very far from
+the beginning of the loaded segment &lt;code&gt;0x555806f2c000&lt;/code&gt;
+(that's hex of &lt;code&gt;memory_start: 93836562055168&lt;/code&gt;).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ readelf --symbols fib&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;details&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Symbol table &amp;#39;.dynsym&amp;#39; contains 7 entries:&lt;/span&gt;
+&lt;span class="go"&gt;   Num:    Value          Size Type    Bind   Vis      Ndx Name&lt;/span&gt;
+&lt;span class="go"&gt;     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND&lt;/span&gt;
+&lt;span class="go"&gt;     1: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND _[...]@GLIBC_2.34 (2)&lt;/span&gt;
+&lt;span class="go"&gt;     2: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_deregisterT[...]&lt;/span&gt;
+&lt;span class="go"&gt;     3: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__&lt;/span&gt;
+&lt;span class="go"&gt;     4: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND [...]@GLIBC_2.3.4 (3)&lt;/span&gt;
+&lt;span class="go"&gt;     5: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_registerTMC[...]&lt;/span&gt;
+&lt;span class="go"&gt;     6: 0000000000000000     0 FUNC    WEAK   DEFAULT  UND [...]@GLIBC_2.2.5 (4)&lt;/span&gt;
+
+&lt;span class="go"&gt;Symbol table &amp;#39;.symtab&amp;#39; contains 37 entries:&lt;/span&gt;
+&lt;span class="go"&gt;   Num:    Value          Size Type    Bind   Vis      Ndx Name&lt;/span&gt;
+&lt;span class="go"&gt;     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND&lt;/span&gt;
+&lt;span class="go"&gt;     1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS Scrt1.o&lt;/span&gt;
+&lt;span class="go"&gt;     2: 000000000000037c    32 OBJECT  LOCAL  DEFAULT    4 __abi_tag&lt;/span&gt;
+&lt;span class="go"&gt;     3: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c&lt;/span&gt;
+&lt;span class="go"&gt;     4: 0000000000001080     0 FUNC    LOCAL  DEFAULT   15 deregister_tm_clones&lt;/span&gt;
+&lt;span class="go"&gt;     5: 00000000000010b0     0 FUNC    LOCAL  DEFAULT   15 register_tm_clones&lt;/span&gt;
+&lt;span class="go"&gt;     6: 00000000000010f0     0 FUNC    LOCAL  DEFAULT   15 __do_global_dtors_aux&lt;/span&gt;
+&lt;span class="go"&gt;     7: 0000000000004010     1 OBJECT  LOCAL  DEFAULT   25 completed.0&lt;/span&gt;
+&lt;span class="go"&gt;     8: 0000000000003dc0     0 OBJECT  LOCAL  DEFAULT   21 __do_global_dtor[...]&lt;/span&gt;
+&lt;span class="go"&gt;     9: 0000000000001130     0 FUNC    LOCAL  DEFAULT   15 frame_dummy&lt;/span&gt;
+&lt;span class="go"&gt;    10: 0000000000003db8     0 OBJECT  LOCAL  DEFAULT   20 __frame_dummy_in[...]&lt;/span&gt;
+&lt;span class="go"&gt;    11: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS main.c&lt;/span&gt;
+&lt;span class="go"&gt;    12: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c&lt;/span&gt;
+&lt;span class="go"&gt;    13: 0000000000002108     0 OBJECT  LOCAL  DEFAULT   19 __FRAME_END__&lt;/span&gt;
+&lt;span class="go"&gt;    14: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS&lt;/span&gt;
+&lt;span class="go"&gt;    15: 0000000000003dc8     0 OBJECT  LOCAL  DEFAULT   22 _DYNAMIC&lt;/span&gt;
+&lt;span class="go"&gt;    16: 0000000000002020     0 NOTYPE  LOCAL  DEFAULT   18 __GNU_EH_FRAME_HDR&lt;/span&gt;
+&lt;span class="go"&gt;    17: 0000000000003fb8     0 OBJECT  LOCAL  DEFAULT   23 _GLOBAL_OFFSET_TABLE_&lt;/span&gt;
+&lt;span class="go"&gt;    18: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __libc_start_mai[...]&lt;/span&gt;
+&lt;span class="go"&gt;    19: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_deregisterT[...]&lt;/span&gt;
+&lt;span class="go"&gt;    20: 0000000000004000     0 NOTYPE  WEAK   DEFAULT   24 data_start&lt;/span&gt;
+&lt;span class="go"&gt;    21: 0000000000004010     0 NOTYPE  GLOBAL DEFAULT   24 _edata&lt;/span&gt;
+&lt;span class="go"&gt;    22: 00000000000011a4     0 FUNC    GLOBAL HIDDEN    16 _fini&lt;/span&gt;
+&lt;span class="go"&gt;    23: 0000000000004000     0 NOTYPE  GLOBAL DEFAULT   24 __data_start&lt;/span&gt;
+&lt;span class="go"&gt;    24: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__&lt;/span&gt;
+&lt;span class="go"&gt;    25: 0000000000004008     0 OBJECT  GLOBAL HIDDEN    24 __dso_handle&lt;/span&gt;
+&lt;span class="go"&gt;    26: 0000000000002000     4 OBJECT  GLOBAL DEFAULT   17 _IO_stdin_used&lt;/span&gt;
+&lt;span class="go"&gt;    27: 0000000000004018     0 NOTYPE  GLOBAL DEFAULT   25 _end&lt;/span&gt;
+&lt;span class="go"&gt;    28: 0000000000001050    38 FUNC    GLOBAL DEFAULT   15 _start&lt;/span&gt;
+&lt;span class="go"&gt;    29: 0000000000004010     0 NOTYPE  GLOBAL DEFAULT   25 __bss_start&lt;/span&gt;
+&lt;span class="go"&gt;    30: 000000000000116d    54 FUNC    GLOBAL DEFAULT   15 main&lt;/span&gt;
+&lt;span class="go"&gt;    31: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __printf_chk@GLI[...]&lt;/span&gt;
+&lt;span class="go"&gt;    32: 0000000000004010     0 OBJECT  GLOBAL HIDDEN    24 __TMC_END__&lt;/span&gt;
+&lt;span class="go"&gt;    33: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_registerTMC[...]&lt;/span&gt;
+&lt;span class="go"&gt;    34: 0000000000000000     0 FUNC    WEAK   DEFAULT  UND __cxa_finalize@G[...]&lt;/span&gt;
+&lt;span class="go"&gt;    35: 0000000000001000     0 FUNC    GLOBAL HIDDEN    12 _init&lt;/span&gt;
+&lt;span class="go"&gt;    36: 0000000000001139    52 FUNC    GLOBAL DEFAULT   15 fibNaive&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+
+&lt;/details&gt;
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Symbol table &amp;#39;.symtab&amp;#39; contains 37 entries:&lt;/span&gt;
+&lt;span class="go"&gt;   Num:    Value          Size Type    Bind   Vis      Ndx Name&lt;/span&gt;
+&lt;span class="go"&gt;    ...&lt;/span&gt;
+&lt;span class="go"&gt;    36: 0000000000001139    52 FUNC    GLOBAL DEFAULT   15 fibNaive&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let's try to figure out where sections are mapped in the virtual address space.
+For that, we need to know the distance from the segment to each section,
+i.e., the section's offset minus the segment's offset:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;0 bytes from &lt;code&gt;.init&lt;/code&gt; section = 0x1000 - 0x1000&lt;/li&gt;
+&lt;li&gt;0x20 bytes from &lt;code&gt;.plt&lt;/code&gt; section = 0x1020 - 0x1000&lt;/li&gt;
+&lt;li&gt;0x40 bytes from &lt;code&gt;.plt.got&lt;/code&gt; section = 0x1040 - 0x1000&lt;/li&gt;
+&lt;li&gt;0x50 bytes from &lt;code&gt;.text&lt;/code&gt; section = 0x1050 - 0x1000&lt;/li&gt;
+&lt;li&gt;0x1a4 bytes from &lt;code&gt;.fini&lt;/code&gt; section = 0x11a4 - 0x1000&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ readelf --sections --wide fib&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;details&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;There are 30 section headers, starting at offset 0x36b8:&lt;/span&gt;
+
+&lt;span class="go"&gt;Section Headers:&lt;/span&gt;
+&lt;span class="go"&gt;  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al&lt;/span&gt;
+&lt;span class="go"&gt;  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0&lt;/span&gt;
+&lt;span class="go"&gt;  [ 1] .interp           PROGBITS        0000000000000318 000318 00001c 00   A  0   0  1&lt;/span&gt;
+&lt;span class="go"&gt;  [ 2] .note.gnu.property NOTE            0000000000000338 000338 000020 00   A  0   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [ 3] .note.gnu.build-id NOTE            0000000000000358 000358 000024 00   A  0   0  4&lt;/span&gt;
+&lt;span class="go"&gt;  [ 4] .note.ABI-tag     NOTE            000000000000037c 00037c 000020 00   A  0   0  4&lt;/span&gt;
+&lt;span class="go"&gt;  [ 5] .gnu.hash         GNU_HASH        00000000000003a0 0003a0 000024 00   A  6   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [ 6] .dynsym           DYNSYM          00000000000003c8 0003c8 0000a8 18   A  7   1  8&lt;/span&gt;
+&lt;span class="go"&gt;  [ 7] .dynstr           STRTAB          0000000000000470 000470 0000a1 00   A  0   0  1&lt;/span&gt;
+&lt;span class="go"&gt;  [ 8] .gnu.version      VERSYM          0000000000000512 000512 00000e 02   A  6   0  2&lt;/span&gt;
+&lt;span class="go"&gt;  [ 9] .gnu.version_r    VERNEED         0000000000000520 000520 000040 00   A  7   1  8&lt;/span&gt;
+&lt;span class="go"&gt;  [10] .rela.dyn         RELA            0000000000000560 000560 0000c0 18   A  6   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [11] .rela.plt         RELA            0000000000000620 000620 000018 18  AI  6  23  8&lt;/span&gt;
+&lt;span class="go"&gt;  [12] .init             PROGBITS        0000000000001000 001000 00001b 00  AX  0   0  4&lt;/span&gt;
+&lt;span class="go"&gt;  [13] .plt              PROGBITS        0000000000001020 001020 000020 10  AX  0   0 16&lt;/span&gt;
+&lt;span class="go"&gt;  [14] .plt.got          PROGBITS        0000000000001040 001040 000008 08  AX  0   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [15] .text             PROGBITS        0000000000001050 001050 000153 00  AX  0   0 16&lt;/span&gt;
+&lt;span class="go"&gt;  [16] .fini             PROGBITS        00000000000011a4 0011a4 00000d 00  AX  0   0  4&lt;/span&gt;
+&lt;span class="go"&gt;  [17] .rodata           PROGBITS        0000000000002000 002000 00001f 00   A  0   0  4&lt;/span&gt;
+&lt;span class="go"&gt;  [18] .eh_frame_hdr     PROGBITS        0000000000002020 002020 000034 00   A  0   0  4&lt;/span&gt;
+&lt;span class="go"&gt;  [19] .eh_frame         PROGBITS        0000000000002058 002058 0000b4 00   A  0   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [20] .init_array       INIT_ARRAY      0000000000003db8 002db8 000008 08  WA  0   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [21] .fini_array       FINI_ARRAY      0000000000003dc0 002dc0 000008 08  WA  0   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [22] .dynamic          DYNAMIC         0000000000003dc8 002dc8 0001f0 10  WA  7   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [23] .got              PROGBITS        0000000000003fb8 002fb8 000048 08  WA  0   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [24] .data             PROGBITS        0000000000004000 003000 000010 00  WA  0   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [25] .bss              NOBITS          0000000000004010 003010 000008 00  WA  0   0  1&lt;/span&gt;
+&lt;span class="go"&gt;  [26] .comment          PROGBITS        0000000000000000 003010 00002b 01  MS  0   0  1&lt;/span&gt;
+&lt;span class="go"&gt;  [27] .symtab           SYMTAB          0000000000000000 003040 000378 18     28  18  8&lt;/span&gt;
+&lt;span class="go"&gt;  [28] .strtab           STRTAB          0000000000000000 0033b8 0001eb 00      0   0  1&lt;/span&gt;
+&lt;span class="go"&gt;  [29] .shstrtab         STRTAB          0000000000000000 0035a3 000111 00      0   0  1&lt;/span&gt;
+&lt;span class="go"&gt;Key to Flags:&lt;/span&gt;
+&lt;span class="go"&gt;  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),&lt;/span&gt;
+&lt;span class="go"&gt;  L (link order), O (extra OS processing required), G (group), T (TLS),&lt;/span&gt;
+&lt;span class="go"&gt;  C (compressed), x (unknown), o (OS specific), E (exclude),&lt;/span&gt;
+&lt;span class="go"&gt;  D (mbind), l (large), p (processor specific)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+
+&lt;/details&gt;
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Section Headers:&lt;/span&gt;
+&lt;span class="go"&gt;  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al&lt;/span&gt;
+&lt;span class="go"&gt;  ...&lt;/span&gt;
+&lt;span class="go"&gt;  [12] .init             PROGBITS        0000000000001000 001000 00001b 00  AX  0   0  4&lt;/span&gt;
+&lt;span class="go"&gt;  [13] .plt              PROGBITS        0000000000001020 001020 000020 10  AX  0   0 16&lt;/span&gt;
+&lt;span class="go"&gt;  [14] .plt.got          PROGBITS        0000000000001040 001040 000008 08  AX  0   0  8&lt;/span&gt;
+&lt;span class="go"&gt;  [15] .text             PROGBITS        0000000000001050 001050 000153 00  AX  0   0 16&lt;/span&gt;
+&lt;span class="go"&gt;  [16] .fini             PROGBITS        00000000000011a4 0011a4 00000d 00  AX  0   0  4&lt;/span&gt;
+&lt;span class="go"&gt;  ...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then we can add those distances to &lt;code&gt;memory_start: 0x555806f2c000&lt;/code&gt;
+to get an idea how the process's virtual address space looked like
+when the executable file was mapped.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Executable object file           Virtual address space&lt;/span&gt;
+&lt;span class="go"&gt; __________                       __________&lt;/span&gt;
+&lt;span class="go"&gt;|          | 0x3e37              |          | N&lt;/span&gt;
+&lt;span class="go"&gt;|          |                     |          |&lt;/span&gt;
+&lt;span class="go"&gt;| ...      | 0x2000              | ...      | 0x555806f2d000&lt;/span&gt;
+&lt;span class="go"&gt;|----------| -----------&amp;gt; vm_end |----------|&lt;/span&gt;
+&lt;span class="go"&gt;| .fini    | 0x11a4              | .fini    | 0x555806f2c1a4&lt;/span&gt;
+&lt;span class="go"&gt;| .text    | 0x1050              | .text    | 0x555806f2c050&lt;/span&gt;
+&lt;span class="go"&gt;| .plt.got | 0x1040              | .plt.got | 0x555806f2c040&lt;/span&gt;
+&lt;span class="go"&gt;| .plt     | 0x1020              | .plt     | 0x555806f2c020&lt;/span&gt;
+&lt;span class="go"&gt;| .init    | 0x1000              | .init    | 0x555806f2c000&lt;/span&gt;
+&lt;span class="go"&gt;|----------| ---------&amp;gt; vm_start |----------|&lt;/span&gt;
+&lt;span class="go"&gt;| ...      |                     | ...      |&lt;/span&gt;
+&lt;span class="go"&gt;|__________| 0                   |__________| 0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The sampled addresses should be in the &lt;code&gt;.text&lt;/code&gt; section
+which starts at &lt;code&gt;0x1050&lt;/code&gt; offset within the file.
+Since the segment itself starts at &lt;code&gt;0x1000&lt;/code&gt; offset,
+the distance between them is 0x50 bytes = 0x1050 - 0x1000.
+Therefore, in virtual address space the &lt;code&gt;.text&lt;/code&gt; section starts at
+&lt;code&gt;0x555806f2c050&lt;/code&gt; address = memory_start + distance = 0x555806f2c000 + 0x50.&lt;/p&gt;
+&lt;p&gt;Our sampled address &lt;code&gt;0x555806f2c139&lt;/code&gt; (that's &lt;code&gt;address: 93836562055481&lt;/code&gt; in hexadecimal form)
+can be adjusted to the ELF file's address range as follows:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Find the distance between the sampled memory address and
+  beginning of the loaded segment:
+  313 bytes = 0x555806f2c139 - 0x555806f2c000.&lt;/li&gt;
+&lt;li&gt;Add the segment's offset to the distance
+  to find the address used in the &lt;code&gt;.symtab&lt;/code&gt; section:
+  0x1139 = 0x1000 + 313.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The &lt;code&gt;0x1139&lt;/code&gt; address belongs to &lt;code&gt;fibNaive&lt;/code&gt; function as we've seen
+in the symbol table.
+That's nice! 🙌&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;// Distance between the sampled memory address and&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// beginning of the loaded segment (vm_start memory address).&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;d&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;sampledAddr&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;mappingMemoryStart&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// Sampled address adjusted to .symtab address range.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;adjustedAddr&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;mappingFileOffset&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;d&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here are all the addresses from &lt;code&gt;cpu.pprof&lt;/code&gt; file sorted in ascending order,
+their distances from &lt;code&gt;memory_start: 0x555806f2c000&lt;/code&gt;,
+and addresses adjusted to the file's range.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;sampled address&lt;/th&gt;
+&lt;th&gt;distance&lt;/th&gt;
+&lt;th&gt;adjusted address&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c139&lt;/td&gt;
+&lt;td&gt;313 bytes&lt;/td&gt;
+&lt;td&gt;0x1139&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c13f&lt;/td&gt;
+&lt;td&gt;319 bytes&lt;/td&gt;
+&lt;td&gt;0x113f&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c144&lt;/td&gt;
+&lt;td&gt;324 bytes&lt;/td&gt;
+&lt;td&gt;0x1144&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c145&lt;/td&gt;
+&lt;td&gt;325 bytes&lt;/td&gt;
+&lt;td&gt;0x1145&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c146&lt;/td&gt;
+&lt;td&gt;326 bytes&lt;/td&gt;
+&lt;td&gt;0x1146&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c147&lt;/td&gt;
+&lt;td&gt;327 bytes&lt;/td&gt;
+&lt;td&gt;0x1147&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c14b&lt;/td&gt;
+&lt;td&gt;331 bytes&lt;/td&gt;
+&lt;td&gt;0x114b&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c14e&lt;/td&gt;
+&lt;td&gt;334 bytes&lt;/td&gt;
+&lt;td&gt;0x114e&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c152&lt;/td&gt;
+&lt;td&gt;338 bytes&lt;/td&gt;
+&lt;td&gt;0x1152&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c157&lt;/td&gt;
+&lt;td&gt;343 bytes&lt;/td&gt;
+&lt;td&gt;0x1157&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c15e&lt;/td&gt;
+&lt;td&gt;350 bytes&lt;/td&gt;
+&lt;td&gt;0x115e&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c163&lt;/td&gt;
+&lt;td&gt;355 bytes&lt;/td&gt;
+&lt;td&gt;0x1163&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c166&lt;/td&gt;
+&lt;td&gt;358 bytes&lt;/td&gt;
+&lt;td&gt;0x1166&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c16a&lt;/td&gt;
+&lt;td&gt;362 bytes&lt;/td&gt;
+&lt;td&gt;0x116a&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;0x555806f2c16b&lt;/td&gt;
+&lt;td&gt;363 bytes&lt;/td&gt;
+&lt;td&gt;0x116b&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Disassembling &lt;code&gt;fib&lt;/code&gt; program confirms that adjusted memory addresses
+correspond to instructions of &lt;code&gt;fibNaive&lt;/code&gt; function.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="x"&gt;﹩ objdump --disassemble=fibNaive fib&lt;/span&gt;
+&lt;span class="x"&gt;...&lt;/span&gt;
+&lt;span class="mh"&gt;0000000000001139&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nf"&gt;fibNaive&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;:&lt;/span&gt;
+&lt;span class="x"&gt;    1139:   48 83 ff 02             cmp    $0x2,%rdi&lt;/span&gt;
+&lt;span class="x"&gt;    113d:   7f 06                   jg     1145 &amp;lt;fibNaive+0xc&amp;gt;&lt;/span&gt;
+&lt;span class="x"&gt;    113f:   b8 01 00 00 00          mov    $0x1,%eax&lt;/span&gt;
+&lt;span class="x"&gt;    1144:   c3                      ret&lt;/span&gt;
+&lt;span class="x"&gt;    1145:   55                      push   %rbp&lt;/span&gt;
+&lt;span class="x"&gt;    1146:   53                      push   %rbx&lt;/span&gt;
+&lt;span class="x"&gt;    1147:   48 83 ec 08             sub    $0x8,%rsp&lt;/span&gt;
+&lt;span class="x"&gt;    114b:   48 89 fb                mov    %rdi,%rbx&lt;/span&gt;
+&lt;span class="x"&gt;    114e:   48 8d 7f fe             lea    -0x2(%rdi),%rdi&lt;/span&gt;
+&lt;span class="x"&gt;    1152:   e8 e2 ff ff ff          call   1139 &amp;lt;fibNaive&amp;gt;&lt;/span&gt;
+&lt;span class="x"&gt;    1157:   48 89 c5                mov    %rax,%rbp&lt;/span&gt;
+&lt;span class="x"&gt;    115a:   48 8d 7b ff             lea    -0x1(%rbx),%rdi&lt;/span&gt;
+&lt;span class="x"&gt;    115e:   e8 d6 ff ff ff          call   1139 &amp;lt;fibNaive&amp;gt;&lt;/span&gt;
+&lt;span class="x"&gt;    1163:   48 01 e8                add    %rbp,%rax&lt;/span&gt;
+&lt;span class="x"&gt;    1166:   48 83 c4 08             add    $0x8,%rsp&lt;/span&gt;
+&lt;span class="x"&gt;    116a:   5b                      pop    %rbx&lt;/span&gt;
+&lt;span class="x"&gt;    116b:   5d                      pop    %rbp&lt;/span&gt;
+&lt;span class="x"&gt;    116c:   c3                      ret&lt;/span&gt;
+&lt;span class="x"&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Based on these observations, I made a symbolization tool
+&lt;a href="https://github.com/marselester/diy-parca-agent/blob/main/cmd/addr2func/main.go"&gt;addr2func&lt;/a&gt;
+and proposed a change in Parca, see &lt;a href="https://github.com/parca-dev/parca/pull/2910"&gt;#2910&lt;/a&gt;.&lt;/p&gt;</content><category term="bpf"></category><category term="profiling"></category></entry><entry><title>DIY CPU profiler: the simplest case of symbolization</title><link href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html" rel="alternate"></link><published>2023-03-23T00:00:00+07:00</published><updated>2023-03-23T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2023-03-23:/diy-cpu-profiler-the-simplest-case-of-symbolization.html</id><summary type="html">&lt;p&gt;In the &lt;a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"&gt;BPF maps to pprof&lt;/a&gt; post
 we managed to collect CPU samples and store them in pprof format.
 Here I would like to explore the simplest case of symbolization
 and put shared libraries aside.&lt;/p&gt;
@@ -68,6 +718,9 @@ so &lt;code&gt;fibNaive&lt;/code&gt; function should dominate the profile.&lt;/p
 &lt;span class="go"&gt;start=0xffffffffff600000 limit=0xffffffffff601000 offset=0x0 [vsyscall]&lt;/span&gt;
 
 &lt;span class="go"&gt;Waiting for stack traces for 10s...&lt;/span&gt;
+&lt;span class="go"&gt;{PID:14548 UserStackID:535 KernelStackID:-14} seen 138 times&lt;/span&gt;
+&lt;span class="go"&gt;    535 [401126]&lt;/span&gt;
+&lt;span class="go"&gt;...&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;After ten seconds the profiler will terminate leaving us with &lt;code&gt;cpu.pprof&lt;/code&gt; file.
@@ -411,6 +1064,7 @@ Let's look at the file's segments and find the one mentioned in the sample.&lt;/
 &lt;span class="go"&gt;  Segment Sections...&lt;/span&gt;
 &lt;span class="go"&gt;   ...&lt;/span&gt;
 &lt;span class="go"&gt;   03     .init .plt .text .fini&lt;/span&gt;
+&lt;span class="go"&gt;   ...&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;As we can see the ELF program header describes
@@ -763,6 +1417,11 @@ correspond to instructions of &lt;code&gt;fibNaive&lt;/code&gt; function.&lt;/p&
 &lt;a href="https://github.com/marselester/diy-parca-agent/blob/main/cmd/profiler/bpf/parca-agent.bpf.c"&gt;profiler&lt;/a&gt;
 collected values stored in &lt;code&gt;rip&lt;/code&gt; register,
 i.e., memory addresses of machine instructions.&lt;/p&gt;
+&lt;p&gt;If we compiled the program with frame pointers,
+&lt;code&gt;bpf_get_stackid&lt;/code&gt; would have additionally unwound a stack which
+could look like &lt;code&gt;[401126, ..., 40115a]&lt;/code&gt; (fibNaive, ..., main)
+instead of &lt;code&gt;[401126]&lt;/code&gt; when frame pointers are disabled (only &lt;code&gt;rip&lt;/code&gt; value is stored),
+see &lt;a href="https://github.com/parca-dev/parca-agent/pull/1489#issuecomment-1488182745"&gt;Javier's explanation&lt;/a&gt;.&lt;/p&gt;
 &lt;h2&gt;PC to symbol address&lt;/h2&gt;
 &lt;p&gt;Since we have sorted symbol addresses from &lt;code&gt;.symtab&lt;/code&gt;,
 we can binary search them to find
@@ -819,9 +1478,7 @@ because binary search stops at &lt;code&gt;0x40115a&lt;/code&gt;.&lt;/p&gt;
 Most likely you would have to resolve symbols in shared libraries,
 and also deal with things like:&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;Frame pointer or DWARF's Call Frame Information based stack walking, see
-  &lt;a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/"&gt;Reducing Go Execution Tracer Overhead With Frame Pointer Unwinding&lt;/a&gt; and
-  &lt;a href="https://www.polarsignals.com/blog/posts/2022/11/29/profiling-without-frame-pointers/"&gt;DWARF-based Stack Walking Using eBPF&lt;/a&gt;.
+&lt;li&gt;&lt;a href="https://www.polarsignals.com/blog/posts/2022/11/29/profiling-without-frame-pointers/"&gt;DWARF-based Stack Walking Using eBPF&lt;/a&gt;.
   Alas, frame pointers are disabled by default in gcc,
   but you can enable them with the &lt;code&gt;-fno-omit-frame-pointer&lt;/code&gt; flag.&lt;/li&gt;
 &lt;li&gt;Looking for symbols formatted in DWARF
@@ -831,7 +1488,7 @@ and also deal with things like:&lt;/p&gt;
 &lt;/ul&gt;
 &lt;p&gt;When profiling JIT-compiled code you would have to
 look for symbols in &lt;code&gt;/tmp/perf-$PID.map&lt;/code&gt; file, see
-&lt;a href="https://www.polarsignals.com/blog/posts/2022/01/27/fantastic-symbols-and-where-to-find-them-part-2/"&gt;Fantastic Symbols and Where to Find Them - Part 2&lt;/a&gt;.&lt;/p&gt;</content><category term="profiling"></category></entry><entry><title>Linux process</title><link href="https://marselester.com/linux-process.html" rel="alternate"></link><published>2023-01-31T00:00:00+07:00</published><updated>2023-01-31T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2023-01-31:/linux-process.html</id><summary type="html">&lt;p&gt;Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
+&lt;a href="https://www.polarsignals.com/blog/posts/2022/01/27/fantastic-symbols-and-where-to-find-them-part-2/"&gt;Fantastic Symbols and Where to Find Them - Part 2&lt;/a&gt;.&lt;/p&gt;</content><category term="bpf"></category><category term="profiling"></category></entry><entry><title>Linux process</title><link href="https://marselester.com/linux-process.html" rel="alternate"></link><published>2023-01-31T00:00:00+07:00</published><updated>2023-01-31T00:00:00+07:00</updated><author><name>Marsel Mavletkulov</name></author><id>tag:marselester.com,2023-01-31:/linux-process.html</id><summary type="html">&lt;p&gt;Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
 BPF performance tools book aided me to navigate BPF C code.
 For example, it explained that a BPF program has to use helpers because it can't access arbitrary memory (outside of BPF) and can't call …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
 BPF performance tools book aided me to navigate BPF C code.

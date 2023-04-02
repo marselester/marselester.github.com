@@ -51,6 +51,701 @@
         
 
             <article>
+                <a href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html"><h3 class="article-title">DIY CPU profiler: position independent executable 🥧</h3></a>
+<h6 class="subheader" title="2023-04-02T00:00:00+07:00">Sun 02 April 2023
+</h6>
+
+
+<p>In the <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">simplest case of symbolization</a>
+we used <code>-fno-pie -no-pie</code> flags, so
+gcc wouldn't produce a position independent executable (PIE).
+It is produced by default for security measures such as
+address space layout randomization (ASLR).
+That means each time the program runs,
+its segments are loaded into different regions of virtual memory,
+but their relative positions stay the same.</p>
+<p>Let's see what happens when those flags are omitted.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ gcc -Og -fcf-protection=none -o fib main.c</span>
+<span class="go">﹩ ./fib &amp;</span>
+<span class="go">﹩ sudo go run ./cmd/profiler3 -pid=$(pidof fib)</span>
+<span class="go">/proc/19978/maps</span>
+<span class="go">start=0x555806f2c000 limit=0x555806f2d000 offset=0x1000 /vagrant/diy-parca-agent/fib</span>
+<span class="go">start=0x7f4e21595000 limit=0x7f4e2172a000 offset=0x28000 /usr/lib/x86_64-linux-gnu/libc.so.6</span>
+<span class="go">start=0x7f4e2179f000 limit=0x7f4e217c9000 offset=0x2000 /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span>
+<span class="go">start=0x7fffe4d9e000 limit=0x7fffe4da0000 offset=0x0 [vdso]</span>
+<span class="go">start=0xffffffffff600000 limit=0xffffffffff601000 offset=0x0 [vsyscall]</span>
+
+<span class="go">Waiting for stack traces for 10s...</span>
+<span class="go">{PID:19978 UserStackID:288 KernelStackID:-14} seen 254 times</span>
+<span class="go">    288 [555806f2c139]</span>
+<span class="go">...</span>
+</code></pre></div>
+
+<p>The first thing I noticed when looking at samples is much higher addresses,
+e.g., we've just sampled <code>93836562055481</code> address vs <code>4198694</code> from
+the <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">previous post</a>.
+The size of the mapping id 1 is still one page,
+i.e., 4096 bytes = memory_limit - memory_start.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ zcat cpu.pprof | protoc --decode perftools.profiles.Profile ./pprof/proto/profile.proto</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="n">sample_type</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">type</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">unit</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">75</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">26</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">48</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">79</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">99</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">23</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">87</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">203</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">61</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">254</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055168</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562059264</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">139973543677952</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">139973545336832</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">163840</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">139973545816064</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">139973545988096</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">140737032871936</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">140737032880128</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">18446744073699065856</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">18446744073699069952</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055526</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055495</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055506</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055494</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055499</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055487</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055481</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055531</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055523</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055511</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055493</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055518</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055492</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055502</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055530</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;samples&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;count&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/vagrant/diy-parca-agent/fib&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/libc.so.6&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;[vdso]&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;[vsyscall]&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cpu&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;nanoseconds&quot;</span><span class="w"></span>
+<span class="n">time_nanos</span><span class="p">:</span><span class="w"> </span><span class="mi">1680393594260736123</span><span class="w"></span>
+<span class="n">duration_nanos</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000000</span><span class="w"></span>
+<span class="n">period_type</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">type</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">unit</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">period</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="p">...</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055168</span><span class="w"> </span><span class="c1"># 4198400 before</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562059264</span><span class="w"> </span><span class="c1"># 4202496 before</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055481</span><span class="w">      </span><span class="c1"># 4198694 before</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+</code></pre></div>
+
+<p>The second thing is a mismatch between
+where the segment should be loaded <code>VirtAddr=0x0000000000001000</code>
+and where it was actually loaded <code>memory_start: 93836562055168</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --segments --wide fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">Elf file type is DYN (Position-Independent Executable file)</span>
+<span class="go">Entry point 0x1050</span>
+<span class="go">There are 13 program headers, starting at offset 64</span>
+
+<span class="go">Program Headers:</span>
+<span class="go">  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align</span>
+<span class="go">  PHDR           0x000040 0x0000000000000040 0x0000000000000040 0x0002d8 0x0002d8 R   0x8</span>
+<span class="go">  INTERP         0x000318 0x0000000000000318 0x0000000000000318 0x00001c 0x00001c R   0x1</span>
+<span class="go">      [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]</span>
+<span class="go">  LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x000638 0x000638 R   0x1000</span>
+<span class="go">  LOAD           0x001000 0x0000000000001000 0x0000000000001000 0x0001b1 0x0001b1 R E 0x1000</span>
+<span class="go">  LOAD           0x002000 0x0000000000002000 0x0000000000002000 0x00010c 0x00010c R   0x1000</span>
+<span class="go">  LOAD           0x002db8 0x0000000000003db8 0x0000000000003db8 0x000258 0x000260 RW  0x1000</span>
+<span class="go">  DYNAMIC        0x002dc8 0x0000000000003dc8 0x0000000000003dc8 0x0001f0 0x0001f0 RW  0x8</span>
+<span class="go">  NOTE           0x000338 0x0000000000000338 0x0000000000000338 0x000020 0x000020 R   0x8</span>
+<span class="go">  NOTE           0x000358 0x0000000000000358 0x0000000000000358 0x000044 0x000044 R   0x4</span>
+<span class="go">  GNU_PROPERTY   0x000338 0x0000000000000338 0x0000000000000338 0x000020 0x000020 R   0x8</span>
+<span class="go">  GNU_EH_FRAME   0x002020 0x0000000000002020 0x0000000000002020 0x000034 0x000034 R   0x4</span>
+<span class="go">  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x10</span>
+<span class="go">  GNU_RELRO      0x002db8 0x0000000000003db8 0x0000000000003db8 0x000248 0x000248 R   0x1</span>
+
+<span class="go"> Section to Segment mapping:</span>
+<span class="go">  Segment Sections...</span>
+<span class="go">   00</span>
+<span class="go">   01     .interp</span>
+<span class="go">   02     .interp .note.gnu.property .note.gnu.build-id .note.ABI-tag .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rela.dyn .rela.plt</span>
+<span class="go">   03     .init .plt .plt.got .text .fini</span>
+<span class="go">   04     .rodata .eh_frame_hdr .eh_frame</span>
+<span class="go">   05     .init_array .fini_array .dynamic .got .data .bss</span>
+<span class="go">   06     .dynamic</span>
+<span class="go">   07     .note.gnu.property</span>
+<span class="go">   08     .note.gnu.build-id .note.ABI-tag</span>
+<span class="go">   09     .note.gnu.property</span>
+<span class="go">   10     .eh_frame_hdr</span>
+<span class="go">   11</span>
+<span class="go">   12     .init_array .fini_array .dynamic .got</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Program Headers:</span>
+<span class="go">  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align</span>
+<span class="go">  ...</span>
+<span class="go">  LOAD           0x001000 0x0000000000001000 0x0000000000001000 0x0001b1 0x0001b1 R E 0x1000</span>
+<span class="go">  ...</span>
+
+<span class="go"> Section to Segment mapping:</span>
+<span class="go">  Segment Sections...</span>
+<span class="go">   ...</span>
+<span class="go">   03     .init .plt .plt.got .text .fini</span>
+<span class="go">   ...</span>
+</code></pre></div>
+
+<p>The third thing is a difference in the segment's sections: the <code>.plt.got</code> section was added.</p>
+<h2>How PIE affects symbolization</h2>
+<p>Clearly none of the sampled addresses matches <code>fibNaive</code> function
+when we look at the symbol table.
+The function's address <code>0x1139</code> is very far from
+the beginning of the loaded segment <code>0x555806f2c000</code>
+(that's hex of <code>memory_start: 93836562055168</code>).</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --symbols fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">Symbol table &#39;.dynsym&#39; contains 7 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND</span>
+<span class="go">     1: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND _[...]@GLIBC_2.34 (2)</span>
+<span class="go">     2: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_deregisterT[...]</span>
+<span class="go">     3: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__</span>
+<span class="go">     4: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND [...]@GLIBC_2.3.4 (3)</span>
+<span class="go">     5: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_registerTMC[...]</span>
+<span class="go">     6: 0000000000000000     0 FUNC    WEAK   DEFAULT  UND [...]@GLIBC_2.2.5 (4)</span>
+
+<span class="go">Symbol table &#39;.symtab&#39; contains 37 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND</span>
+<span class="go">     1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS Scrt1.o</span>
+<span class="go">     2: 000000000000037c    32 OBJECT  LOCAL  DEFAULT    4 __abi_tag</span>
+<span class="go">     3: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c</span>
+<span class="go">     4: 0000000000001080     0 FUNC    LOCAL  DEFAULT   15 deregister_tm_clones</span>
+<span class="go">     5: 00000000000010b0     0 FUNC    LOCAL  DEFAULT   15 register_tm_clones</span>
+<span class="go">     6: 00000000000010f0     0 FUNC    LOCAL  DEFAULT   15 __do_global_dtors_aux</span>
+<span class="go">     7: 0000000000004010     1 OBJECT  LOCAL  DEFAULT   25 completed.0</span>
+<span class="go">     8: 0000000000003dc0     0 OBJECT  LOCAL  DEFAULT   21 __do_global_dtor[...]</span>
+<span class="go">     9: 0000000000001130     0 FUNC    LOCAL  DEFAULT   15 frame_dummy</span>
+<span class="go">    10: 0000000000003db8     0 OBJECT  LOCAL  DEFAULT   20 __frame_dummy_in[...]</span>
+<span class="go">    11: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS main.c</span>
+<span class="go">    12: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c</span>
+<span class="go">    13: 0000000000002108     0 OBJECT  LOCAL  DEFAULT   19 __FRAME_END__</span>
+<span class="go">    14: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS</span>
+<span class="go">    15: 0000000000003dc8     0 OBJECT  LOCAL  DEFAULT   22 _DYNAMIC</span>
+<span class="go">    16: 0000000000002020     0 NOTYPE  LOCAL  DEFAULT   18 __GNU_EH_FRAME_HDR</span>
+<span class="go">    17: 0000000000003fb8     0 OBJECT  LOCAL  DEFAULT   23 _GLOBAL_OFFSET_TABLE_</span>
+<span class="go">    18: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __libc_start_mai[...]</span>
+<span class="go">    19: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_deregisterT[...]</span>
+<span class="go">    20: 0000000000004000     0 NOTYPE  WEAK   DEFAULT   24 data_start</span>
+<span class="go">    21: 0000000000004010     0 NOTYPE  GLOBAL DEFAULT   24 _edata</span>
+<span class="go">    22: 00000000000011a4     0 FUNC    GLOBAL HIDDEN    16 _fini</span>
+<span class="go">    23: 0000000000004000     0 NOTYPE  GLOBAL DEFAULT   24 __data_start</span>
+<span class="go">    24: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__</span>
+<span class="go">    25: 0000000000004008     0 OBJECT  GLOBAL HIDDEN    24 __dso_handle</span>
+<span class="go">    26: 0000000000002000     4 OBJECT  GLOBAL DEFAULT   17 _IO_stdin_used</span>
+<span class="go">    27: 0000000000004018     0 NOTYPE  GLOBAL DEFAULT   25 _end</span>
+<span class="go">    28: 0000000000001050    38 FUNC    GLOBAL DEFAULT   15 _start</span>
+<span class="go">    29: 0000000000004010     0 NOTYPE  GLOBAL DEFAULT   25 __bss_start</span>
+<span class="go">    30: 000000000000116d    54 FUNC    GLOBAL DEFAULT   15 main</span>
+<span class="go">    31: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __printf_chk@GLI[...]</span>
+<span class="go">    32: 0000000000004010     0 OBJECT  GLOBAL HIDDEN    24 __TMC_END__</span>
+<span class="go">    33: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_registerTMC[...]</span>
+<span class="go">    34: 0000000000000000     0 FUNC    WEAK   DEFAULT  UND __cxa_finalize@G[...]</span>
+<span class="go">    35: 0000000000001000     0 FUNC    GLOBAL HIDDEN    12 _init</span>
+<span class="go">    36: 0000000000001139    52 FUNC    GLOBAL DEFAULT   15 fibNaive</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Symbol table &#39;.symtab&#39; contains 37 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">    ...</span>
+<span class="go">    36: 0000000000001139    52 FUNC    GLOBAL DEFAULT   15 fibNaive</span>
+</code></pre></div>
+
+<p>Let's try to figure out where sections are mapped in the virtual address space.
+For that, we need to know the distance from the segment to each section,
+i.e., the section's offset minus the segment's offset:</p>
+<ul>
+<li>0 bytes from <code>.init</code> section = 0x1000 - 0x1000</li>
+<li>0x20 bytes from <code>.plt</code> section = 0x1020 - 0x1000</li>
+<li>0x40 bytes from <code>.plt.got</code> section = 0x1040 - 0x1000</li>
+<li>0x50 bytes from <code>.text</code> section = 0x1050 - 0x1000</li>
+<li>0x1a4 bytes from <code>.fini</code> section = 0x11a4 - 0x1000</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --sections --wide fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">There are 30 section headers, starting at offset 0x36b8:</span>
+
+<span class="go">Section Headers:</span>
+<span class="go">  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al</span>
+<span class="go">  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0</span>
+<span class="go">  [ 1] .interp           PROGBITS        0000000000000318 000318 00001c 00   A  0   0  1</span>
+<span class="go">  [ 2] .note.gnu.property NOTE            0000000000000338 000338 000020 00   A  0   0  8</span>
+<span class="go">  [ 3] .note.gnu.build-id NOTE            0000000000000358 000358 000024 00   A  0   0  4</span>
+<span class="go">  [ 4] .note.ABI-tag     NOTE            000000000000037c 00037c 000020 00   A  0   0  4</span>
+<span class="go">  [ 5] .gnu.hash         GNU_HASH        00000000000003a0 0003a0 000024 00   A  6   0  8</span>
+<span class="go">  [ 6] .dynsym           DYNSYM          00000000000003c8 0003c8 0000a8 18   A  7   1  8</span>
+<span class="go">  [ 7] .dynstr           STRTAB          0000000000000470 000470 0000a1 00   A  0   0  1</span>
+<span class="go">  [ 8] .gnu.version      VERSYM          0000000000000512 000512 00000e 02   A  6   0  2</span>
+<span class="go">  [ 9] .gnu.version_r    VERNEED         0000000000000520 000520 000040 00   A  7   1  8</span>
+<span class="go">  [10] .rela.dyn         RELA            0000000000000560 000560 0000c0 18   A  6   0  8</span>
+<span class="go">  [11] .rela.plt         RELA            0000000000000620 000620 000018 18  AI  6  23  8</span>
+<span class="go">  [12] .init             PROGBITS        0000000000001000 001000 00001b 00  AX  0   0  4</span>
+<span class="go">  [13] .plt              PROGBITS        0000000000001020 001020 000020 10  AX  0   0 16</span>
+<span class="go">  [14] .plt.got          PROGBITS        0000000000001040 001040 000008 08  AX  0   0  8</span>
+<span class="go">  [15] .text             PROGBITS        0000000000001050 001050 000153 00  AX  0   0 16</span>
+<span class="go">  [16] .fini             PROGBITS        00000000000011a4 0011a4 00000d 00  AX  0   0  4</span>
+<span class="go">  [17] .rodata           PROGBITS        0000000000002000 002000 00001f 00   A  0   0  4</span>
+<span class="go">  [18] .eh_frame_hdr     PROGBITS        0000000000002020 002020 000034 00   A  0   0  4</span>
+<span class="go">  [19] .eh_frame         PROGBITS        0000000000002058 002058 0000b4 00   A  0   0  8</span>
+<span class="go">  [20] .init_array       INIT_ARRAY      0000000000003db8 002db8 000008 08  WA  0   0  8</span>
+<span class="go">  [21] .fini_array       FINI_ARRAY      0000000000003dc0 002dc0 000008 08  WA  0   0  8</span>
+<span class="go">  [22] .dynamic          DYNAMIC         0000000000003dc8 002dc8 0001f0 10  WA  7   0  8</span>
+<span class="go">  [23] .got              PROGBITS        0000000000003fb8 002fb8 000048 08  WA  0   0  8</span>
+<span class="go">  [24] .data             PROGBITS        0000000000004000 003000 000010 00  WA  0   0  8</span>
+<span class="go">  [25] .bss              NOBITS          0000000000004010 003010 000008 00  WA  0   0  1</span>
+<span class="go">  [26] .comment          PROGBITS        0000000000000000 003010 00002b 01  MS  0   0  1</span>
+<span class="go">  [27] .symtab           SYMTAB          0000000000000000 003040 000378 18     28  18  8</span>
+<span class="go">  [28] .strtab           STRTAB          0000000000000000 0033b8 0001eb 00      0   0  1</span>
+<span class="go">  [29] .shstrtab         STRTAB          0000000000000000 0035a3 000111 00      0   0  1</span>
+<span class="go">Key to Flags:</span>
+<span class="go">  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),</span>
+<span class="go">  L (link order), O (extra OS processing required), G (group), T (TLS),</span>
+<span class="go">  C (compressed), x (unknown), o (OS specific), E (exclude),</span>
+<span class="go">  D (mbind), l (large), p (processor specific)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Section Headers:</span>
+<span class="go">  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al</span>
+<span class="go">  ...</span>
+<span class="go">  [12] .init             PROGBITS        0000000000001000 001000 00001b 00  AX  0   0  4</span>
+<span class="go">  [13] .plt              PROGBITS        0000000000001020 001020 000020 10  AX  0   0 16</span>
+<span class="go">  [14] .plt.got          PROGBITS        0000000000001040 001040 000008 08  AX  0   0  8</span>
+<span class="go">  [15] .text             PROGBITS        0000000000001050 001050 000153 00  AX  0   0 16</span>
+<span class="go">  [16] .fini             PROGBITS        00000000000011a4 0011a4 00000d 00  AX  0   0  4</span>
+<span class="go">  ...</span>
+</code></pre></div>
+
+<p>Then we can add those distances to <code>memory_start: 0x555806f2c000</code>
+to get an idea how the process's virtual address space looked like
+when the executable file was mapped.</p>
+<div class="highlight"><pre><span></span><code><span class="go">Executable object file           Virtual address space</span>
+<span class="go"> __________                       __________</span>
+<span class="go">|          | 0x3e37              |          | N</span>
+<span class="go">|          |                     |          |</span>
+<span class="go">| ...      | 0x2000              | ...      | 0x555806f2d000</span>
+<span class="go">|----------| -----------&gt; vm_end |----------|</span>
+<span class="go">| .fini    | 0x11a4              | .fini    | 0x555806f2c1a4</span>
+<span class="go">| .text    | 0x1050              | .text    | 0x555806f2c050</span>
+<span class="go">| .plt.got | 0x1040              | .plt.got | 0x555806f2c040</span>
+<span class="go">| .plt     | 0x1020              | .plt     | 0x555806f2c020</span>
+<span class="go">| .init    | 0x1000              | .init    | 0x555806f2c000</span>
+<span class="go">|----------| ---------&gt; vm_start |----------|</span>
+<span class="go">| ...      |                     | ...      |</span>
+<span class="go">|__________| 0                   |__________| 0</span>
+</code></pre></div>
+
+<p>The sampled addresses should be in the <code>.text</code> section
+which starts at <code>0x1050</code> offset within the file.
+Since the segment itself starts at <code>0x1000</code> offset,
+the distance between them is 0x50 bytes = 0x1050 - 0x1000.
+Therefore, in virtual address space the <code>.text</code> section starts at
+<code>0x555806f2c050</code> address = memory_start + distance = 0x555806f2c000 + 0x50.</p>
+<p>Our sampled address <code>0x555806f2c139</code> (that's <code>address: 93836562055481</code> in hexadecimal form)
+can be adjusted to the ELF file's address range as follows:</p>
+<ol>
+<li>Find the distance between the sampled memory address and
+  beginning of the loaded segment:
+  313 bytes = 0x555806f2c139 - 0x555806f2c000.</li>
+<li>Add the segment's offset to the distance
+  to find the address used in the <code>.symtab</code> section:
+  0x1139 = 0x1000 + 313.</li>
+</ol>
+<p>The <code>0x1139</code> address belongs to <code>fibNaive</code> function as we've seen
+in the symbol table.
+That's nice! 🙌</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Distance between the sampled memory address and</span><span class="w"></span>
+<span class="c1">// beginning of the loaded segment (vm_start memory address).</span><span class="w"></span>
+<span class="nx">d</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sampledAddr</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">mappingMemoryStart</span><span class="w"></span>
+<span class="c1">// Sampled address adjusted to .symtab address range.</span><span class="w"></span>
+<span class="nx">adjustedAddr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mappingFileOffset</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">d</span><span class="w"></span>
+</code></pre></div>
+
+<p>Here are all the addresses from <code>cpu.pprof</code> file sorted in ascending order,
+their distances from <code>memory_start: 0x555806f2c000</code>,
+and addresses adjusted to the file's range.</p>
+<table>
+<thead>
+<tr>
+<th>sampled address</th>
+<th>distance</th>
+<th>adjusted address</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x555806f2c139</td>
+<td>313 bytes</td>
+<td>0x1139</td>
+</tr>
+<tr>
+<td>0x555806f2c13f</td>
+<td>319 bytes</td>
+<td>0x113f</td>
+</tr>
+<tr>
+<td>0x555806f2c144</td>
+<td>324 bytes</td>
+<td>0x1144</td>
+</tr>
+<tr>
+<td>0x555806f2c145</td>
+<td>325 bytes</td>
+<td>0x1145</td>
+</tr>
+<tr>
+<td>0x555806f2c146</td>
+<td>326 bytes</td>
+<td>0x1146</td>
+</tr>
+<tr>
+<td>0x555806f2c147</td>
+<td>327 bytes</td>
+<td>0x1147</td>
+</tr>
+<tr>
+<td>0x555806f2c14b</td>
+<td>331 bytes</td>
+<td>0x114b</td>
+</tr>
+<tr>
+<td>0x555806f2c14e</td>
+<td>334 bytes</td>
+<td>0x114e</td>
+</tr>
+<tr>
+<td>0x555806f2c152</td>
+<td>338 bytes</td>
+<td>0x1152</td>
+</tr>
+<tr>
+<td>0x555806f2c157</td>
+<td>343 bytes</td>
+<td>0x1157</td>
+</tr>
+<tr>
+<td>0x555806f2c15e</td>
+<td>350 bytes</td>
+<td>0x115e</td>
+</tr>
+<tr>
+<td>0x555806f2c163</td>
+<td>355 bytes</td>
+<td>0x1163</td>
+</tr>
+<tr>
+<td>0x555806f2c166</td>
+<td>358 bytes</td>
+<td>0x1166</td>
+</tr>
+<tr>
+<td>0x555806f2c16a</td>
+<td>362 bytes</td>
+<td>0x116a</td>
+</tr>
+<tr>
+<td>0x555806f2c16b</td>
+<td>363 bytes</td>
+<td>0x116b</td>
+</tr>
+</tbody>
+</table>
+<p>Disassembling <code>fib</code> program confirms that adjusted memory addresses
+correspond to instructions of <code>fibNaive</code> function.</p>
+<div class="highlight"><pre><span></span><code><span class="x">﹩ objdump --disassemble=fibNaive fib</span>
+<span class="x">...</span>
+<span class="mh">0000000000001139</span><span class="w"> </span><span class="p">&lt;</span><span class="nf">fibNaive</span><span class="p">&gt;:</span>
+<span class="x">    1139:   48 83 ff 02             cmp    $0x2,%rdi</span>
+<span class="x">    113d:   7f 06                   jg     1145 &lt;fibNaive+0xc&gt;</span>
+<span class="x">    113f:   b8 01 00 00 00          mov    $0x1,%eax</span>
+<span class="x">    1144:   c3                      ret</span>
+<span class="x">    1145:   55                      push   %rbp</span>
+<span class="x">    1146:   53                      push   %rbx</span>
+<span class="x">    1147:   48 83 ec 08             sub    $0x8,%rsp</span>
+<span class="x">    114b:   48 89 fb                mov    %rdi,%rbx</span>
+<span class="x">    114e:   48 8d 7f fe             lea    -0x2(%rdi),%rdi</span>
+<span class="x">    1152:   e8 e2 ff ff ff          call   1139 &lt;fibNaive&gt;</span>
+<span class="x">    1157:   48 89 c5                mov    %rax,%rbp</span>
+<span class="x">    115a:   48 8d 7b ff             lea    -0x1(%rbx),%rdi</span>
+<span class="x">    115e:   e8 d6 ff ff ff          call   1139 &lt;fibNaive&gt;</span>
+<span class="x">    1163:   48 01 e8                add    %rbp,%rax</span>
+<span class="x">    1166:   48 83 c4 08             add    $0x8,%rsp</span>
+<span class="x">    116a:   5b                      pop    %rbx</span>
+<span class="x">    116b:   5d                      pop    %rbp</span>
+<span class="x">    116c:   c3                      ret</span>
+<span class="x">...</span>
+</code></pre></div>
+
+<p>Based on these observations, I made a symbolization tool
+<a href="https://github.com/marselester/diy-parca-agent/blob/main/cmd/addr2func/main.go">addr2func</a>
+and proposed a change in Parca, see <a href="https://github.com/parca-dev/parca/pull/2910">#2910</a>.</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"><h3 class="article-title">DIY CPU profiler: the simplest case of symbolization</h3></a>
+<h6 class="subheader" title="2023-03-23T00:00:00+07:00">Thu 23 March 2023
+</h6>
+
+
+<p>In the <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">BPF maps to pprof</a> post
+we managed to collect CPU samples and store them in pprof format.
+Here I would like to explore the simplest case of symbolization
+and put shared libraries aside.</p>
+<p>Symbolization is resolving sampled memory addresses to function names (symbols).
+In our case, simply searching …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"><h3 class="article-title">DIY CPU profiler: from BPF maps to pprof</h3></a>
 <h6 class="subheader" title="2022-10-20T00:00:00+07:00">Thu 20 October 2022
 </h6>
@@ -64,362 +759,7 @@ though they were not very helpful.</p>
 <span class="go">{PID:15958 UserStackID:132 KernelStackID:114} seen 1 times</span>
 </code></pre></div>
 
-<p>Let's try to show more useful information this time,
-i.e., sampled memory addresses.
-You can find the results of my experiments in
-<a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
-<h2>Reading addresses from BPF maps</h2>
-<p>I continued to explore
-<a href="https://github.com/parca-dev/parca-agent/blob/1e935f4d5f7b4484f6cf3d4ee26340f3718ff37d/pkg/profiler/profiler.go#L336">github.com/parca-dev/parca-agent/pkg/profiler/profiler.go</a>
-and found the place where stack trace samples are read from the BPF maps — <code>profileLoop()</code> method.
-Here is its simplified version.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Always needs to be sync with MAX_STACK_DEPTH in parca-agent.bpf.c.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">stackDepth</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">127</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Twice the stack depth because we have a User and a potential Kernel stack.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">doubleStackDepth</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">254</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-
-<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">CgroupProfiler</span><span class="p">)</span><span class="w"> </span><span class="nx">profileLoop</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">captureTime</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">it</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">counts</span><span class="p">.</span><span class="nx">Iterator</span><span class="p">()</span><span class="w"></span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// Note, pid, userStackID, and kernelStackID are read from it.Key().</span><span class="w"></span>
-<span class="w">        </span><span class="nx">stack</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[</span><span class="nx">doubleStackDepth</span><span class="p">]</span><span class="kt">uint64</span><span class="p">{}</span><span class="w"></span>
-
-<span class="w">        </span><span class="c1">// Collect user-space stack trace samples.</span><span class="w"></span>
-<span class="w">        </span><span class="nx">stackBytes</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">stackTraces</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">(</span><span class="w"></span>
-<span class="w">            </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">userStackID</span><span class="p">),</span><span class="w"></span>
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">stackBytes</span><span class="p">),</span><span class="w"> </span><span class="nx">byteOrder</span><span class="p">,</span><span class="w"> </span><span class="nx">stack</span><span class="p">[:</span><span class="nx">stackDepth</span><span class="p">])</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">stack</span><span class="p">[:</span><span class="nx">stackDepth</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mapping</span><span class="p">.</span><span class="nx">PIDAddrMapping</span><span class="p">(</span><span class="nx">pid</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">        </span><span class="c1">// Collect kernel-space stack trace samples.</span><span class="w"></span>
-<span class="w">        </span><span class="nx">stackBytes</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">stackTraces</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">(</span><span class="w"></span>
-<span class="w">            </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">kernelStackID</span><span class="p">),</span><span class="w"></span>
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">stackBytes</span><span class="p">),</span><span class="w"> </span><span class="nx">byteOrder</span><span class="p">,</span><span class="w"> </span><span class="nx">stack</span><span class="p">[</span><span class="nx">stackDepth</span><span class="p">:])</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">stack</span><span class="p">[</span><span class="nx">stackDepth</span><span class="p">:]</span><span class="w"> </span><span class="p">{}</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>From looking at it I can tell that PID, user-space stack ID, and kernel-space stack ID are read
-from the <code>counts</code> BPF map on each iteration.</p>
-<table>
-<thead>
-<tr>
-<th>{ pid; userStackID; kernelStackID }</th>
-<th>seen</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>{ 10342; 1253; 0234 }</td>
-<td>45</td>
-</tr>
-</tbody>
-</table>
-<p>A stack ID allows to fetch a stack trace
-(an array of memory addresses that represent the code executed during profiling)
-from the <code>stack_traces</code> BPF map.</p>
-<table>
-<thead>
-<tr>
-<th>stack ID</th>
-<th>memory addresses</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1253</td>
-<td>[ 0xdeadbeef; 0x123abcde; ... ]</td>
-</tr>
-<tr>
-<td>0234</td>
-<td>[ 0x597be95a; 0xae5ee03; ... ]</td>
-</tr>
-</tbody>
-</table>
-<p>A user-space stack trace indexed by <code>userStackID=1253</code> is placed
-in the beginning of the <code>stack [254]uint64</code> array.
-The <code>kernelStackID=0234</code> kernel-space stack trace is placed in the middle of the array.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// User-space stack trace is limited by stackDepth=127.</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xdeadbeef</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x123abcde</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">126</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">...</span><span class="w"></span>
-
-<span class="c1">// Kernel-space stack trace is limited by doubleStackDepth=254.</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">127</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x597be95a</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xae5ee03</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">253</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">...</span><span class="w"></span>
-</code></pre></div>
-
-<h2>Memory mapping</h2>
-<p>Alright, but what does
-<code>m, err := mapping.PIDAddrMapping(pid, addr)</code> line do?
-Basically the function call does the following
-(see <a href="https://github.com/parca-dev/parca-agent/blob/1e935f4d5f7b4484f6cf3d4ee26340f3718ff37d/pkg/maps/maps.go#L85">maps.go</a>):</p>
-<ol>
-<li>opens a memory map file of a given process <code>/proc/PID/maps</code></li>
-<li>parses a memory map using <code>github.com/google/pprof/profile</code> package</li>
-<li>looks up a mapping for a given memory address previously found in a stack trace (e.g., <code>0xdeadbeef</code>),
-   i.e., it should be located between <code>m.Start</code> and <code>m.Limit</code> inclusively.
-   For example, in <code>[0x55dd2d5eb000; 0x55dd2d65f000]</code> interval.</li>
-</ol>
-<div class="highlight"><pre><span></span><code><span class="nx">f</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;/proc/%d/maps&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">pid</span><span class="p">),</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-
-<span class="nx">mm</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">ParseProcMaps</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span><span class="w"></span>
-
-<span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">mm</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Start</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Limit</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">m</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>Note, <code>mm</code> is a slice of <code>*profile.Mapping{}</code> structs
-that could look as it's shown below.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">mm</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Mapping</span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">                     </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Start</span><span class="p">:</span><span class="w">                  </span><span class="mi">94408437313536</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x55dd2d5eb000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Limit</span><span class="p">:</span><span class="w">                  </span><span class="mi">94408437788672</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x55dd2d65f000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Offset</span><span class="p">:</span><span class="w">                 </span><span class="mi">45056</span><span class="p">,</span><span class="w">          </span><span class="c1">// 0xb000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">File</span><span class="p">:</span><span class="w">                   </span><span class="s">&quot;/usr/sbin/sshd&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">BuildID</span><span class="p">:</span><span class="w">                </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasFunctions</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasFilenames</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasLineNumbers</span><span class="p">:</span><span class="w">         </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasInlineFrames</span><span class="p">:</span><span class="w">        </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">KernelRelocationSymbol</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">                     </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Start</span><span class="p">:</span><span class="w">                  </span><span class="mi">140349706260480</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x7fa5b662d000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Limit</span><span class="p">:</span><span class="w">                  </span><span class="mi">140349706448896</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x7fa5b665b000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Offset</span><span class="p">:</span><span class="w">                 </span><span class="mi">24576</span><span class="p">,</span><span class="w">           </span><span class="c1">// 0x6000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">File</span><span class="p">:</span><span class="w">                   </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/libnss_systemd.so.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">BuildID</span><span class="p">:</span><span class="w">                </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasFunctions</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasFilenames</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasLineNumbers</span><span class="p">:</span><span class="w">         </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasInlineFrames</span><span class="p">:</span><span class="w">        </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">KernelRelocationSymbol</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>Here is the corresponding memory map file.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo cat /proc/4068/maps</span>
-<span class="go">55dd2d5e0000-55dd2d5eb000 r--p 00000000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d5eb000-55dd2d65f000 r-xp 0000b000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d65f000-55dd2d69d000 r--p 0007f000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d69e000-55dd2d6a1000 r--p 000bd000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d6a1000-55dd2d6a2000 rw-p 000c0000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d6a2000-55dd2d6a6000 rw-p 00000000 00:00 0</span>
-<span class="go">55dd2e9d6000-55dd2ea68000 rw-p 00000000 00:00 0            [heap]</span>
-<span class="go">55dd2ea68000-55dd2ea8a000 rw-p 00000000 00:00 0            [heap]</span>
-<span class="go">7fa5b6627000-7fa5b662d000 r--p 00000000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b662d000-7fa5b665b000 r-xp 00006000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b665b000-7fa5b666a000 r--p 00034000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b666a000-7fa5b666e000 r--p 00042000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b666e000-7fa5b666f000 rw-p 00046000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b6675000-7fa5b6676000 r--p 00000000 08:01 3974         /usr/lib/x86_64-linux-gnu/security/pam_env.so</span>
-
-<span class="go">...</span>
-
-<span class="go">7fa5b72f4000-7fa5b72f6000 rw-p 00034000 08:01 3657         /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span>
-<span class="go">7fff5522d000-7fff55271000 rw-p 00000000 00:00 0            [stack]</span>
-<span class="go">7fff55285000-7fff55289000 r--p 00000000 00:00 0            [vvar]</span>
-<span class="go">7fff55289000-7fff5528b000 r-xp 00000000 00:00 0            [vdso]</span>
-<span class="go">ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0    [vsyscall]</span>
-</code></pre></div>
-
-<p>🤔</p>
-<p>Let's do a similar thing in a new profiler called profiler2.
-The v2 DIY profiler is able to print a memory map file of a given process
-and show the traced memory addresses of user and kernel space.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler2 -pid=4068</span>
-<span class="go">/proc/4068/maps</span>
-<span class="go">start=0x55dd2d5eb000 limit=0x55dd2d65f000 offset=0xb000 /usr/sbin/sshd</span>
-<span class="go">...</span>
-
-<span class="go">Waiting for stack traces...</span>
-</code></pre></div>
-
-<h2>pprof</h2>
-<p>It would be great to finally see symbols (function names) instead of memory addresses
-and pprof is going to help us with that.
-pprof is a tool for visualization and analysis of profiling data.
-It reads a collection of profiling samples in
-<a href="https://github.com/google/pprof/blob/main/proto/profile.proto">profile.proto</a> format
-and generates reports to visualize the collected profiles.</p>
-<p>Let's get back to <code>profileLoop()</code> method and see what else it's doing:</p>
-<ol>
-<li>it prepares <code>prof := profile.Profile{}</code> struct which is an in-memory representation of profile.proto</li>
-<li>using addresses from BPF maps it fills <code>Profile.Location</code> — the set of program locations;
-   each location describes function and line table debug information</li>
-<li>it fills <code>Profile.Sample</code> — the set of samples recorded in a profile</li>
-<li>it fills <code>Profile.Mapping</code> — mapping from address ranges to the object file</li>
-<li>it uploads object files to Parca server</li>
-<li>it uploads pprof profile</li>
-</ol>
-<p>The first step is to create a CPU profile which will be saved somewhere by <code>prof.Write()</code>
-after a profile was filled with samples.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">Profile</span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// SampleType is a description of the samples associated with each Sample.Value.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// By convention the number of events should use unit &quot;count&quot; and</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// it should be at index 0.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">SampleType</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">ValueType</span><span class="p">{{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;samples&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Unit</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;count&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">}},</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// TimeNanos is a time of collection (UTC) represented as nanoseconds past the epoch.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">TimeNanos</span><span class="p">:</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">UnixNano</span><span class="p">(),</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// DurationNanos is a profiling duration in nanoseconds, Parca uses 10s by default.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">DurationNanos</span><span class="p">:</span><span class="w"> </span><span class="nb">int64</span><span class="p">(</span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// PeriodType is the kind of events between sampled ocurrences,</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// i.e., [&quot;cpu&quot;, &quot;nanoseconds&quot;].</span><span class="w"></span>
-<span class="w">    </span><span class="c1">//</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ValueType describes the semantics and measurement units of a value.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">PeriodType</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">ValueType</span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cpu&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Unit</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;nanoseconds&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Period is the number of events between sampled occurrences.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// We sample at 100Hz (100 times per second),</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// which is every 0.01s or 10 million nanoseconds.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Period</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000</span><span class="p">,</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>A simplified version of the steps 2 to 4 show
-how user-space stack traces (samples) are added to a pprof profile.</p>
-<p>For every non-zero unique address found in stack traces
-we create a <code>profile.Location{}</code> to describe a function.
-A corresponding memory mapping is added to that newly created location
-("Memory mapping" section above shows how to find a mapping for an address).
-All the locations are appended to <code>prof.Location</code> slice.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ID is a unique nonzero id for the location.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">locIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Address is the instruction address for this location.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// It should be within [Mapping.memory_start...Mapping.memory_limit]</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// for the corresponding mapping.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Address</span><span class="p">:</span><span class="w"> </span><span class="nx">addr</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Mapping is the corresponding profile.Mapping for this location.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// It can be nil if the mapping is unknown.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Mapping</span><span class="p">:</span><span class="w"> </span><span class="nx">m</span><span class="p">,</span><span class="w"></span>
-<span class="p">})</span><span class="w"></span>
-</code></pre></div>
-
-<p>Locations related to a given stack trace are added to a sample.
-Each <code>profile.Sample</code> records how many times a particular stack trace was seen.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Sample</span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Value</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">int64</span><span class="p">{</span><span class="nb">int64</span><span class="p">(</span><span class="nx">seen</span><span class="p">)},</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Location</span><span class="p">:</span><span class="w"> </span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"></span>
-<span class="p">})</span><span class="w"></span>
-</code></pre></div>
-
-<p>At the end, all the mappings get assigned IDs starting with one
-because ID zero is reserved.
-The pprof tool will show the following error if ID zero is used:
-<code>malformed profile: found mapping with reserved ID=0</code>.
-See the whole code snippet in the details below.</p>
-<details>
-
-
-<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">locationIndex</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">PID</span><span class="w">  </span><span class="kt">int</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Addr</span><span class="w"> </span><span class="kt">uint64</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-
-<span class="c1">// locationIndices maps {pid; addr} found in the sample</span><span class="w"></span>
-<span class="c1">// to an index in the Profile.Location slice</span><span class="w"></span>
-<span class="c1">// to look up a respective Location.</span><span class="w"></span>
-<span class="nx">locationIndices</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="nx">locationIndex</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span><span class="w"></span>
-
-<span class="k">for</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Collect user-space stack trace samples.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">sampleLocations</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{}</span><span class="w"></span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">userStack</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="k">continue</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">        </span><span class="c1">// Look up a location for the given PID and address</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// and append it to the current sample&#39;s locations.</span><span class="w"></span>
-<span class="w">        </span><span class="c1">//</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// In case a location wasn&#39;t found, create one.</span><span class="w"></span>
-<span class="w">        </span><span class="nx">key</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">locationIndex</span><span class="p">{</span><span class="nx">pid</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="nx">locIndex</span><span class="p">,</span><span class="w"> </span><span class="nx">found</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">locationIndices</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"></span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">found</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mappingForAddr</span><span class="p">(</span><span class="nx">mm</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to get process mapping for addr: %x&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">            </span><span class="nx">locIndex</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="c1">// Each Location describes function and line table debug information.</span><span class="w"></span>
-<span class="w">            </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// ID is a unique nonzero id for the location.</span><span class="w"></span>
-<span class="w">                </span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">locIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// Address is the instruction address for this location.</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// It should be within [Mapping.memory_start...Mapping.memory_limit]</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// for the corresponding mapping.</span><span class="w"></span>
-<span class="w">                </span><span class="nx">Address</span><span class="p">:</span><span class="w"> </span><span class="nx">addr</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// Mapping is the corresponding profile.Mapping for this location.</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// It can be nil if the mapping is unknown.</span><span class="w"></span>
-<span class="w">                </span><span class="nx">Mapping</span><span class="p">:</span><span class="w"> </span><span class="nx">m</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="p">})</span><span class="w"></span>
-<span class="w">            </span><span class="nx">locationIndices</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">locIndex</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">        </span><span class="nx">sampleLocations</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"> </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">[</span><span class="nx">locIndex</span><span class="p">])</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">    </span><span class="c1">// Each Sample records how many times a particular stack trace was seen</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// along with the corresponding locations.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Sample</span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Value</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">int64</span><span class="p">{</span><span class="nb">int64</span><span class="p">(</span><span class="nx">seen</span><span class="p">)},</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Location</span><span class="p">:</span><span class="w"> </span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">})</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-
-<span class="c1">// Mappings in pprof must have IDs and need to start with 1.</span><span class="w"></span>
-<span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">mm</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">ID</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-<span class="nx">prof</span><span class="p">.</span><span class="nx">Mapping</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">mm</span><span class="w"></span>
-</code></pre></div>
-
-
-
-</details>
-
-<p>🧪</p>
-<p>Putting those steps together gives us profiler3.
-In v3 DIY profiler we write a CPU profile to <code>cpu.pprof</code> file
-instead of uploading it to a Parca server.
-Let's run profiler3 and make sure the profiled program does something instead of idling,
-so there will be enough CPU samples.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler3 -pid=4068</span>
-<span class="go">/proc/4068/maps</span>
-<span class="go">start=0x55dd2d5eb000 limit=0x55dd2d65f000 offset=0xb000 /usr/sbin/sshd</span>
-<span class="go">...</span>
-
-<span class="go">Waiting for stack traces for 10s...</span>
-</code></pre></div>
-
-<p>After ten seconds the profiler will terminate leaving you with <code>cpu.pprof</code> file.
-You can inspect it with <code>go tool pprof cpu.pprof</code> command.</p>
-<p>Exploring Parca Agent's internals and reconstructing it in the simplest form
-helped me demystify some of aspects of BPF CPU profilers.</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+<p>Let's try to show more useful information …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/bpf.html">bpf </a>
@@ -429,11 +769,9 @@ helped me demystify some of aspects of BPF CPU profilers.</p><p class="subheader
 
 
 
-<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

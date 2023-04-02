@@ -122,6 +122,9 @@ so <code>fibNaive</code> function should dominate the profile.</p>
 <span class="go">start=0xffffffffff600000 limit=0xffffffffff601000 offset=0x0 [vsyscall]</span>
 
 <span class="go">Waiting for stack traces for 10s...</span>
+<span class="go">{PID:14548 UserStackID:535 KernelStackID:-14} seen 138 times</span>
+<span class="go">    535 [401126]</span>
+<span class="go">...</span>
 </code></pre></div>
 
 <p>After ten seconds the profiler will terminate leaving us with <code>cpu.pprof</code> file.
@@ -465,6 +468,7 @@ Let's look at the file's segments and find the one mentioned in the sample.</p>
 <span class="go">  Segment Sections...</span>
 <span class="go">   ...</span>
 <span class="go">   03     .init .plt .text .fini</span>
+<span class="go">   ...</span>
 </code></pre></div>
 
 <p>As we can see the ELF program header describes
@@ -817,6 +821,11 @@ correspond to instructions of <code>fibNaive</code> function.</p>
 <a href="https://github.com/marselester/diy-parca-agent/blob/main/cmd/profiler/bpf/parca-agent.bpf.c">profiler</a>
 collected values stored in <code>rip</code> register,
 i.e., memory addresses of machine instructions.</p>
+<p>If we compiled the program with frame pointers,
+<code>bpf_get_stackid</code> would have additionally unwound a stack which
+could look like <code>[401126, ..., 40115a]</code> (fibNaive, ..., main)
+instead of <code>[401126]</code> when frame pointers are disabled (only <code>rip</code> value is stored),
+see <a href="https://github.com/parca-dev/parca-agent/pull/1489#issuecomment-1488182745">Javier's explanation</a>.</p>
 <h2>PC to symbol address</h2>
 <p>Since we have sorted symbol addresses from <code>.symtab</code>,
 we can binary search them to find
@@ -873,9 +882,7 @@ because binary search stops at <code>0x40115a</code>.</p>
 Most likely you would have to resolve symbols in shared libraries,
 and also deal with things like:</p>
 <ul>
-<li>Frame pointer or DWARF's Call Frame Information based stack walking, see
-  <a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">Reducing Go Execution Tracer Overhead With Frame Pointer Unwinding</a> and
-  <a href="https://www.polarsignals.com/blog/posts/2022/11/29/profiling-without-frame-pointers/">DWARF-based Stack Walking Using eBPF</a>.
+<li><a href="https://www.polarsignals.com/blog/posts/2022/11/29/profiling-without-frame-pointers/">DWARF-based Stack Walking Using eBPF</a>.
   Alas, frame pointers are disabled by default in gcc,
   but you can enable them with the <code>-fno-omit-frame-pointer</code> flag.</li>
 <li>Looking for symbols formatted in DWARF
@@ -889,6 +896,7 @@ look for symbols in <code>/tmp/perf-$PID.map</code> file, see
 <p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
 
     Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
     <a href="https://marselester.com/tag/profiling.html">profiling </a>
 </p>
 

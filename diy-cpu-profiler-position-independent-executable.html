@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - profiling</title>
+    <title>DIY CPU profiler: position independent executable 🥧</title>
 
     <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html" rel="bookmark"
+        title="Permalink to DIY CPU profiler: position independent executable 🥧">DIY CPU profiler: position independent executable 🥧</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html"><h3 class="article-title">DIY CPU profiler: position independent executable 🥧</h3></a>
 <h6 class="subheader" title="2023-04-02T00:00:00+07:00">Sun 02 April 2023
 </h6>
 
 
-<p>In the <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">simplest case of symbolization</a>
+    <p>In the <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">simplest case of symbolization</a>
 we used <code>-fno-pie -no-pie</code> flags, so
 gcc wouldn't produce a position independent executable (PIE).
 It is produced by default for security measures such as
@@ -700,7 +702,8 @@ correspond to instructions of <code>fibNaive</code> function.</p>
 
 <p>Based on these observations, I made a symbolization tool
 <a href="https://github.com/marselester/diy-parca-agent/blob/main/cmd/addr2func/main.go">addr2func</a>
-and proposed a change in Parca, see <a href="https://github.com/parca-dev/parca/pull/2910">#2910</a>.</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+and proposed a change in Parca, see <a href="https://github.com/parca-dev/parca/pull/2910">#2910</a>.</p>
+<p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/bpf.html">bpf </a>
@@ -709,101 +712,22 @@ and proposed a change in Parca, see <a href="https://github.com/parca-dev/parca/
 
 
 
-<p><a href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "diy-cpu-profiler-position-independent-executable.html";
+        var disqus_url = "https://marselester.com/diy-cpu-profiler-position-independent-executable.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"><h3 class="article-title">DIY CPU profiler: the simplest case of symbolization</h3></a>
-<h6 class="subheader" title="2023-03-23T00:00:00+07:00">Thu 23 March 2023
-</h6>
-
-
-<p>In the <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">BPF maps to pprof</a> post
-we managed to collect CPU samples and store them in pprof format.
-Here I would like to explore the simplest case of symbolization
-and put shared libraries aside.</p>
-<p>Symbolization is resolving sampled memory addresses to function names (symbols).
-In our case, simply searching …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/profiling.html">profiling </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"><h3 class="article-title">DIY CPU profiler: from BPF maps to pprof</h3></a>
-<h6 class="subheader" title="2022-10-20T00:00:00+07:00">Thu 20 October 2022
-</h6>
-
-
-<p><a href="https://marselester.com/continuous-profiling-in-go.html">In previous post</a>
-I had a DIY BPF profiler printing stack trace IDs of a given process,
-though they were not very helpful.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler/ -pid 15958</span>
-<span class="go">Waiting for stack traces...</span>
-<span class="go">{PID:15958 UserStackID:132 KernelStackID:114} seen 1 times</span>
-</code></pre></div>
-
-<p>Let's try to show more useful information …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/profiling.html">profiling </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/continuous-profiling-in-go.html"><h3 class="article-title">Continuous profiling in Go</h3></a>
-<h6 class="subheader" title="2022-04-22T00:00:00+07:00">Fri 22 April 2022
-</h6>
-
-
-<p>In this post I explore possibilities of continuous profiling of Go programs
-using Parca and also peek under the hood of its BPF agent.
-You can find the results of my experiments in
-<a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
-<h2>Ad hoc profiling</h2>
-<p>I was looking for a way to profile Go programs …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="https://marselester.com/tag/profiling.html">profiling </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/continuous-profiling-in-go.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/continuous-profiling-in-go.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 
