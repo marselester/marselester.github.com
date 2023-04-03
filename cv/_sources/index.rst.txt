@@ -13,7 +13,8 @@ I would like to learn more about systems performance.
 - https://twitter.com/marselester
 - https://angel.co/u/marselester
 
-Based in Montreal, Canada.
+Based in Montreal, QC, Canada.
+I've been working remotely for a decade.
 
 Work Experience
 ---------------
@@ -25,7 +26,7 @@ August 2017 — September 2020
 **Senior Software Engineer**
 July 2014 — August 2017
 
-- built a wallet service (Django, PostgreSQL) which helped the company to grow from thousands to over **15 millions** of customers;
+- built a wallet service (Django, PostgreSQL) which helped the company grow from thousands to over **15 millions** of customers;
 - designed a new ledger (Go, PostgreSQL, Kafka) to solve scalability issues and led the team focused on its delivery;
 - ran an architecture guild meetings, gave talks about architecture,
   `Kafka <https://go-talks.appspot.com/github.com/marselester/kafka-for-gophers/kafka.slide>`_,
@@ -49,7 +50,7 @@ July 2014 — August 2017
 To try something different I joined infrastructure team as an SRE
 
 - added horizontal/vertical pod autoscaling for 17 services which
-  increased resiliency of our services,
+  increased overall resiliency,
   helped to **handle x2 traffic, reduced infrastructure costs by 20%**;
 - rewrote parts of 5 Django/Celery core services in Go to reduce memory (tens of gigabytes)
   and CPU consumption in Kubernetes cluster,
@@ -61,7 +62,7 @@ To try something different I joined infrastructure team as an SRE
   and reconstructed a `BPF agent <https://github.com/marselester/diy-parca-agent>`_ for fun;
 - investigated and resolved API latency outliers, e.g.,
   `AWS SDK latency <https://github.com/marselester/awscreds>`_
-  due to AWS STS requests going to the global endpoint,
+  due to STS requests going to the global endpoint,
   and misconfigured SNS retry policy;
 
 **Python Developer** contractor at icon fonts generator Fontastic_ (Webalys_) 🤌
