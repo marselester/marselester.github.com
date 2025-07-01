@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - settings</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/splitting-settings-in-django.html"><h3 class="article-title">Разделение настроек в Django</h3></a>
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>В <a class="reference external" href="https://code.djangoproject.com/wiki/SplitSettings">Django wiki</a> собраны
+различные способы разделения настроек. Мне нравится <a class="reference external" href="http://senko.net/en/django-quickstart-skeleton-project/">вариант</a>, описанный в блоге
+Senko Rašić:</p>
+<pre class="literal-block">
+settings/
+├── __init__.py
+├── base.py
+├── development.py
+├── local.py
+└── production.py
+</pre>
+<p><tt class="docutils literal">base.py</tt> содержит общие настройки для <tt class="docutils literal">development.py</tt> и
+<tt class="docutils literal">production.py</tt>, например:</p>
+<div class="highlight"><pre><span></span><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
+<span class="n">MANAGERS</span> <span class="o">=</span> <span class="n">ADMINS</span>
+
+<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s1">&#39;Asia/Yekaterinburg&#39;</span>
+<span class="c1"># ...</span>
+</pre></div>
+<p><tt class="docutils literal">production.py</tt> содержит настройки для эксплуатации. Как минимум, необходимо
+выключить режим отладки:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">DEBUG</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">TEMPLATE_DEBUG</span> <span class="o">=</span> <span class="n">DEBUG</span>
+<span class="c1"># ...</span>
+</pre></div>
+<p><tt class="docutils literal">development.py</tt> содержит настройки, необходимые для разработки. Настройки
+должны быть <strong>одинаковы</strong> и <strong>полезны для всех участников</strong> процесса
+разработки, например:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">DEBUG</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">TEMPLATE_DEBUG</span> <span class="o">=</span> <span class="n">DEBUG</span>
+<span class="c1"># ...</span>
+</pre></div>
+<p>Все индивидуальные настройки разработчика необходимо вынести в <tt class="docutils literal">local.py</tt>.
+Например, это могут быть настройки подключения к БД, любимые инструменты
+разработки и так далее:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.development</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s1">&#39;django.db.backends.mysql&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;NAME&#39;</span><span class="p">:</span> <span class="s2">&quot;developer&#39;s db name&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;USER&#39;</span><span class="p">:</span> <span class="s2">&quot;developer&#39;s db user&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;PASSWORD&#39;</span><span class="p">:</span> <span class="s2">&quot;developer&#39;s db password&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;HOST&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span>
+        <span class="s1">&#39;PORT&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>На production сервере <tt class="docutils literal">local.py</tt> обычно содержит настройки подключения к
+БД:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.production</span> <span class="kn">import</span> <span class="o">*</span>
+</pre></div>
+<p><tt class="docutils literal">local.py</tt> не должен отслеживаться VCS.</p>
+<p>Для Django 1.4 в файлах <tt class="docutils literal"><span class="pre">repo-name/project_name/wsgi.py</span></tt> и
+<tt class="docutils literal"><span class="pre">repo-name/manage.py</span></tt> нужно указать путь до <tt class="docutils literal">local.py</tt>:</p>
+<div class="highlight"><pre><span></span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;DJANGO_SETTINGS_MODULE&quot;</span><span class="p">,</span> <span class="s2">&quot;project_name.settings.local&quot;</span><span class="p">)</span>
+</pre></div>
+<p>У меня не получилось разместить <tt class="docutils literal">local.py</tt> на <a class="reference external" href="http://www.heroku.com/">heroku</a>, чтобы файл не находился под контролем git (плохо
+искал?). Самое простое решение -- избавиться от <tt class="docutils literal">local.py</tt>, в <tt class="docutils literal">manage.py</tt>
+указать <tt class="docutils literal">project_name.settings.development</tt>, а в <tt class="docutils literal">wsgi.py</tt> --
+<tt class="docutils literal">project_name.settings.production</tt>. Еще можно использовать
+<tt class="docutils literal">heroku config</tt>:</p>
+<pre class="literal-block">
+$ heroku config:add SECRET_KEY=my_unique_secret_key
+</pre>
+<p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/settings.html">settings </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/splitting-settings-in-django.html#disqus_thread">comments</a></p>            </article>
+
+
+
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

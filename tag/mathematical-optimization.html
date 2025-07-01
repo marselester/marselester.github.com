@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - mathematical optimization</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/computing-methods-of-one-dimensional-optimization.html"><h3 class="article-title">Вычислительные методы одномерной оптимизации</h3></a>
+<h6 class="subheader" title="2010-10-06T00:00:00+07:00">Wed 06 October 2010
+</h6>
+
+
+<p>На третьем курсе по предмету методы оптимизации делали лабораторную работу на
+тему «Вычислительные методы одномерной оптимизации».
+Задача заключалась в поиске безусловного минимума функции
+<tt class="docutils literal">f(x) = pow(x, 3) – x + pow(e, <span class="pre">-x)</span></tt> на начальном интервале <tt class="docutils literal">[0, 1]</tt>
+с точностью <tt class="docutils literal">0.00001</tt>.</p>
+<p>Вычисления производились через:</p>
+<ul class="simple">
+<li>пассивный метод;</li>
+<li>равномерные блочные методы;</li>
+<li>метод золотого сечения;</li>
+<li>метод чисел Фибоначчи;</li>
+<li>метод касательной.</li>
+</ul>
+<p>Наилучшим по количеству экспериментов оказался метод чисел Фибоначчи,
+наихудшим – пассивный метод. Наилучшим по времени работы оказался метод
+золотого сечения, наихудшим – пассивный метод. Так же было установлено, что
+для данной функции блочный метод работает лучше с блоками размерами 3 и 8, для
+нечетного и четного соответственно.</p>
+<p>Если кому-нибудь пригодилось – <a class="reference external" href="https://dl.dropbox.com/u/15875449/fx.zip">архив с исходниками</a> на php.</p>
+<p class="subheader">Category: <a href="https://marselester.com/category/misc.html">Misc</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/php.html">php </a>
+    <a href="https://marselester.com/tag/mathematical-optimization.html">mathematical optimization </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/computing-methods-of-one-dimensional-optimization.html#disqus_thread">comments</a></p>            </article>
+
+
+
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - python</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/drf-pagination.html"><h3 class="article-title">Django REST framework: pagination on PostgreSQL triggers</h3></a>
+<h6 class="subheader" title="2016-04-02T00:00:00+07:00">Sat 02 April 2016
+</h6>
+
+
+<p>Django and Django REST Framework use SQL COUNT in pagination.
+As your database grows SQL COUNT becomes too slow. Fortunately the frameworks
+are well designed and allow to customize a way items are count.
+Let me illustrate that on a typical &quot;books&quot; example.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;author&#39;</span>
+
+
+<span class="k">class</span> <span class="nc">Book</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">Author</span><span class="p">,</span> <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;books&#39;</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;book&#39;</span>
+</pre></div>
+<p>It has been working fine for some time but authors are so productive and wrote thousands of books.
+As a result <tt class="docutils literal">alice.books.count()</tt> takes a few seconds to execute.
+One option is to store books count in <tt class="docutils literal">Author</tt> model which might be helpful in
+other SQL queries. Another one is to keep count somewhere else, e.g., Redis.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
+    <span class="n">books_count</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">(</span><span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">db_table</span> <span class="o">=</span> <span class="s1">&#39;author&#39;</span>
+</pre></div>
+<p>Note that <tt class="docutils literal">books_count</tt> is nullable due to existing data on production servers.
+Setting a default value <tt class="docutils literal">0</tt> on schema migration would take long to update
+every author record, also it's hard to tell whether an author record is
+already migrated (<tt class="docutils literal">books_count</tt> is calculated or not).</p>
+<p>Now we have <tt class="docutils literal">Author.books_count</tt> field which should keep track of new books.
+You can implement that based on Django signals or SQL triggers.</p>
+<p>Signals might fail, even with <tt class="docutils literal">send_robust</tt>. Updating a books count in
+a signal receiver slows down an application (two to three DB queries and
+acquiring a DB lock on author record):</p>
+<div class="highlight"><pre><span></span><span class="nd">@receiver</span><span class="p">(</span><span class="n">post_save</span><span class="p">,</span> <span class="n">sender</span><span class="o">=</span><span class="n">Book</span><span class="p">,</span> <span class="n">dispatch_uid</span><span class="o">=</span><span class="s1">&#39;update_author_books_count&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">update_author_books_count</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">created</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">created</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">book</span> <span class="o">=</span> <span class="n">instance</span>
+
+    <span class="k">with</span> <span class="n">atomic</span><span class="p">():</span>
+        <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">select_for_update</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">book</span><span class="o">.</span><span class="n">author_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="o">=</span> <span class="n">author</span><span class="o">.</span><span class="n">books</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">author</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+<p>Moving an update logic from a signal receiver to Celery task doesn't look
+promising -- <tt class="docutils literal">books_count</tt> would be inconsistent between a task trigger and
+its execution or simply Celery task might fail. Another issue is that
+a model signal is not &quot;attached&quot; to DB transaction. For example,
+a Celery task is run before a DB transaction is committed.
+That is usually quick fixed with <tt class="docutils literal">task_name.apply_async(countdown=1)</tt>
+to delay a task execution, but I would rather recommend something like
+<a class="reference external" href="https://django-transaction-hooks.readthedocs.org/en/latest/">django-transaction-hooks</a>.</p>
+<p>What about SQL trigger option? A bad thing is that a business logic leaks from an app to DB.
+But with a good documentation and tests it's maintainable: SQL code is stored in
+a data migration module.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>python manage.py makemigrations --empty yourappname
+</pre></div>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">migrations</span>
+
+<span class="n">CREATE_FUNCTION_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CREATE OR REPLACE FUNCTION update_books_count_on_author() RETURNS trigger AS $$</span>
+<span class="s2">    BEGIN</span>
+<span class="s2">        UPDATE author SET books_count =</span>
+<span class="s2">            CASE</span>
+<span class="s2">                WHEN books_count IS NULL THEN (</span>
+<span class="s2">                    SELECT count(*) FROM book WHERE author_id = author.id</span>
+<span class="s2">                )</span>
+<span class="s2">                ELSE books_count + 1</span>
+<span class="s2">            END</span>
+<span class="s2">        WHERE id = NEW.author_id;</span>
+
+<span class="s2">        RETURN NEW;</span>
+<span class="s2">    END;</span>
+<span class="s2">$$ LANGUAGE plpgsql;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">CREATE_TRIGGER_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CREATE TRIGGER books_count_update</span>
+<span class="s2">    AFTER INSERT ON book</span>
+<span class="s2">    FOR EACH ROW</span>
+<span class="s2">    EXECUTE PROCEDURE update_books_count_on_author();</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">Migration</span><span class="p">(</span><span class="n">migrations</span><span class="o">.</span><span class="n">Migration</span><span class="p">):</span>
+    <span class="n">dependencies</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">operations</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">migrations</span><span class="o">.</span><span class="n">RunSQL</span><span class="p">(</span><span class="n">CREATE_FUNCTION_SQL</span><span class="p">),</span>
+        <span class="n">migrations</span><span class="o">.</span><span class="n">RunSQL</span><span class="p">(</span><span class="n">CREATE_TRIGGER_SQL</span><span class="p">),</span>
+    <span class="p">]</span>
+</pre></div>
+<p>Here is a pitfall though. When a new book is created and author is updated on the
+same DB transaction, then <tt class="docutils literal">books_count</tt> value might be overwritten.</p>
+<div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">atomic</span><span class="p">():</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">select_for_update</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">author_id</span><span class="p">)</span>
+    <span class="n">Book</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="n">author</span><span class="p">)</span>
+    <span class="n">author</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Bob&#39;</span>
+    <span class="n">author</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+<p>You can either explicitly list fields to update <tt class="docutils literal"><span class="pre">author.save(update_fields=['name'])</span></tt>
+or use <a class="reference external" href="https://django-save-the-change.readthedocs.org/en/latest/">django-save-the-change</a>. Let's document that in the model docstring.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">save_the_change.mixins</span> <span class="kn">import</span> <span class="n">SaveTheChange</span>
+
+
+<span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">SaveTheChange</span><span class="p">,</span> <span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Author, e.g., Terry Pratchett.</span>
+
+<span class="sd">    :attribute books_count: How many books writer has. SQL COUNT is</span>
+<span class="sd">        expensive operation, so we store calculated value and update it</span>
+<span class="sd">        by SQL trigger (check a data migration module for details).</span>
+<span class="sd">        It&#39;s important to save only fields that were updated in the model.</span>
+<span class="sd">        Otherwise SQL trigger&#39;s results are overwritten by Django ORM.</span>
+<span class="sd">        For example:</span>
+
+<span class="sd">        1. author is requested with a lock (books_count = 1)</span>
+<span class="sd">        2. new book is created</span>
+<span class="sd">        3. SQL trigger updates author&#39;s books_count field (now it is 2)</span>
+<span class="sd">        4. author instance is saved with the old value of books_count = 1.</span>
+
+<span class="sd">        SaveTheChange mixin helps to prevent it.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+</pre></div>
+<p>To benefit from <tt class="docutils literal">books_count</tt> field in Django REST Framework we need
+a custom pagination class which implements <tt class="docutils literal">Paginator.count</tt> property.
+The idea is to extract author ID from paginator's SQL, query a books count
+from <tt class="docutils literal">Author</tt> model and return it, instead of default
+<tt class="docutils literal"><span class="pre">Book.objects.filter(author_id=author_id).count()</span></tt>.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.core.paginator</span> <span class="kn">import</span> <span class="n">Paginator</span>
+<span class="kn">from</span> <span class="nn">rest_framework</span> <span class="kn">import</span> <span class="n">pagination</span>
+<span class="kn">from</span> <span class="nn">rest_framework.viewsets</span> <span class="kn">import</span> <span class="n">ReadOnlyModelViewSet</span>
+
+
+<span class="k">class</span> <span class="nc">BookViewSet</span><span class="p">(</span><span class="n">ReadOnlyModelViewSet</span><span class="p">):</span>
+    <span class="n">pagination_class</span> <span class="o">=</span> <span class="n">BookPagination</span>
+
+
+<span class="k">class</span> <span class="nc">BookPagination</span><span class="p">(</span><span class="n">pagination</span><span class="o">.</span><span class="n">PageNumberPagination</span><span class="p">):</span>
+    <span class="n">django_paginator_class</span> <span class="o">=</span> <span class="n">CachedBookCountPaginator</span>
+
+
+<span class="k">class</span> <span class="nc">CachedBookCountPaginator</span><span class="p">(</span><span class="n">Paginator</span><span class="p">):</span>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the total number of books, across all pages.</span>
+
+<span class="sd">        It parses a SQL and learns what author ID was requested</span>
+<span class="sd">        based on ``self.object_list.query``. After that we can get</span>
+<span class="sd">        a cached books count from Author model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># There is query.where, but I could&#39;t find an author ID easily.</span>
+        <span class="c1"># Moreover query.where internals might be changed.</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object_list</span><span class="o">.</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">author_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_author_id_from_sql</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+
+        <span class="n">author</span> <span class="o">=</span> <span class="n">Author</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">author_id</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;books_count&#39;</span><span class="p">)</span>
+        <span class="c1"># In case we got unsynced author, we fallback to SQL COUNT.</span>
+        <span class="k">if</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_count</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">author</span><span class="o">.</span><span class="n">books_count</span>
+
+    <span class="k">def</span> <span class="nf">query_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Request books count from DB.</span>
+
+<span class="sd">        We need this method to facilitate testing (mocks).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">CachedBookCountPaginator</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">count</span>
+
+<span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">_get_author_id_from_sql</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">sql</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+<p>I hope this helps. Cheers!</p>
+<p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/postgresql.html">postgresql </a>
+    <a href="https://marselester.com/tag/django-rest-framework.html">django rest framework </a>
+    <a href="https://marselester.com/tag/pagination.html">pagination </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/drf-pagination.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/api-based-on-flask.html"><h3 class="article-title">API based on Flask</h3></a>
+<h6 class="subheader" title="2013-12-09T00:00:00+07:00">Mon 09 December 2013
+</h6>
+
+
+<p>Here I want to consider implementation of API best practices which
+usually don't follow Fielding's REST strictly. <a class="reference external" href="https://github.com/marselester/api-example-based-on-flask">Example Flask project</a>
+is on GitHub.</p>
+<div class="section" id="api-versioning">
+<h2>API Versioning</h2>
+<p>Interfaces are changed hence versioning is mandatory in order to not annoy
+your users. You might need to add new resource or field to particular …</p></div><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/flask.html">flask </a>
+    <a href="https://marselester.com/tag/api.html">api </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/api-based-on-flask.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/api-based-on-flask.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
+<h6 class="subheader" title="2013-11-28T00:00:00+07:00">Thu 28 November 2013
+</h6>
+
+
+<p>Eventually you will need to deploy project,
+but deployment was not considered in the <a class="reference external" href="https://marselester.com/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
+<p>Server configuration is different from local, thus environments will be needed
+(at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
+environment by default.</p>
+<p>Environments are set in <tt class="docutils literal">minion.conf …</tt></p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="https://marselester.com/tag/salt.html">salt </a>
+    <a href="https://marselester.com/tag/saltstack.html">saltstack </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
+<h6 class="subheader" title="2013-11-09T00:00:00+07:00">Sat 09 November 2013
+</h6>
+
+
+<p>Let's use <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> as an example of Django project. I want it to
+run in VirtualBox which is managed by Vagrant. Infrastructure management
+is provided by SaltStack.</p>
+<p>I advise you to create separate folder for repositories (currently there
+is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there.
+Also …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="https://marselester.com/tag/salt.html">salt </a>
+    <a href="https://marselester.com/tag/saltstack.html">saltstack </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/developing-django-project-with-saltstack.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/preparation-to-python-interview.html"><h3 class="article-title">Preparation to Python Interview</h3></a>
+<h6 class="subheader" title="2012-11-02T00:00:00+07:00">Fri 02 November 2012
+</h6>
+
+
+<p>I decided to collect a little more information and experience during
+preparation to Python developer interview. These are some information and
+links which seemed important to me. Maybe it will be helpful.</p>
+<div class="section" id="how-does-it-usually-go">
+<h2>How does it usually go?</h2>
+<div class="section" id="what-kind-of-projects-did-you-participate-in">
+<h3>What kind of projects did you participate in?</h3>
+<p>What did you do at …</p></div></div><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/interview.html">interview </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/preparation-to-python-interview.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/preparation-to-python-interview.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-testing-during-construction.html"><h3 class="article-title">Django TODO: тестирование во время конструирования</h3></a>
+<h6 class="subheader" title="2012-06-29T13:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
+стратегии тестирования.</p>
+<p>Тестирование может указать только на отдельные дефектные области программы --
+оно не сделает программу удобнее в использовании, более быстрой, компактной,
+удобочитаемой или расширяемой.</p>
+<p>Цель тестирования противоположна целям других этапов разработки. Его целью
+является нахождение ошибок. Успешным считается тест, нарушающий работу ПО …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/testing.html">testing </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-testing-during-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-testing-during-construction.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
+<h6 class="subheader" title="2012-06-29T12:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>При работе над проектом конструирование включает другие процессы, в том числе
+проектирование. Формальная архитектура дает ответы только на вопросы
+системного уровня, при этом значительная часть проектирования может быть
+намеренно оставлена на этап конструирования. Проектирование -- это
+&quot;постепенный&quot; процесс. Проекты приложений не возникают в умах разработчиков
+сразу в готовом виде. Они развиваются …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/construction.html">construction </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-system-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-system-construction.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Следующим этапом разработки системы является проектирование архитектуры.</p>
+<p>Архитектура должна быть продуманным концептуальным целым. Главный тезис самой
+популярной книги по разработке ПО &quot;Мифический человеко-месяц&quot; гласит, что
+основной проблемой, характерной для крупных систем, является поддержание их
+концептуальной целостности. Хорошая архитектура должна соответствовать
+проблеме <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
+<p>Разделение системы на подсистемы на уровне архитектуры, позволяет …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/architecture.html">architecture </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-design-architecture.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-design-architecture.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>После прочтения Макконелла захотелось спроецировать его советы на Django.
+Для этого я взял за основу разработку системы <a class="reference external" href="https://github.com/marselester/django-todo">Django TODO</a>. Итак, первый этап -- выработка требований к
+системе.</p>
+<p>Требования подробно описывают, что должна делать система. Внимание к
+требованиям помогает свести к минимуму изменения системы после начала
+разработки. Явные требования помогают гарантировать, что …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/requirements.html">requirements </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-development-of-system-requirements.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-development-of-system-requirements.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/links-to-best-practices-of-python-django.html"><h3 class="article-title">Соглашения по разработке на Python/Django</h3></a>
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Во время разработки я часто сверяюсь с известными мне соглашениями,
+стараюсь следовать рекомендациям. Цитировать их не имеет смысла -- лучше
+приведу ссылки.</p>
+<p><a class="reference external" href="http://www.python.org/dev/peps/pep-0008/">PEP 8 -- Style Guide for Python Code</a>.</p>
+<p><a class="reference external" href="http://python.net/~goodger/projects/pycon/2007/idiomatic/handout.html#long-lines-continuations">Code Like a Pythonista: Idiomatic Python</a>.
+В нем я нашел ответы на вопросы форматирования длинных строк:</p>
+<pre class="literal-block">
+expended_time = (self.finish_date() - self.start_date
+                 + datetime …</pre><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/best-practices.html">best practices </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/links-to-best-practices-of-python-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/links-to-best-practices-of-python-django.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/splitting-settings-in-django.html"><h3 class="article-title">Разделение настроек в Django</h3></a>
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>В <a class="reference external" href="https://code.djangoproject.com/wiki/SplitSettings">Django wiki</a> собраны
+различные способы разделения настроек. Мне нравится <a class="reference external" href="http://senko.net/en/django-quickstart-skeleton-project/">вариант</a>, описанный в блоге
+Senko Rašić:</p>
+<pre class="literal-block">
+settings/
+├── __init__.py
+├── base.py
+├── development.py
+├── local.py
+└── production.py
+</pre>
+<p><tt class="docutils literal">base.py</tt> содержит общие настройки для <tt class="docutils literal">development.py</tt> и
+<tt class="docutils literal">production.py</tt>, например:</p>
+<div class="highlight"><pre><span></span><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
+<span class="n">MANAGERS</span> <span class="o">=</span> <span class="n">ADMINS</span>
+
+<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s1">&#39;Asia/Yekaterinburg&#39;</span>
+<span class="c1"># ...</span>
+</pre></div>
+<p><tt class="docutils literal">production.py</tt> содержит настройки для …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/settings.html">settings </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/splitting-settings-in-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/splitting-settings-in-django.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html"><h3 class="article-title">Краткий обзор инфраструктуры для разработки reusable Django приложений</h3></a>
+<h6 class="subheader" title="2012-06-13T00:00:00+07:00">Wed 13 June 2012
+</h6>
+
+
+<p>Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
+зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
+веб-приложений на Django к этим проблемам необходимо отнести организацию
+файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
+организации автоматизированного тестирования. В данной статье приведены пути
+решения этих проблем.</p>
+<p>Важно знать различия между двумя …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/infrastructure.html">infrastructure </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/modeling-single-channel-queue-with-refusals.html"><h3 class="article-title">Моделирование одноканальной СМО с отказами</h3></a>
+<h6 class="subheader" title="2009-05-30T00:00:00+07:00">Sat 30 May 2009
+</h6>
+
+
+<p>Дана одноканальная система массового обслуживания с отказами. В нее поступают
+заявки через промежуток времени <tt class="docutils literal">n</tt>, где <tt class="docutils literal">n</tt> – случайная величина,
+подчиненная равномерному закону распределения. Время обслуживания заявки
+системой <tt class="docutils literal">m</tt> также является случайной величиной с показательным законом
+распределения. Если к моменту прихода заявки канал занят, заявка покидает
+систему необслуженной.</p>
+<p>Изначально код был …</p><p class="subheader">Category: <a href="https://marselester.com/category/misc.html">Misc</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/modeling.html">modeling </a>
+    <a href="https://marselester.com/tag/single-channel-queue.html">single-channel queue </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/modeling-single-channel-queue-with-refusals.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/modeling-single-channel-queue-with-refusals.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

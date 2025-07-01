@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - Marsel</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html"><h3 class="article-title">DIY CPU profiler: position independent executable 🥧</h3></a>
+<h6 class="subheader" title="2023-04-02T00:00:00+07:00">Sun 02 April 2023
+</h6>
+
+
+<p>In the <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">simplest case of symbolization</a>
+we used <code>-fno-pie -no-pie</code> flags, so
+gcc wouldn't produce a position independent executable (PIE).
+It is produced by default for security measures such as
+address space layout randomization (ASLR).
+That means each time the program runs,
+its segments are loaded into different regions of virtual memory,
+but their relative positions stay the same.</p>
+<p>Let's see what happens when those flags are omitted.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ gcc -Og -fcf-protection=none -o fib main.c</span>
+<span class="go">﹩ ./fib &amp;</span>
+<span class="go">﹩ sudo go run ./cmd/profiler3 -pid=$(pidof fib)</span>
+<span class="go">/proc/19978/maps</span>
+<span class="go">start=0x555806f2c000 limit=0x555806f2d000 offset=0x1000 /vagrant/diy-parca-agent/fib</span>
+<span class="go">start=0x7f4e21595000 limit=0x7f4e2172a000 offset=0x28000 /usr/lib/x86_64-linux-gnu/libc.so.6</span>
+<span class="go">start=0x7f4e2179f000 limit=0x7f4e217c9000 offset=0x2000 /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span>
+<span class="go">start=0x7fffe4d9e000 limit=0x7fffe4da0000 offset=0x0 [vdso]</span>
+<span class="go">start=0xffffffffff600000 limit=0xffffffffff601000 offset=0x0 [vsyscall]</span>
+
+<span class="go">Waiting for stack traces for 10s...</span>
+<span class="go">{PID:19978 UserStackID:288 KernelStackID:-14} seen 254 times</span>
+<span class="go">    288 [555806f2c139]</span>
+<span class="go">...</span>
+</code></pre></div>
+
+<p>The first thing I noticed when looking at samples is much higher addresses,
+e.g., we've just sampled <code>93836562055481</code> address vs <code>4198694</code> from
+the <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">previous post</a>.
+The size of the mapping id 1 is still one page,
+i.e., 4096 bytes = memory_limit - memory_start.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ zcat cpu.pprof | protoc --decode perftools.profiles.Profile ./pprof/proto/profile.proto</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="n">sample_type</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">type</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">unit</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">75</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">26</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">48</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">79</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">99</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">23</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">87</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">203</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">61</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">254</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">sample</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">location_id</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="w">  </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055168</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562059264</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">139973543677952</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">139973545336832</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">163840</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">139973545816064</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">139973545988096</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">140737032871936</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">140737032880128</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">18446744073699065856</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">18446744073699069952</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055526</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055495</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055506</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055494</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055499</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055487</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055481</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055531</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055523</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055511</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055493</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055518</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055492</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055502</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055530</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;samples&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;count&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/vagrant/diy-parca-agent/fib&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/libc.so.6&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;[vdso]&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;[vsyscall]&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cpu&quot;</span><span class="w"></span>
+<span class="n">string_table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;nanoseconds&quot;</span><span class="w"></span>
+<span class="n">time_nanos</span><span class="p">:</span><span class="w"> </span><span class="mi">1680393594260736123</span><span class="w"></span>
+<span class="n">duration_nanos</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000000</span><span class="w"></span>
+<span class="n">period_type</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">type</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="w"></span>
+<span class="w">  </span><span class="n">unit</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">period</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="p">...</span><span class="w"></span>
+<span class="n">mapping</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_start</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055168</span><span class="w"> </span><span class="c1"># 4198400 before</span><span class="w"></span>
+<span class="w">  </span><span class="n">memory_limit</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562059264</span><span class="w"> </span><span class="c1"># 4202496 before</span><span class="w"></span>
+<span class="w">  </span><span class="n">file_offset</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="w"></span>
+<span class="w">  </span><span class="n">filename</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+<span class="n">location</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">  </span><span class="n">mapping_id</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="n">address</span><span class="p">:</span><span class="w"> </span><span class="mi">93836562055481</span><span class="w">      </span><span class="c1"># 4198694 before</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+</code></pre></div>
+
+<p>The second thing is a mismatch between
+where the segment should be loaded <code>VirtAddr=0x0000000000001000</code>
+and where it was actually loaded <code>memory_start: 93836562055168</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --segments --wide fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">Elf file type is DYN (Position-Independent Executable file)</span>
+<span class="go">Entry point 0x1050</span>
+<span class="go">There are 13 program headers, starting at offset 64</span>
+
+<span class="go">Program Headers:</span>
+<span class="go">  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align</span>
+<span class="go">  PHDR           0x000040 0x0000000000000040 0x0000000000000040 0x0002d8 0x0002d8 R   0x8</span>
+<span class="go">  INTERP         0x000318 0x0000000000000318 0x0000000000000318 0x00001c 0x00001c R   0x1</span>
+<span class="go">      [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]</span>
+<span class="go">  LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x000638 0x000638 R   0x1000</span>
+<span class="go">  LOAD           0x001000 0x0000000000001000 0x0000000000001000 0x0001b1 0x0001b1 R E 0x1000</span>
+<span class="go">  LOAD           0x002000 0x0000000000002000 0x0000000000002000 0x00010c 0x00010c R   0x1000</span>
+<span class="go">  LOAD           0x002db8 0x0000000000003db8 0x0000000000003db8 0x000258 0x000260 RW  0x1000</span>
+<span class="go">  DYNAMIC        0x002dc8 0x0000000000003dc8 0x0000000000003dc8 0x0001f0 0x0001f0 RW  0x8</span>
+<span class="go">  NOTE           0x000338 0x0000000000000338 0x0000000000000338 0x000020 0x000020 R   0x8</span>
+<span class="go">  NOTE           0x000358 0x0000000000000358 0x0000000000000358 0x000044 0x000044 R   0x4</span>
+<span class="go">  GNU_PROPERTY   0x000338 0x0000000000000338 0x0000000000000338 0x000020 0x000020 R   0x8</span>
+<span class="go">  GNU_EH_FRAME   0x002020 0x0000000000002020 0x0000000000002020 0x000034 0x000034 R   0x4</span>
+<span class="go">  GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x10</span>
+<span class="go">  GNU_RELRO      0x002db8 0x0000000000003db8 0x0000000000003db8 0x000248 0x000248 R   0x1</span>
+
+<span class="go"> Section to Segment mapping:</span>
+<span class="go">  Segment Sections...</span>
+<span class="go">   00</span>
+<span class="go">   01     .interp</span>
+<span class="go">   02     .interp .note.gnu.property .note.gnu.build-id .note.ABI-tag .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rela.dyn .rela.plt</span>
+<span class="go">   03     .init .plt .plt.got .text .fini</span>
+<span class="go">   04     .rodata .eh_frame_hdr .eh_frame</span>
+<span class="go">   05     .init_array .fini_array .dynamic .got .data .bss</span>
+<span class="go">   06     .dynamic</span>
+<span class="go">   07     .note.gnu.property</span>
+<span class="go">   08     .note.gnu.build-id .note.ABI-tag</span>
+<span class="go">   09     .note.gnu.property</span>
+<span class="go">   10     .eh_frame_hdr</span>
+<span class="go">   11</span>
+<span class="go">   12     .init_array .fini_array .dynamic .got</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Program Headers:</span>
+<span class="go">  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align</span>
+<span class="go">  ...</span>
+<span class="go">  LOAD           0x001000 0x0000000000001000 0x0000000000001000 0x0001b1 0x0001b1 R E 0x1000</span>
+<span class="go">  ...</span>
+
+<span class="go"> Section to Segment mapping:</span>
+<span class="go">  Segment Sections...</span>
+<span class="go">   ...</span>
+<span class="go">   03     .init .plt .plt.got .text .fini</span>
+<span class="go">   ...</span>
+</code></pre></div>
+
+<p>The third thing is a difference in the segment's sections: the <code>.plt.got</code> section was added.</p>
+<h2>How PIE affects symbolization</h2>
+<p>Clearly none of the sampled addresses matches <code>fibNaive</code> function
+when we look at the symbol table.
+The function's address <code>0x1139</code> is very far from
+the beginning of the loaded segment <code>0x555806f2c000</code>
+(that's hex of <code>memory_start: 93836562055168</code>).</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --symbols fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">Symbol table &#39;.dynsym&#39; contains 7 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND</span>
+<span class="go">     1: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND _[...]@GLIBC_2.34 (2)</span>
+<span class="go">     2: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_deregisterT[...]</span>
+<span class="go">     3: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__</span>
+<span class="go">     4: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND [...]@GLIBC_2.3.4 (3)</span>
+<span class="go">     5: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_registerTMC[...]</span>
+<span class="go">     6: 0000000000000000     0 FUNC    WEAK   DEFAULT  UND [...]@GLIBC_2.2.5 (4)</span>
+
+<span class="go">Symbol table &#39;.symtab&#39; contains 37 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND</span>
+<span class="go">     1: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS Scrt1.o</span>
+<span class="go">     2: 000000000000037c    32 OBJECT  LOCAL  DEFAULT    4 __abi_tag</span>
+<span class="go">     3: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c</span>
+<span class="go">     4: 0000000000001080     0 FUNC    LOCAL  DEFAULT   15 deregister_tm_clones</span>
+<span class="go">     5: 00000000000010b0     0 FUNC    LOCAL  DEFAULT   15 register_tm_clones</span>
+<span class="go">     6: 00000000000010f0     0 FUNC    LOCAL  DEFAULT   15 __do_global_dtors_aux</span>
+<span class="go">     7: 0000000000004010     1 OBJECT  LOCAL  DEFAULT   25 completed.0</span>
+<span class="go">     8: 0000000000003dc0     0 OBJECT  LOCAL  DEFAULT   21 __do_global_dtor[...]</span>
+<span class="go">     9: 0000000000001130     0 FUNC    LOCAL  DEFAULT   15 frame_dummy</span>
+<span class="go">    10: 0000000000003db8     0 OBJECT  LOCAL  DEFAULT   20 __frame_dummy_in[...]</span>
+<span class="go">    11: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS main.c</span>
+<span class="go">    12: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c</span>
+<span class="go">    13: 0000000000002108     0 OBJECT  LOCAL  DEFAULT   19 __FRAME_END__</span>
+<span class="go">    14: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS</span>
+<span class="go">    15: 0000000000003dc8     0 OBJECT  LOCAL  DEFAULT   22 _DYNAMIC</span>
+<span class="go">    16: 0000000000002020     0 NOTYPE  LOCAL  DEFAULT   18 __GNU_EH_FRAME_HDR</span>
+<span class="go">    17: 0000000000003fb8     0 OBJECT  LOCAL  DEFAULT   23 _GLOBAL_OFFSET_TABLE_</span>
+<span class="go">    18: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __libc_start_mai[...]</span>
+<span class="go">    19: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_deregisterT[...]</span>
+<span class="go">    20: 0000000000004000     0 NOTYPE  WEAK   DEFAULT   24 data_start</span>
+<span class="go">    21: 0000000000004010     0 NOTYPE  GLOBAL DEFAULT   24 _edata</span>
+<span class="go">    22: 00000000000011a4     0 FUNC    GLOBAL HIDDEN    16 _fini</span>
+<span class="go">    23: 0000000000004000     0 NOTYPE  GLOBAL DEFAULT   24 __data_start</span>
+<span class="go">    24: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__</span>
+<span class="go">    25: 0000000000004008     0 OBJECT  GLOBAL HIDDEN    24 __dso_handle</span>
+<span class="go">    26: 0000000000002000     4 OBJECT  GLOBAL DEFAULT   17 _IO_stdin_used</span>
+<span class="go">    27: 0000000000004018     0 NOTYPE  GLOBAL DEFAULT   25 _end</span>
+<span class="go">    28: 0000000000001050    38 FUNC    GLOBAL DEFAULT   15 _start</span>
+<span class="go">    29: 0000000000004010     0 NOTYPE  GLOBAL DEFAULT   25 __bss_start</span>
+<span class="go">    30: 000000000000116d    54 FUNC    GLOBAL DEFAULT   15 main</span>
+<span class="go">    31: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __printf_chk@GLI[...]</span>
+<span class="go">    32: 0000000000004010     0 OBJECT  GLOBAL HIDDEN    24 __TMC_END__</span>
+<span class="go">    33: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND _ITM_registerTMC[...]</span>
+<span class="go">    34: 0000000000000000     0 FUNC    WEAK   DEFAULT  UND __cxa_finalize@G[...]</span>
+<span class="go">    35: 0000000000001000     0 FUNC    GLOBAL HIDDEN    12 _init</span>
+<span class="go">    36: 0000000000001139    52 FUNC    GLOBAL DEFAULT   15 fibNaive</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Symbol table &#39;.symtab&#39; contains 37 entries:</span>
+<span class="go">   Num:    Value          Size Type    Bind   Vis      Ndx Name</span>
+<span class="go">    ...</span>
+<span class="go">    36: 0000000000001139    52 FUNC    GLOBAL DEFAULT   15 fibNaive</span>
+</code></pre></div>
+
+<p>Let's try to figure out where sections are mapped in the virtual address space.
+For that, we need to know the distance from the segment to each section,
+i.e., the section's offset minus the segment's offset:</p>
+<ul>
+<li>0 bytes from <code>.init</code> section = 0x1000 - 0x1000</li>
+<li>0x20 bytes from <code>.plt</code> section = 0x1020 - 0x1000</li>
+<li>0x40 bytes from <code>.plt.got</code> section = 0x1040 - 0x1000</li>
+<li>0x50 bytes from <code>.text</code> section = 0x1050 - 0x1000</li>
+<li>0x1a4 bytes from <code>.fini</code> section = 0x11a4 - 0x1000</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ readelf --sections --wide fib</span>
+</code></pre></div>
+
+<details>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">There are 30 section headers, starting at offset 0x36b8:</span>
+
+<span class="go">Section Headers:</span>
+<span class="go">  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al</span>
+<span class="go">  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0</span>
+<span class="go">  [ 1] .interp           PROGBITS        0000000000000318 000318 00001c 00   A  0   0  1</span>
+<span class="go">  [ 2] .note.gnu.property NOTE            0000000000000338 000338 000020 00   A  0   0  8</span>
+<span class="go">  [ 3] .note.gnu.build-id NOTE            0000000000000358 000358 000024 00   A  0   0  4</span>
+<span class="go">  [ 4] .note.ABI-tag     NOTE            000000000000037c 00037c 000020 00   A  0   0  4</span>
+<span class="go">  [ 5] .gnu.hash         GNU_HASH        00000000000003a0 0003a0 000024 00   A  6   0  8</span>
+<span class="go">  [ 6] .dynsym           DYNSYM          00000000000003c8 0003c8 0000a8 18   A  7   1  8</span>
+<span class="go">  [ 7] .dynstr           STRTAB          0000000000000470 000470 0000a1 00   A  0   0  1</span>
+<span class="go">  [ 8] .gnu.version      VERSYM          0000000000000512 000512 00000e 02   A  6   0  2</span>
+<span class="go">  [ 9] .gnu.version_r    VERNEED         0000000000000520 000520 000040 00   A  7   1  8</span>
+<span class="go">  [10] .rela.dyn         RELA            0000000000000560 000560 0000c0 18   A  6   0  8</span>
+<span class="go">  [11] .rela.plt         RELA            0000000000000620 000620 000018 18  AI  6  23  8</span>
+<span class="go">  [12] .init             PROGBITS        0000000000001000 001000 00001b 00  AX  0   0  4</span>
+<span class="go">  [13] .plt              PROGBITS        0000000000001020 001020 000020 10  AX  0   0 16</span>
+<span class="go">  [14] .plt.got          PROGBITS        0000000000001040 001040 000008 08  AX  0   0  8</span>
+<span class="go">  [15] .text             PROGBITS        0000000000001050 001050 000153 00  AX  0   0 16</span>
+<span class="go">  [16] .fini             PROGBITS        00000000000011a4 0011a4 00000d 00  AX  0   0  4</span>
+<span class="go">  [17] .rodata           PROGBITS        0000000000002000 002000 00001f 00   A  0   0  4</span>
+<span class="go">  [18] .eh_frame_hdr     PROGBITS        0000000000002020 002020 000034 00   A  0   0  4</span>
+<span class="go">  [19] .eh_frame         PROGBITS        0000000000002058 002058 0000b4 00   A  0   0  8</span>
+<span class="go">  [20] .init_array       INIT_ARRAY      0000000000003db8 002db8 000008 08  WA  0   0  8</span>
+<span class="go">  [21] .fini_array       FINI_ARRAY      0000000000003dc0 002dc0 000008 08  WA  0   0  8</span>
+<span class="go">  [22] .dynamic          DYNAMIC         0000000000003dc8 002dc8 0001f0 10  WA  7   0  8</span>
+<span class="go">  [23] .got              PROGBITS        0000000000003fb8 002fb8 000048 08  WA  0   0  8</span>
+<span class="go">  [24] .data             PROGBITS        0000000000004000 003000 000010 00  WA  0   0  8</span>
+<span class="go">  [25] .bss              NOBITS          0000000000004010 003010 000008 00  WA  0   0  1</span>
+<span class="go">  [26] .comment          PROGBITS        0000000000000000 003010 00002b 01  MS  0   0  1</span>
+<span class="go">  [27] .symtab           SYMTAB          0000000000000000 003040 000378 18     28  18  8</span>
+<span class="go">  [28] .strtab           STRTAB          0000000000000000 0033b8 0001eb 00      0   0  1</span>
+<span class="go">  [29] .shstrtab         STRTAB          0000000000000000 0035a3 000111 00      0   0  1</span>
+<span class="go">Key to Flags:</span>
+<span class="go">  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),</span>
+<span class="go">  L (link order), O (extra OS processing required), G (group), T (TLS),</span>
+<span class="go">  C (compressed), x (unknown), o (OS specific), E (exclude),</span>
+<span class="go">  D (mbind), l (large), p (processor specific)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="go">Section Headers:</span>
+<span class="go">  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al</span>
+<span class="go">  ...</span>
+<span class="go">  [12] .init             PROGBITS        0000000000001000 001000 00001b 00  AX  0   0  4</span>
+<span class="go">  [13] .plt              PROGBITS        0000000000001020 001020 000020 10  AX  0   0 16</span>
+<span class="go">  [14] .plt.got          PROGBITS        0000000000001040 001040 000008 08  AX  0   0  8</span>
+<span class="go">  [15] .text             PROGBITS        0000000000001050 001050 000153 00  AX  0   0 16</span>
+<span class="go">  [16] .fini             PROGBITS        00000000000011a4 0011a4 00000d 00  AX  0   0  4</span>
+<span class="go">  ...</span>
+</code></pre></div>
+
+<p>Then we can add those distances to <code>memory_start: 0x555806f2c000</code>
+to get an idea how the process's virtual address space looked like
+when the executable file was mapped.</p>
+<div class="highlight"><pre><span></span><code><span class="go">Executable object file           Virtual address space</span>
+<span class="go"> __________                       __________</span>
+<span class="go">|          | 0x3e37              |          | N</span>
+<span class="go">|          |                     |          |</span>
+<span class="go">| ...      | 0x2000              | ...      | 0x555806f2d000</span>
+<span class="go">|----------| -----------&gt; vm_end |----------|</span>
+<span class="go">| .fini    | 0x11a4              | .fini    | 0x555806f2c1a4</span>
+<span class="go">| .text    | 0x1050              | .text    | 0x555806f2c050</span>
+<span class="go">| .plt.got | 0x1040              | .plt.got | 0x555806f2c040</span>
+<span class="go">| .plt     | 0x1020              | .plt     | 0x555806f2c020</span>
+<span class="go">| .init    | 0x1000              | .init    | 0x555806f2c000</span>
+<span class="go">|----------| ---------&gt; vm_start |----------|</span>
+<span class="go">| ...      |                     | ...      |</span>
+<span class="go">|__________| 0                   |__________| 0</span>
+</code></pre></div>
+
+<p>The sampled addresses should be in the <code>.text</code> section
+which starts at <code>0x1050</code> offset within the file.
+Since the segment itself starts at <code>0x1000</code> offset,
+the distance between them is 0x50 bytes = 0x1050 - 0x1000.
+Therefore, in virtual address space the <code>.text</code> section starts at
+<code>0x555806f2c050</code> address = memory_start + distance = 0x555806f2c000 + 0x50.</p>
+<p>Our sampled address <code>0x555806f2c139</code> (that's <code>address: 93836562055481</code> in hexadecimal form)
+can be adjusted to the ELF file's address range as follows:</p>
+<ol>
+<li>Find the distance between the sampled memory address and
+  beginning of the loaded segment:
+  313 bytes = 0x555806f2c139 - 0x555806f2c000.</li>
+<li>Add the segment's offset to the distance
+  to find the address used in the <code>.symtab</code> section:
+  0x1139 = 0x1000 + 313.</li>
+</ol>
+<p>The <code>0x1139</code> address belongs to <code>fibNaive</code> function as we've seen
+in the symbol table.
+That's nice! 🙌</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Distance between the sampled memory address and</span><span class="w"></span>
+<span class="c1">// beginning of the loaded segment (vm_start memory address).</span><span class="w"></span>
+<span class="nx">d</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sampledAddr</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">mappingMemoryStart</span><span class="w"></span>
+<span class="c1">// Sampled address adjusted to .symtab address range.</span><span class="w"></span>
+<span class="nx">adjustedAddr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mappingFileOffset</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">d</span><span class="w"></span>
+</code></pre></div>
+
+<p>Here are all the addresses from <code>cpu.pprof</code> file sorted in ascending order,
+their distances from <code>memory_start: 0x555806f2c000</code>,
+and addresses adjusted to the file's range.</p>
+<table>
+<thead>
+<tr>
+<th>sampled address</th>
+<th>distance</th>
+<th>adjusted address</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x555806f2c139</td>
+<td>313 bytes</td>
+<td>0x1139</td>
+</tr>
+<tr>
+<td>0x555806f2c13f</td>
+<td>319 bytes</td>
+<td>0x113f</td>
+</tr>
+<tr>
+<td>0x555806f2c144</td>
+<td>324 bytes</td>
+<td>0x1144</td>
+</tr>
+<tr>
+<td>0x555806f2c145</td>
+<td>325 bytes</td>
+<td>0x1145</td>
+</tr>
+<tr>
+<td>0x555806f2c146</td>
+<td>326 bytes</td>
+<td>0x1146</td>
+</tr>
+<tr>
+<td>0x555806f2c147</td>
+<td>327 bytes</td>
+<td>0x1147</td>
+</tr>
+<tr>
+<td>0x555806f2c14b</td>
+<td>331 bytes</td>
+<td>0x114b</td>
+</tr>
+<tr>
+<td>0x555806f2c14e</td>
+<td>334 bytes</td>
+<td>0x114e</td>
+</tr>
+<tr>
+<td>0x555806f2c152</td>
+<td>338 bytes</td>
+<td>0x1152</td>
+</tr>
+<tr>
+<td>0x555806f2c157</td>
+<td>343 bytes</td>
+<td>0x1157</td>
+</tr>
+<tr>
+<td>0x555806f2c15e</td>
+<td>350 bytes</td>
+<td>0x115e</td>
+</tr>
+<tr>
+<td>0x555806f2c163</td>
+<td>355 bytes</td>
+<td>0x1163</td>
+</tr>
+<tr>
+<td>0x555806f2c166</td>
+<td>358 bytes</td>
+<td>0x1166</td>
+</tr>
+<tr>
+<td>0x555806f2c16a</td>
+<td>362 bytes</td>
+<td>0x116a</td>
+</tr>
+<tr>
+<td>0x555806f2c16b</td>
+<td>363 bytes</td>
+<td>0x116b</td>
+</tr>
+</tbody>
+</table>
+<p>Disassembling <code>fib</code> program confirms that adjusted memory addresses
+correspond to instructions of <code>fibNaive</code> function.</p>
+<div class="highlight"><pre><span></span><code><span class="x">﹩ objdump --disassemble=fibNaive fib</span>
+<span class="x">...</span>
+<span class="mh">0000000000001139</span><span class="w"> </span><span class="p">&lt;</span><span class="nf">fibNaive</span><span class="p">&gt;:</span>
+<span class="x">    1139:   48 83 ff 02             cmp    $0x2,%rdi</span>
+<span class="x">    113d:   7f 06                   jg     1145 &lt;fibNaive+0xc&gt;</span>
+<span class="x">    113f:   b8 01 00 00 00          mov    $0x1,%eax</span>
+<span class="x">    1144:   c3                      ret</span>
+<span class="x">    1145:   55                      push   %rbp</span>
+<span class="x">    1146:   53                      push   %rbx</span>
+<span class="x">    1147:   48 83 ec 08             sub    $0x8,%rsp</span>
+<span class="x">    114b:   48 89 fb                mov    %rdi,%rbx</span>
+<span class="x">    114e:   48 8d 7f fe             lea    -0x2(%rdi),%rdi</span>
+<span class="x">    1152:   e8 e2 ff ff ff          call   1139 &lt;fibNaive&gt;</span>
+<span class="x">    1157:   48 89 c5                mov    %rax,%rbp</span>
+<span class="x">    115a:   48 8d 7b ff             lea    -0x1(%rbx),%rdi</span>
+<span class="x">    115e:   e8 d6 ff ff ff          call   1139 &lt;fibNaive&gt;</span>
+<span class="x">    1163:   48 01 e8                add    %rbp,%rax</span>
+<span class="x">    1166:   48 83 c4 08             add    $0x8,%rsp</span>
+<span class="x">    116a:   5b                      pop    %rbx</span>
+<span class="x">    116b:   5d                      pop    %rbp</span>
+<span class="x">    116c:   c3                      ret</span>
+<span class="x">...</span>
+</code></pre></div>
+
+<p>Based on these observations, I made a symbolization tool
+<a href="https://github.com/marselester/diy-parca-agent/blob/main/cmd/addr2func/main.go">addr2func</a>
+and proposed a change in Parca, see <a href="https://github.com/parca-dev/parca/pull/2910">#2910</a>.</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"><h3 class="article-title">DIY CPU profiler: the simplest case of symbolization</h3></a>
+<h6 class="subheader" title="2023-03-23T00:00:00+07:00">Thu 23 March 2023
+</h6>
+
+
+<p>In the <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">BPF maps to pprof</a> post
+we managed to collect CPU samples and store them in pprof format.
+Here I would like to explore the simplest case of symbolization
+and put shared libraries aside.</p>
+<p>Symbolization is resolving sampled memory addresses to function names (symbols).
+In our case, simply searching …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/linux-process.html"><h3 class="article-title">Linux process</h3></a>
+<h6 class="subheader" title="2023-01-31T00:00:00+07:00">Tue 31 January 2023
+</h6>
+
+
+<p>Being curious about BPF, I studied source code of several programs from the BCC libbpf-tools.
+BPF performance tools book aided me to navigate BPF C code.
+For example, it explained that a BPF program has to use helpers because it can't access arbitrary memory (outside of BPF) and can't call …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/architecture.html">architecture </a>
+    <a href="https://marselester.com/tag/linux.html">linux </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/linux-process.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/linux-process.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/bandwitch-of-cpu-and-storages.html"><h3 class="article-title">Bandwitch 🧙‍♀️ of CPU and storages</h3></a>
+<h6 class="subheader" title="2023-01-08T00:00:00+07:00">Sun 08 January 2023
+</h6>
+
+
+<p>Let us begin with a definition of a CPU clock rate ⏰.
+It refers to the frequency at which the clock generator (an oscillator crystal)
+of a processor can generate pulses, which are used to synchronize the operations of its components.
+For example, 1GHz CPU implies that its clock runs at …</p><p class="subheader">Category: <a href="https://marselester.com/category/performance.html">Performance</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/architecture.html">architecture </a>
+    <a href="https://marselester.com/tag/performance.html">performance </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/bandwitch-of-cpu-and-storages.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bandwitch-of-cpu-and-storages.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"><h3 class="article-title">DIY CPU profiler: from BPF maps to pprof</h3></a>
+<h6 class="subheader" title="2022-10-20T00:00:00+07:00">Thu 20 October 2022
+</h6>
+
+
+<p><a href="https://marselester.com/continuous-profiling-in-go.html">In previous post</a>
+I had a DIY BPF profiler printing stack trace IDs of a given process,
+though they were not very helpful.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler/ -pid 15958</span>
+<span class="go">Waiting for stack traces...</span>
+<span class="go">{PID:15958 UserStackID:132 KernelStackID:114} seen 1 times</span>
+</code></pre></div>
+
+<p>Let's try to show more useful information …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/continuous-profiling-in-go.html"><h3 class="article-title">Continuous profiling in Go</h3></a>
+<h6 class="subheader" title="2022-04-22T00:00:00+07:00">Fri 22 April 2022
+</h6>
+
+
+<p>In this post I explore possibilities of continuous profiling of Go programs
+using Parca and also peek under the hood of its BPF agent.
+You can find the results of my experiments in
+<a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
+<h2>Ad hoc profiling</h2>
+<p>I was looking for a way to profile Go programs …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/profiling.html">profiling </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/continuous-profiling-in-go.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/continuous-profiling-in-go.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/bpf-go-program-in-kubernetes.html"><h3 class="article-title">BPF Go program in Kubernetes</h3></a>
+<h6 class="subheader" title="2021-11-17T00:00:00+07:00">Wed 17 November 2021
+</h6>
+
+
+<p>BPF opens a lot of possibilities of making observability tools running in Kubernetes.
+One can start with <a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools">BCC libbpf-tools</a> written in C,
+e.g., launch tcpconnlat program and process its stdout with another program to
+detect cases when it took too long to establish a TCP connection.
+For example, <code>curl …</code></p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/bpf-go-program-in-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-program-in-kubernetes.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html"><h3 class="article-title">BPF: Go frontend for tcpconnect</h3></a>
+<h6 class="subheader" title="2021-11-01T00:00:00+07:00">Mon 01 November 2021
+</h6>
+
+
+<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">In the previos BPF post</a>
+I shared my experiment of writing Go frontend for execsnoop.
+Here I would like to focus on tcpconnect, a BCC tool to trace new TCP active connections.
+It is useful for determining who is connecting to whom.
+This works by tracing the <code>tcp_v4_connect()</code> and <code>tcp_v6_connect …</code></p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"><h3 class="article-title">BPF: Go frontend for execsnoop</h3></a>
+<h6 class="subheader" title="2021-10-26T00:00:00+07:00">Tue 26 October 2021
+</h6>
+
+
+<p>After reading Brendan Gregg's books about BPF I was excited to try and implement something in Go.
+At a first glance it turned out I would need to install LLVM, Clang, and kernel header dependencies to run a simple program.
+Fortunately <a href="https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html">BTF, CO-RE technologies</a>
+eliminate those dependencies though kernel &gt;=5 …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/bpf.html">bpf </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/apigate-ambassador.html"><h3 class="article-title">Ambassador as API Gateway</h3></a>
+<h6 class="subheader" title="2019-03-13T00:00:00+07:00">Wed 13 March 2019
+</h6>
+
+
+<p><a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway">API gateway</a>
+acts as a reverse proxy, routing API requests from clients to services.
+Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
+In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://getambassador.io/">Ambassador</a>.</p>
+<p>The demo is based on a dummy …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/ambassador.html">ambassador </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="https://marselester.com/tag/api-gateway.html">api gateway </a>
+    <a href="https://marselester.com/tag/auth.html">auth </a>
+    <a href="https://marselester.com/tag/rate-limiting.html">rate limiting </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/apigate-ambassador.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/apigate-ambassador.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/apigate-traefik.html"><h3 class="article-title">Traefik as API Gateway</h3></a>
+<h6 class="subheader" title="2019-03-12T00:00:00+07:00">Tue 12 March 2019
+</h6>
+
+
+<p><a class="reference external" href="https://docs.microsoft.com/en-us/azure/architecture/microservices/design/gateway">API gateway</a>
+acts as a reverse proxy, routing API requests from clients to services.
+Usually it also performs authentication and rate limiting, so the services behind the gate don't have to.
+In this short tutorial we'll see how to achieve that with <a class="reference external" href="https://traefik.io/">Traefik</a> reverse-proxy.</p>
+<p>The demo is based on a …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/traefik.html">traefik </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="https://marselester.com/tag/api-gateway.html">api gateway </a>
+    <a href="https://marselester.com/tag/auth.html">auth </a>
+    <a href="https://marselester.com/tag/rate-limiting.html">rate limiting </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/apigate-traefik.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/apigate-traefik.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/how-to-structure-go-projects.html"><h3 class="article-title">How to Structure Go Projects</h3></a>
+<h6 class="subheader" title="2018-09-28T00:00:00+07:00">Fri 28 September 2018
+</h6>
+
+
+<p>I came to Go from Django where the framework defines project layout, thus I wanted to know
+how to structure my Go applications. After reading documentation and building a few Django projects,
+you get a clear mental picture, as most of the questions are already answered.
+That helps to keep …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/project-structure.html">project structure </a>
+    <a href="https://marselester.com/tag/domain-driven-design.html">Domain-Driven Design </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/how-to-structure-go-projects.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/how-to-structure-go-projects.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/prometheus-via-dogstatsd.html"><h3 class="article-title">Forward DogStatsD Metrics to Prometheus</h3></a>
+<h6 class="subheader" title="2017-06-17T00:00:00+07:00">Sat 17 June 2017
+</h6>
+
+
+<p><strong>tl;dr:</strong> StatsD doesn't have metric labels, DogStatsD does.</p>
+<p>This is a follow up post after
+<a class="reference external" href="https://marselester.com/django-prometheus-via-statsd.html">Instrumenting Django with Prometheus and StatsD</a>.</p>
+<hr class="docutils" />
+<p>You got Prometheus up and running and eager to start instrumenting your Django application.
+Don't be hasty and read <a class="reference external" href="https://prometheus.io/docs/practices/instrumentation/">Prometheus Best Practices</a>.</p>
+<p>Let's say our application has to …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/prometheus.html">prometheus </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/statsd.html">statsd </a>
+    <a href="https://marselester.com/tag/dogstatsd.html">dogstatsd </a>
+    <a href="https://marselester.com/tag/datadog.html">datadog </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/prometheus-via-dogstatsd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/prometheus-via-dogstatsd.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-prometheus-via-statsd.html"><h3 class="article-title">Instrumenting Django with Prometheus and StatsD</h3></a>
+<h6 class="subheader" title="2017-06-09T00:00:00+07:00">Fri 09 June 2017
+</h6>
+
+
+<p>If you ever wondered how to monitor your Django application with Prometheus this article is for you.
+Quick search on the topic will lead you to <a class="reference external" href="https://github.com/korfuri/django-prometheus/">django-prometheus</a>.
+For those who don't want to use it, there is another way to export application metrics
+via <a class="reference external" href="https://www.datadoghq.com/blog/statsd/">StatsD</a>.</p>
+<p>The idea is to send …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/prometheus.html">prometheus </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/statsd.html">statsd </a>
+    <a href="https://marselester.com/tag/helm.html">helm </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-prometheus-via-statsd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-prometheus-via-statsd.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/minukube-aws-ecr.html"><h3 class="article-title">Minukube &amp; Amazon EC2 Container Registry</h3></a>
+<h6 class="subheader" title="2016-12-05T00:00:00+07:00">Mon 05 December 2016
+</h6>
+
+
+<p><a class="reference external" href="http://kubernetes.io/docs/getting-started-guides/minikube/">Minukube</a> is an easy way to run Kubernetes locally.
+When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
+we can configure our Docker client to communicate with the Minikube Docker daemon.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>minikube start
+<span class="go">Starting local Kubernetes cluster...</span>
+<span class="go">Kubectl is now configured to …</span></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="https://marselester.com/tag/aws.html">aws </a>
+    <a href="https://marselester.com/tag/minukube.html">minukube </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/minukube-aws-ecr.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/minukube-aws-ecr.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/prometheus-on-kubernetes.html"><h3 class="article-title">Prometheus on Kubernetes</h3></a>
+<h6 class="subheader" title="2016-11-13T00:00:00+07:00">Sun 13 November 2016
+</h6>
+
+
+<p><a class="reference external" href="https://prometheus.io/">Prometheus</a> is a monitoring toolkit.
+Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
+from <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes">hello web application</a>
+which also runs in the same cluster.</p>
+<p>First of all, we need Kubernetes cluster running. It's easy to bootstrap one via <a class="reference external" href="https://console.cloud.google.com">Google Container Engine</a>.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>gcloud …</pre></div><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/prometheus.html">prometheus </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/google-container-engine.html">Google Container Engine </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/prometheus-on-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/prometheus-on-kubernetes.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/drf-pagination.html"><h3 class="article-title">Django REST framework: pagination on PostgreSQL triggers</h3></a>
+<h6 class="subheader" title="2016-04-02T00:00:00+07:00">Sat 02 April 2016
+</h6>
+
+
+<p>Django and Django REST Framework use SQL COUNT in pagination.
+As your database grows SQL COUNT becomes too slow. Fortunately the frameworks
+are well designed and allow to customize a way items are count.
+Let me illustrate that on a typical &quot;books&quot; example.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField …</span></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/postgresql.html">postgresql </a>
+    <a href="https://marselester.com/tag/django-rest-framework.html">django rest framework </a>
+    <a href="https://marselester.com/tag/pagination.html">pagination </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/drf-pagination.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/drf-pagination.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/api-based-on-flask.html"><h3 class="article-title">API based on Flask</h3></a>
+<h6 class="subheader" title="2013-12-09T00:00:00+07:00">Mon 09 December 2013
+</h6>
+
+
+<p>Here I want to consider implementation of API best practices which
+usually don't follow Fielding's REST strictly. <a class="reference external" href="https://github.com/marselester/api-example-based-on-flask">Example Flask project</a>
+is on GitHub.</p>
+<div class="section" id="api-versioning">
+<h2>API Versioning</h2>
+<p>Interfaces are changed hence versioning is mandatory in order to not annoy
+your users. You might need to add new resource or field to particular …</p></div><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/flask.html">flask </a>
+    <a href="https://marselester.com/tag/api.html">api </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/api-based-on-flask.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/api-based-on-flask.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/saltstack-slides.html"><h3 class="article-title">Slides about SaltStack</h3></a>
+<h6 class="subheader" title="2013-12-03T00:00:00+07:00">Tue 03 December 2013
+</h6>
+
+
+<p><strong>Update</strong> I gave a talk with <a class="reference external" href="https://twitter.com/shr">Simon Robson</a> at <a class="reference external" href="https://twitter.com/barcampcm">Beercamp</a> in Chiang Mai,
+Thailand on 12 Dec 2013. We compared Salt and <a class="reference external" href="http://slid.es/simonrobson/ansible">Ansible</a>.
+Here are my <a class="reference external" href="https://slid.es/marselester/saltstack">slides</a>.</p>
+<p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/salt.html">salt </a>
+    <a href="https://marselester.com/tag/saltstack.html">saltstack </a>
+    <a href="https://marselester.com/tag/slides.html">slides </a>
+    <a href="https://marselester.com/tag/talk.html">talk </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/saltstack-slides.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/saltstack-slides.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
+<h6 class="subheader" title="2013-11-28T00:00:00+07:00">Thu 28 November 2013
+</h6>
+
+
+<p>Eventually you will need to deploy project,
+but deployment was not considered in the <a class="reference external" href="https://marselester.com/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
+<p>Server configuration is different from local, thus environments will be needed
+(at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
+environment by default.</p>
+<p>Environments are set in <tt class="docutils literal">minion.conf …</tt></p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="https://marselester.com/tag/salt.html">salt </a>
+    <a href="https://marselester.com/tag/saltstack.html">saltstack </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
+<h6 class="subheader" title="2013-11-09T00:00:00+07:00">Sat 09 November 2013
+</h6>
+
+
+<p>Let's use <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> as an example of Django project. I want it to
+run in VirtualBox which is managed by Vagrant. Infrastructure management
+is provided by SaltStack.</p>
+<p>I advise you to create separate folder for repositories (currently there
+is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there.
+Also …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="https://marselester.com/tag/salt.html">salt </a>
+    <a href="https://marselester.com/tag/saltstack.html">saltstack </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/developing-django-project-with-saltstack.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/preparation-to-python-interview.html"><h3 class="article-title">Preparation to Python Interview</h3></a>
+<h6 class="subheader" title="2012-11-02T00:00:00+07:00">Fri 02 November 2012
+</h6>
+
+
+<p>I decided to collect a little more information and experience during
+preparation to Python developer interview. These are some information and
+links which seemed important to me. Maybe it will be helpful.</p>
+<div class="section" id="how-does-it-usually-go">
+<h2>How does it usually go?</h2>
+<div class="section" id="what-kind-of-projects-did-you-participate-in">
+<h3>What kind of projects did you participate in?</h3>
+<p>What did you do at …</p></div></div><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/interview.html">interview </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/preparation-to-python-interview.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/preparation-to-python-interview.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-testing-during-construction.html"><h3 class="article-title">Django TODO: тестирование во время конструирования</h3></a>
+<h6 class="subheader" title="2012-06-29T13:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
+стратегии тестирования.</p>
+<p>Тестирование может указать только на отдельные дефектные области программы --
+оно не сделает программу удобнее в использовании, более быстрой, компактной,
+удобочитаемой или расширяемой.</p>
+<p>Цель тестирования противоположна целям других этапов разработки. Его целью
+является нахождение ошибок. Успешным считается тест, нарушающий работу ПО …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/testing.html">testing </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-testing-during-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-testing-during-construction.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
+<h6 class="subheader" title="2012-06-29T12:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>При работе над проектом конструирование включает другие процессы, в том числе
+проектирование. Формальная архитектура дает ответы только на вопросы
+системного уровня, при этом значительная часть проектирования может быть
+намеренно оставлена на этап конструирования. Проектирование -- это
+&quot;постепенный&quot; процесс. Проекты приложений не возникают в умах разработчиков
+сразу в готовом виде. Они развиваются …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/construction.html">construction </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-system-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-system-construction.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Следующим этапом разработки системы является проектирование архитектуры.</p>
+<p>Архитектура должна быть продуманным концептуальным целым. Главный тезис самой
+популярной книги по разработке ПО &quot;Мифический человеко-месяц&quot; гласит, что
+основной проблемой, характерной для крупных систем, является поддержание их
+концептуальной целостности. Хорошая архитектура должна соответствовать
+проблеме <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
+<p>Разделение системы на подсистемы на уровне архитектуры, позволяет …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/architecture.html">architecture </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-design-architecture.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-design-architecture.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>После прочтения Макконелла захотелось спроецировать его советы на Django.
+Для этого я взял за основу разработку системы <a class="reference external" href="https://github.com/marselester/django-todo">Django TODO</a>. Итак, первый этап -- выработка требований к
+системе.</p>
+<p>Требования подробно описывают, что должна делать система. Внимание к
+требованиям помогает свести к минимуму изменения системы после начала
+разработки. Явные требования помогают гарантировать, что …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/requirements.html">requirements </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-development-of-system-requirements.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-development-of-system-requirements.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/links-to-best-practices-of-python-django.html"><h3 class="article-title">Соглашения по разработке на Python/Django</h3></a>
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Во время разработки я часто сверяюсь с известными мне соглашениями,
+стараюсь следовать рекомендациям. Цитировать их не имеет смысла -- лучше
+приведу ссылки.</p>
+<p><a class="reference external" href="http://www.python.org/dev/peps/pep-0008/">PEP 8 -- Style Guide for Python Code</a>.</p>
+<p><a class="reference external" href="http://python.net/~goodger/projects/pycon/2007/idiomatic/handout.html#long-lines-continuations">Code Like a Pythonista: Idiomatic Python</a>.
+В нем я нашел ответы на вопросы форматирования длинных строк:</p>
+<pre class="literal-block">
+expended_time = (self.finish_date() - self.start_date
+                 + datetime …</pre><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/best-practices.html">best practices </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/links-to-best-practices-of-python-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/links-to-best-practices-of-python-django.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/splitting-settings-in-django.html"><h3 class="article-title">Разделение настроек в Django</h3></a>
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>В <a class="reference external" href="https://code.djangoproject.com/wiki/SplitSettings">Django wiki</a> собраны
+различные способы разделения настроек. Мне нравится <a class="reference external" href="http://senko.net/en/django-quickstart-skeleton-project/">вариант</a>, описанный в блоге
+Senko Rašić:</p>
+<pre class="literal-block">
+settings/
+├── __init__.py
+├── base.py
+├── development.py
+├── local.py
+└── production.py
+</pre>
+<p><tt class="docutils literal">base.py</tt> содержит общие настройки для <tt class="docutils literal">development.py</tt> и
+<tt class="docutils literal">production.py</tt>, например:</p>
+<div class="highlight"><pre><span></span><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
+<span class="n">MANAGERS</span> <span class="o">=</span> <span class="n">ADMINS</span>
+
+<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s1">&#39;Asia/Yekaterinburg&#39;</span>
+<span class="c1"># ...</span>
+</pre></div>
+<p><tt class="docutils literal">production.py</tt> содержит настройки для …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/settings.html">settings </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/splitting-settings-in-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/splitting-settings-in-django.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html"><h3 class="article-title">Краткий обзор инфраструктуры для разработки reusable Django приложений</h3></a>
+<h6 class="subheader" title="2012-06-13T00:00:00+07:00">Wed 13 June 2012
+</h6>
+
+
+<p>Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
+зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
+веб-приложений на Django к этим проблемам необходимо отнести организацию
+файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
+организации автоматизированного тестирования. В данной статье приведены пути
+решения этих проблем.</p>
+<p>Важно знать различия между двумя …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/infrastructure.html">infrastructure </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/computing-methods-of-one-dimensional-optimization.html"><h3 class="article-title">Вычислительные методы одномерной оптимизации</h3></a>
+<h6 class="subheader" title="2010-10-06T00:00:00+07:00">Wed 06 October 2010
+</h6>
+
+
+<p>На третьем курсе по предмету методы оптимизации делали лабораторную работу на
+тему «Вычислительные методы одномерной оптимизации».
+Задача заключалась в поиске безусловного минимума функции
+<tt class="docutils literal">f(x) = pow(x, 3) – x + pow(e, <span class="pre">-x)</span></tt> на начальном интервале <tt class="docutils literal">[0, 1]</tt>
+с точностью <tt class="docutils literal">0.00001</tt>.</p>
+<p>Вычисления производились через:</p>
+<ul class="simple">
+<li>пассивный метод;</li>
+<li>равномерные блочные методы;</li>
+<li>метод …</li></ul><p class="subheader">Category: <a href="https://marselester.com/category/misc.html">Misc</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/php.html">php </a>
+    <a href="https://marselester.com/tag/mathematical-optimization.html">mathematical optimization </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/computing-methods-of-one-dimensional-optimization.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/computing-methods-of-one-dimensional-optimization.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html"><h3 class="article-title">Определение нажатия комбинации клавиш средствами BIOS на ассемблере</h3></a>
+<h6 class="subheader" title="2009-12-03T00:00:00+07:00">Thu 03 December 2009
+</h6>
+
+
+<p>По учебе понадобилось написать программу на ассемблере, которая должна
+распознать нажатие «горячей» комбинации клавиш <tt class="docutils literal">LeftCtrl+RightShift+F3</tt> и
+реагировать на него звуковым сигналом. Информации/примеров по этой теме
+маловато, по этому решил опубликовать свою программку.</p>
+<div class="highlight"><pre><span></span><span class="nf">masm</span><span class="w"></span>
+<span class="nf">.model</span><span class="w"> </span><span class="nv">small</span><span class="w"></span>
+<span class="nf">.stack</span><span class="w"> </span><span class="mi">256</span><span class="w"></span>
+<span class="nf">.data</span><span class="w"></span>
+<span class="w">    </span><span class="nf">Msg_about</span><span class="w"> </span><span class="nv">db</span><span class="w"> </span><span class="s">&#39;Распознать нажатие «горячей» комбинации клавиш&#39;</span><span class="p">,</span><span class="w"> </span><span class="mh">0Ah</span><span class="p">,</span><span class="w"> </span><span class="mh">0Dh …</span></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/misc.html">Misc</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/assembler.html">assembler </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/modeling-single-channel-queue-with-refusals.html"><h3 class="article-title">Моделирование одноканальной СМО с отказами</h3></a>
+<h6 class="subheader" title="2009-05-30T00:00:00+07:00">Sat 30 May 2009
+</h6>
+
+
+<p>Дана одноканальная система массового обслуживания с отказами. В нее поступают
+заявки через промежуток времени <tt class="docutils literal">n</tt>, где <tt class="docutils literal">n</tt> – случайная величина,
+подчиненная равномерному закону распределения. Время обслуживания заявки
+системой <tt class="docutils literal">m</tt> также является случайной величиной с показательным законом
+распределения. Если к моменту прихода заявки канал занят, заявка покидает
+систему необслуженной.</p>
+<p>Изначально код был …</p><p class="subheader">Category: <a href="https://marselester.com/category/misc.html">Misc</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/modeling.html">modeling </a>
+    <a href="https://marselester.com/tag/single-channel-queue.html">single-channel queue </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/modeling-single-channel-queue-with-refusals.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/modeling-single-channel-queue-with-refusals.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

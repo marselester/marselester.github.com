@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - construction</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
+<h6 class="subheader" title="2012-06-29T12:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>При работе над проектом конструирование включает другие процессы, в том числе
+проектирование. Формальная архитектура дает ответы только на вопросы
+системного уровня, при этом значительная часть проектирования может быть
+намеренно оставлена на этап конструирования. Проектирование -- это
+&quot;постепенный&quot; процесс. Проекты приложений не возникают в умах разработчиков
+сразу в готовом виде. Они развиваются и улучшаются в ходе обзоров,
+неформальных обсуждений, написания кода и выполнения его ревизий.</p>
+<p>Практически во всех случаях проект несколько меняется во время первоначальной
+разработки системы и еще больше -- при ее модернизации.</p>
+<p>Управление сложностью -- самый важный технический аспект разработки ПО.
+Управлять сложностью гораздо легче, если при проектировании стремиться к
+простоте. Есть два общих способа достижения простоты: минимизация объема
+существенной сложности, с которой приходится иметь дело в любой конкретный
+момент времени, и подавление необязательного роста несущественной сложности.</p>
+<p>Одной из самых полезных концепций проектирования является сокрытие информации.
+Оно полезно на всех уровнях проектирования: от применения именованных констант
+вместо литералов до создания типов данных и проектирования классов, методов и
+подсистем <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
+<p>Для снижения сложности Стив Макконелл определил ряд рекомендаций
+<a class="footnote-reference" href="#mcconnell" id="footnote-reference-2">[1]</a>:</p>
+<ul class="simple">
+<li>тщательно определяйте интерфейсы классов, чтобы можно было игнорировать
+внутреннее устройство классов;</li>
+<li>поддерживайте абстракцию, формируемую интерфейсом класса, чтобы не
+запоминать ненужных деталей;</li>
+<li>избегайте глобальных данных, потому что их использование значительно
+увеличивает процент кода, который нужно удерживать в уме в любой момент
+времени;</li>
+<li>избегайте глубоких иерархий наследования, потому что они предъявляют высокие
+требования к интеллекту;</li>
+<li>избегайте глубокой вложенности циклов и условных операторов, поскольку их
+можно заменить на более простые управляющие структуры, позволяющие бережнее
+расходовать умственные ресурсы;</li>
+<li>тщательно определите подход к обработке ошибок, вместо того, чтобы
+использовать произвольную комбинацию произвольных методик;</li>
+<li>не позволяйте классам достигать размеров целых программ;</li>
+<li>поддерживайте методы короткими;</li>
+<li>используйте ясные, очевидные имена переменных;</li>
+<li>минимизируйте число параметров, передаваемых в метод, или, что еще важнее,
+передавайте только те параметры, которые нужны для поддержания абстракции,
+формируемой интерфейсом метода;</li>
+<li>используйте соглашения, чтобы не запоминать произвольные, несущественные
+различия между разными фрагментами кода;</li>
+<li>создавая для сложного теста булеву функцию и абстрагирую суть теста
+упрощается код.</li>
+</ul>
+<p>При конструировании системы <a class="reference external" href="https://github.com/marselester/django-todo">Django TODO</a> я старался придерживаться вышеперечисленных рекомендаций.</p>
+<div class="section" id="section-1">
+<h2>Модель данных</h2>
+<p>Уровень доступа к данным вынесен в отдельную часть приложения, называемый
+моделью. Модели размещаются в файле <tt class="docutils literal">models.py</tt>.</p>
+<p>Модель в Django представляет собой описание данных в базе, представленное на
+языке Python. В Django модель используется, чтобы выполнить SQL-запрос и
+вернуть удобные структуры данных Python. Кроме того, модели позволяют
+представить высокоуровневые концепции, для которых в SQL может не быть
+аналогов.</p>
+<p>Описание моделей на Python лучше по ряду причин:</p>
+<ul class="simple">
+<li>сокращается количество мысленных &quot;переключений контекста&quot;. Когда приходится
+писать код на SQL, потом на Python, а потом снова на SQL, продуктивность
+падает;</li>
+<li>размещение моделей данных в коде упрощает их хранение в системе управления
+версиями;</li>
+<li>удобные средства миграции моделей (например, South).</li>
+</ul>
+<p>Каждая модель соответствует одной таблице БД, а каждый атрибут модели
+соответствует одному столбцу таблицы. Из этого правила есть исключение,
+касающееся отношения многие-ко-многим <a class="footnote-reference" href="#holovaty" id="footnote-reference-3">[2]</a>.</p>
+<div class="section" id="section-2">
+<h3>Соглашения по оформлению кода</h3>
+<p>При конструировании моделей приняты следующие соглашения по оформлению кода.
+Последовательность размещения атрибутов класса-модели <a class="footnote-reference" href="#django" id="footnote-reference-4">[3]</a>:</p>
+<ul class="simple">
+<li>названия полей;</li>
+<li>атрибуты менеджера модели;</li>
+<li>класс <tt class="docutils literal">Meta</tt>;</li>
+<li>метод <tt class="docutils literal">__unicode__</tt>;</li>
+<li>метод <tt class="docutils literal">__str__</tt>;</li>
+<li>метод <tt class="docutils literal">save</tt>;</li>
+<li>метод <tt class="docutils literal">get_absolute_url</tt>;</li>
+<li>остальные методы.</li>
+</ul>
+<p>Вышеперечисленные группы атрибутов должны быть отделены друг от друга пустой
+строкой.</p>
+<p>Если в модели есть поле выбора (<em>choices</em>), оно должно быть оформлено в виде
+кортежа из кортежей, заглавными буквами. Должны быть расположены в начале
+модели <a class="footnote-reference" href="#django" id="footnote-reference-5">[3]</a> и названы без использования &quot;магических чисел&quot;
+<a class="footnote-reference" href="#mcconnell" id="footnote-reference-6">[1]</a>. Например:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Task</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+
+    <span class="n">UNCERTAIN_STATUS</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">DONE_STATUS</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">STOP_STATUS</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">WAIT_STATUS</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">WORK_STATUS</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">STATUS_CHOICES</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">DONE_STATUS</span><span class="p">,</span> <span class="s1">&#39;done&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">STOP_STATUS</span><span class="p">,</span> <span class="s1">&#39;stop&#39;</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">status</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">(</span><span class="n">choices</span><span class="o">=</span><span class="n">STATUS_CHOICES</span><span class="p">,</span>
+                                 <span class="n">default</span><span class="o">=</span><span class="n">UNCERTAIN_STATUS</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="section-3">
+<h3>Методы модели</h3>
+<p>Разработчик может определить в модели свои собственные методы и тем самым
+наделять свои объекты дополнительной функциональностью на уровне строк. Методы
+модели подходят для инкапсуляции всей бизнес-логики в одном месте. Например,
+фрагмент модели <em>Цепочка</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Chain</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Цепочка задач.&quot;&quot;&quot;</span>
+
+    <span class="c1"># Пропущены атрибуты модели для экономии места.</span>
+
+    <span class="c1"># Default manager.</span>
+    <span class="n">objects</span> <span class="o">=</span> <span class="n">PassThroughManager</span><span class="o">.</span><span class="n">for_queryset_class</span><span class="p">(</span><span class="n">ChainQuerySet</span><span class="p">)()</span>
+
+    <span class="k">def</span> <span class="nf">actual_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Определяет фактический статус цепочки.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_date</span> <span class="o">&gt;</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">WAIT_STATUS</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_set</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">Task</span><span class="o">.</span><span class="n">STOP_STATUS</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">STOP_STATUS</span>
+        <span class="n">last_task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_task</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">last_task</span><span class="o">.</span><span class="n">actual_status</span><span class="p">()</span> <span class="o">==</span> <span class="n">Task</span><span class="o">.</span><span class="n">DONE_STATUS</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">DONE_STATUS</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">WORK_STATUS</span>
+</pre></div>
+<p>Согласно спроектированной архитектуре системы были разработаны следующие
+методы модели данных <em>Задача</em>:</p>
+<ul class="simple">
+<li><em>be_in_time</em> определяет, успевает ли задача к дедлайну;</li>
+<li><em>actual_status</em> определяет фактический статус задачи, основываясь на таких
+данных, как «статический» статус задачи (DONE, STOP), статус предыдущей
+задачи, порядковый номер задачи и текущая дата;</li>
+<li><em>start_date</em> определяет дату начала работы над задачей, если это возможно;</li>
+<li><em>days_to_start</em> определяет количество дней, оставшихся до начала работы над
+задачей;</li>
+<li><em>remaining_days</em> определяет количество полных дней, оставшихся до дедлайна.
+Например, задача ограничена сроком <tt class="docutils literal">[26; 29)</tt> и сейчас <em>27 число</em>. До
+дедлайна остался один полный день <em>(28 число)</em>, так как текущий день не
+учитывается;</li>
+<li><em>days_quantity_after_deadline</em> определяет количество дней, на которые
+просрочена задача;</li>
+<li><em>expended_days</em> определяет количество дней, затраченных на задачу;</li>
+<li><em>duration</em> определяет количество дней, выделенных на выполнение задачи.</li>
+</ul>
+<p>Для модели <em>Цепочка</em> были реализованы методы:</p>
+<ul class="simple">
+<li><em>actual_status</em> определяет фактический статус цепочки, основываясь на таких
+данных, как дата начала работы над цепочкой, статус текущей задачи цепочки;</li>
+<li><em>deadline</em> определяет дедлайн цепочки. Дедлайн цепочки равен дедлайну
+последней задачи в цепочке;</li>
+<li><em>finish_date</em> определяет дату завершения цепочки. Дата завершения цепочки
+равна дате завершения последней задачи в цепочке;</li>
+<li><em>be_in_time</em> определяет, успевает ли цепочка задач к дедлайну;</li>
+<li><em>days_to_start</em> определяет количество дней, оставшихся до начала работы
+цепочки;</li>
+<li><em>remaining_days</em> определяет количество дней, оставшихся до дедлайна цепочки.
+Совпадает с количеством дней, оставшихся до дедлайна последней задачи в
+цепочке;</li>
+<li><em>days_quantity_after_deadline</em> определяет количество дней, на которые
+просрочена цепочка;</li>
+<li><em>expended_days</em> определяет количество дней, затраченных на цепочку;</li>
+<li><em>last_task</em> возвращает последнюю задачу из цепочки.</li>
+</ul>
+</div>
+<div class="section" id="section-4">
+<h3>Менеджер модели</h3>
+<p>Менеджер модели -- это объект, с помощью которого Django выполняет запросы к
+БД. Каждая модель Django имеет по меньшей мере один менеджер, и разработчик
+может создавать свои менеджеры для организации специализированных видов
+доступа.</p>
+<p>Потребность создания собственного менеджера может быть вызвана двумя
+причинами: необходимостью добавить менеджеру дополнительные методы или
+необходимостью модифицировать исходный объект QuerySet, возвращаемый
+менеджером <a class="footnote-reference" href="#holovaty" id="footnote-reference-7">[2]</a>.</p>
+<p>Встроенный в Django менеджер моделей не позволяет строить цепочки методов,
+таких как <tt class="docutils literal">actual_tasks = <span class="pre">Task.objects.by_worker(user).actual()</span></tt>. Для обхода
+этого ограничения используется сторонняя библиотека <em>django-model-utils</em>,
+которая позволяет писать QuerySet вместо менеджера <a class="footnote-reference" href="#korobov" id="footnote-reference-8">[4]</a>. Например:</p>
+<div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">django.db.models.query</span> <span class="kn">import</span> <span class="n">QuerySet</span>
+
+
+<span class="k">class</span> <span class="nc">ChainQuerySet</span><span class="p">(</span><span class="n">QuerySet</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">by_owner</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owner</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Возвращает цепочки владельца.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner</span><span class="o">=</span><span class="n">owner</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">actual</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Возвращает актуальтуные цепочки задач.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">archive</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;start_date&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="section-5">
+<h3>Миграция схемы модели</h3>
+<p>Во время разработки Django приложений наступает момент, когда необходимо
+изменить схему модели данных, например, добавить новое поле. Если разработка
+ведется в группе, то проблема усугубляется тем, что необходимо
+синхронизировать модель. Эту проблему призвана решить библиотека South. Ее
+основными задачами является обеспечение простого, стабильного и независимого
+от БД слоя миграции, чтобы избавить разработчика от проблем изменения схемы.</p>
+<p>Рассмотрим типовые примеры начала работы с South <a class="footnote-reference" href="#south" id="footnote-reference-9">[5]</a>. Случай, когда в
+базе данных нет таблиц и нет файлов миграций -- состояние проекта сразу после
+выполнения команда <tt class="docutils literal">manage.py startapp myapp</tt>. Далее, вместо команды
+<tt class="docutils literal">manage.py syncdb</tt> нужно создать начальную миграцию командой <tt class="docutils literal">manage.py
+schemamigration myapp <span class="pre">--initial</span></tt> и применить миграцию командой
+<tt class="docutils literal">manage.py migrate myapp</tt>.</p>
+<p>Следующий вариант, когда таблицы уже созданы, но нет файлов миграций. В данной
+ситуации необходимо выполнить команду <tt class="docutils literal">manage.py convert_to_south myapp</tt>.</p>
+<p>Возможна ситуация, когда таблицы уже созданы, но миграции еще не применены.
+Тогда необходимо выполнить <tt class="docutils literal">manage.py migrate myapp 0001 <span class="pre">--fake</span></tt>.</p>
+</div>
+</div>
+<div class="section" id="section-6">
+<h2>Шаблон</h2>
+<p>Шаблон -- это текстовый документ или строка Python, который размечен с
+применением языка шаблонов Django. Шаблон может содержать шаблонные теги и
+шаблонные переменные.</p>
+<p>При выборе места хранения шаблонов в многоразовых Django приложениях
+рекомендуется <a class="footnote-reference" href="#lincolnloop" id="footnote-reference-10">[6]</a> использовать следующий путь:
+<tt class="docutils literal"><span class="pre">корень-репозитория/название_приложения/templates/название_приложения/</span>
+название_шаблона</tt>. Например, <tt class="docutils literal"><span class="pre">django-todo/todo/templates/todo/base.html</span></tt>.</p>
+<p>Название шаблонов следует выбирать придерживаясь следующей конвенции
+<tt class="docutils literal"><span class="pre">[model]_[function].html</span></tt>, например, <tt class="docutils literal">task_list.html</tt>. Отнюдь не каждое
+название шаблона, полученное в соответствии с конвенцией, получается
+подходящим. В таких случаях следует выбирать название по своему усмотрению.</p>
+<p>Шаблонный тег -- это некоторое обозначение в шаблоне, с которым ассоциирована
+программная логика. Например, шаблонный тег может порождать содержимое,
+выступать в роли управляющей конструкции, получать содержимое из базы данных
+или разрешать доступ к другим шаблонным тегам.</p>
+<p>Шаблоны пользовательских тегов и частичные шаблоны рекомендуется хранить в
+директории <tt class="docutils literal">includes</tt>. Например, отображение информации о цепочке задач
+вынесено в шаблон <tt class="docutils literal">includes/chain.html</tt>.</p>
+<p>Пользовательские теги шаблона рекомендуется хранить в каталоге:
+<tt class="docutils literal"><span class="pre">корень-репозитория/название_приложения/templatetags/</span>
+[название_приложения]_tags.py</tt>. Например, <tt class="docutils literal"><span class="pre">django-todo/todo/templatetags/</span>
+todo_tags.py</tt>.</p>
+</div>
+<div class="section" id="url">
+<h2>Представления и конфигурирование URL</h2>
+<p>Представление -- функция на языке Python, которая принимает экземпляр класса
+<em>HttpRequest</em> в качестве первого параметра и возвращает экземпляр класса
+<em>HttpResponse</em>. Ниже приведен код функции вместе с командами импорта из файла
+<tt class="docutils literal">views.py</tt>:</p>
+<div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span><span class="p">,</span> <span class="n">get_object_or_404</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+
+<span class="kn">from</span> <span class="nn">todo.models</span> <span class="kn">import</span> <span class="n">Chain</span><span class="p">,</span> <span class="n">Task</span>
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">actual_tasks</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Отображает список актуальных задач для исполнителя.&quot;&quot;&quot;</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+    <span class="n">actual_tasks</span> <span class="o">=</span> <span class="n">Task</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">by_worker</span><span class="p">(</span><span class="n">user</span><span class="p">)</span><span class="o">.</span><span class="n">actual</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;todo/task_list.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;place&#39;</span><span class="p">:</span> <span class="s1">&#39;tasks&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;actual_tasks&#39;</span><span class="p">:</span> <span class="n">actual_tasks</span><span class="p">,</span>
+    <span class="p">})</span>
+</pre></div>
+<p>Чтобы связать функцию представления с URL, в Django используется механизм
+конфигурации URL. Django ожидает найти переменную <em>urlpatterns</em> в конфигурации
+URL. Она определяет соответствие между URL-адресами и обрабатывающим их кодом.</p>
+<p>Вот как подключается представление <em>actual_tasks</em> и <em>task_archive</em> в файле
+<tt class="docutils literal">urls.py</tt>:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.conf.urls.defaults</span> <span class="kn">import</span> <span class="n">patterns</span><span class="p">,</span> <span class="n">url</span>
+
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="n">patterns</span><span class="p">(</span><span class="s1">&#39;todo.views&#39;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^$&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_tasks&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;todo_actual_tasks&#39;</span><span class="p">),</span>
+    <span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^task/archive/$&#39;</span><span class="p">,</span> <span class="s1">&#39;task_archive&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;todo_task_archive&#39;</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+<p>Любой запрос к URL <tt class="docutils literal">/task/archive/</tt> должен обрабатываться функцией
+<em>task_archive</em>, а запрос <tt class="docutils literal">/</tt> будет обрабатываться <em>actual_tasks</em>.</p>
+<p>Названия шаблонам URL рекомендуется давать в форме <tt class="docutils literal">APP_MODEL_VIEW</tt>,
+например, <tt class="docutils literal">blog_post_detail</tt> или <tt class="docutils literal">blog_post_list</tt>.</p>
+<table class="docutils footnote" frame="void" id="mcconnell" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td><em>(<a class="fn-backref" href="#footnote-reference-1">1</a>, <a class="fn-backref" href="#footnote-reference-2">2</a>, <a class="fn-backref" href="#footnote-reference-6">3</a>)</em> Макконелл С. Совершенный код. Мастер-класс /
+Пер. с англ. – М. : Издательство &quot;Русская редакция&quot;, 2012. – 896 стр. : ил.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="holovaty" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[2]</td><td><em>(<a class="fn-backref" href="#footnote-reference-3">1</a>, <a class="fn-backref" href="#footnote-reference-7">2</a>)</em> Головатый А., Каплан-Мосс Дж. Django. Подробное руководство,
+2-е издание. – Пер. с англ. – СПб.: Символ-Плюс, 2010. – 560 с., ил.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="django" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[3]</td><td><em>(<a class="fn-backref" href="#footnote-reference-4">1</a>, <a class="fn-backref" href="#footnote-reference-5">2</a>)</em> Django community. <a class="reference external" href="https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/">Django Coding Style</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="korobov" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-8">[4]</a></td><td>Коробов М. <a class="reference external" href="http://habrahabr.ru/post/142703/">Рецепты от ПанГурмана</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="south" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-9">[5]</a></td><td>Godwin A. <a class="reference external" href="http://south.readthedocs.org/en/latest/tutorial/index.html">South documentation</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="lincolnloop" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-10">[6]</a></td><td>Lincoln Loop company. <a class="reference external" href="http://lincolnloop.com/django-best-practices/">Django Best Practices</a>.</td></tr>
+</tbody>
+</table>
+</div>
+<p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/construction.html">construction </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-system-construction.html#disqus_thread">comments</a></p>            </article>
+
+
+
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

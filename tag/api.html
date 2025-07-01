@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - api</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/api-based-on-flask.html"><h3 class="article-title">API based on Flask</h3></a>
+<h6 class="subheader" title="2013-12-09T00:00:00+07:00">Mon 09 December 2013
+</h6>
+
+
+<p>Here I want to consider implementation of API best practices which
+usually don't follow Fielding's REST strictly. <a class="reference external" href="https://github.com/marselester/api-example-based-on-flask">Example Flask project</a>
+is on GitHub.</p>
+<div class="section" id="api-versioning">
+<h2>API Versioning</h2>
+<p>Interfaces are changed hence versioning is mandatory in order to not annoy
+your users. You might need to add new resource or field to particular resource.
+You write code, tests and update documentation. Users are happy.
+It's possible that you have to rename or delete field of some resource.
+This case is harder and you might make the easiest decision — spawn
+a lot of <tt class="docutils literal">if</tt> statements and write more tests consequently.
+Code base maintaining is getting worse.</p>
+<p>I think it's better to make API versions isolated.
+It will keep things simple and tests as well. You may even want to change
+framework if legacy API implementation is not good enough.
+For example, you have two WSGI applications. Each application implements
+certain API version, e.g, <strong>messaging_api_v1</strong>, <strong>messaging_api_v2</strong>.
+In order to hide versioning information from applications, e.g., URL prefix,
+you can dispatch requests by Werkzeug's <tt class="docutils literal">DispatcherMiddleware</tt>.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">werkzeug.wsgi</span> <span class="kn">import</span> <span class="n">DispatcherMiddleware</span>
+<span class="kn">from</span> <span class="nn">werkzeug.exceptions</span> <span class="kn">import</span> <span class="n">NotFound</span>
+
+<span class="kn">import</span> <span class="nn">messaging_api_v1</span>
+<span class="kn">import</span> <span class="nn">messaging_api_v2</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">DispatcherMiddleware</span><span class="p">(</span><span class="n">NotFound</span><span class="p">(),</span> <span class="p">{</span>
+    <span class="s1">&#39;/v1&#39;</span><span class="p">:</span> <span class="n">messaging_api_v1</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+    <span class="s1">&#39;/v2&#39;</span><span class="p">:</span> <span class="n">messaging_api_v2</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+<span class="p">})</span>
+</pre></div>
+<p>Dispatcher in work:</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>gunicorn messaging_api:app
+</pre></div>
+<p>Let's request the same API resource from different WSGI applications:</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl http://127.0.0.1:8000/v1/messages/1
+<span class="go">{</span>
+<span class="go">  &quot;content&quot;: &quot;hi world from V1&quot;</span>
+<span class="go">}</span>
+<span class="gp">$ </span>curl http://127.0.0.1:8000/v2/messages/1
+<span class="go">{</span>
+<span class="go">  &quot;content&quot;: &quot;hi world from V2&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<div class="section" id="urls">
+<h2>URLs</h2>
+<p>API resources are nouns, so <tt class="docutils literal">/messages/</tt> URL is for a collection of messages.
+You should think about it as UNIX folder. Hence <tt class="docutils literal">/messages</tt> is correct
+folder path and Flask will redirect to the canonical URL <tt class="docutils literal">/messages/</tt>.
+Certain message's <tt class="docutils literal">/messages/1</tt> URL must not contain trailing slash
+in order to look like UNIX file path.</p>
+<p>Resources usually have relationships and they might be expressed in URLs,
+e.g., get messages from account which id is <tt class="docutils literal">1</tt>.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl https://api.example.com/v1/accounts/1/messages/
+</pre></div>
+</div>
+<div class="section" id="representation">
+<h2>Representation</h2>
+<p>There are two popular approaches to specify response format. First one
+is based on <strong>Accept</strong> header, second — URL based. Here I use header based
+approach.</p>
+<p>I wrote <a class="reference external" href="https://github.com/marselester/flask-api-utils#accept-header-based-response">ResponsiveFlask</a> class which extends <tt class="docutils literal">Flask</tt> by supporting
+dictionary response. Views can return dict and it will be represented
+based on <strong>Accept</strong> header. When <tt class="docutils literal">ResponsiveFlask.make_response()</tt> receives
+dictionary it creates real response object using appropriate formatter.
+Formatter is picked by mimetype.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl http://127.0.0.1:8000/v2/messages/1 -i -H <span class="s1">&#39;Accept: application/json&#39;</span>
+<span class="go">HTTP/1.1 200 OK</span>
+<span class="go">Server: gunicorn/18.0</span>
+<span class="go">Date: Tue, 10 Dec 2013 07:52:31 GMT</span>
+<span class="go">Connection: close</span>
+<span class="go">Content-Type: application/json</span>
+<span class="go">Content-Length: 35</span>
+
+<span class="go">{</span>
+<span class="go">  &quot;content&quot;: &quot;hi world from V2&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<div class="section" id="error-handling">
+<h2>Error Handling</h2>
+<p>Flask shows error pages by default with basic description in
+<strong>text/html</strong> format. It would be better if error representation depends
+on <strong>Accept</strong> header. <tt class="docutils literal">ResponsiveFlask</tt> class concerns about it.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>curl http://127.0.0.1:8000/v2/messages/666 -i
+<span class="go">HTTP/1.1 404 NOT FOUND</span>
+<span class="go">Server: gunicorn/18.0</span>
+<span class="go">Date: Fri, 03 Jan 2014 05:16:03 GMT</span>
+<span class="go">Connection: close</span>
+<span class="go">Content-Type: application/json</span>
+<span class="go">Content-Length: 49</span>
+
+<span class="go">{</span>
+<span class="go">  &quot;code&quot;: 404,</span>
+<span class="go">  &quot;message&quot;: &quot;404: Not Found&quot;</span>
+<span class="go">}</span>
+</pre></div>
+<p>You can set your own HTTP error handler by using
+<a class="reference external" href="https://github.com/marselester/flask-api-utils#error-handling">app.default_errorhandler</a> decorator. Note that it might override
+already defined error handlers, so you should declare it before them.</p>
+<p>It's convenient to add URL of detailed error description into response.</p>
+<div class="highlight"><pre><span></span><span class="go">{</span>
+<span class="go">  &quot;code&quot;: 404,</span>
+<span class="go">  &quot;info_url&quot;: &quot;http://developer.example.com/errors.html#error-code-404&quot;,</span>
+<span class="go">  &quot;message&quot;: &quot;404: Not Found&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<div class="section" id="misc">
+<h2>Misc</h2>
+<p>It's good idea to keep in mind following:</p>
+<ul class="simple">
+<li>HTTPS;</li>
+<li>response should contain resource url, e.g.,
+<tt class="docutils literal">{'url': <span class="pre">'https://api.example.com/v2/messages/1'}</span></tt>;</li>
+<li>pagination by <tt class="docutils literal">offset</tt> and <tt class="docutils literal">limit</tt> QS arguments with default values;</li>
+<li>filtration and search by QS arguments;</li>
+<li>partial response by <tt class="docutils literal">fields=id,lastname</tt> QS argument.</li>
+</ul>
+</div>
+<p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/flask.html">flask </a>
+    <a href="https://marselester.com/tag/api.html">api </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/api-based-on-flask.html#disqus_thread">comments</a></p>            </article>
+
+
+
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

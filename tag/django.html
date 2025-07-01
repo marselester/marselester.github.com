@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - django</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/django-prometheus-via-statsd.html"><h3 class="article-title">Instrumenting Django with Prometheus and StatsD</h3></a>
+<h6 class="subheader" title="2017-06-09T00:00:00+07:00">Fri 09 June 2017
+</h6>
+
+
+<p>If you ever wondered how to monitor your Django application with Prometheus this article is for you.
+Quick search on the topic will lead you to <a class="reference external" href="https://github.com/korfuri/django-prometheus/">django-prometheus</a>.
+For those who don't want to use it, there is another way to export application metrics
+via <a class="reference external" href="https://www.datadoghq.com/blog/statsd/">StatsD</a>.</p>
+<p>The idea is to send metrics from Django by StatsD Python library to StatsD server over UDP.
+Here is an example of incrementing &quot;hello.requests.total&quot; metric every time &quot;say_hello&quot; view is run.</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">statsd.defaults.django</span> <span class="kn">import</span> <span class="n">statsd</span>
+
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpResponse</span>
+
+
+<span class="k">def</span> <span class="nf">say_hello</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">statsd</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="s1">&#39;hello.requests.total&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="s1">&#39;Hello, World!&#39;</span><span class="p">)</span>
+</pre></div>
+<p>StatsD server aggregates measurements over time and flushes them into monitoring backend.
+Here <a class="reference external" href="https://github.com/prometheus/statsd_exporter">statsd_exporter</a> comes into play.
+It uses the same UDP protocol as StatsD server and exports StatsD-style metrics as Prometheus metrics,
+so &quot;hello.requests.total&quot; becomes &quot;hello_requests_total_counter&quot;.</p>
+<p>All we need is to configure Django to send metrics to statsd_exporter daemon.
+Let's set up &quot;Olympus&quot; Django project to demonstrate StatsD integration or
+you can get it from <a class="reference external" href="https://github.com/marselester/django-prometheus-via-statsd">github.com/marselester/django-prometheus-via-statsd</a>.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>virtualenv venv
+<span class="gp">$ </span><span class="nb">source</span> ./venv/bin/activate
+<span class="gp">$ </span>pip install <span class="nv">Django</span><span class="o">==</span><span class="m">1</span>.11.1 <span class="nv">statsd</span><span class="o">==</span><span class="m">3</span>.2.1
+<span class="gp">$ </span>django-admin.py startproject olympus .
+</pre></div>
+<p>These two lines of Django settings <cite>./olympus/settings.py</cite> configure a default StatsD client
+that is used in the &quot;say_hello&quot; Django view.</p>
+<div class="highlight"><pre><span></span><span class="c1"># statsd_exporter daemon listens to UDP at localhost:8125</span>
+<span class="n">STATSD_HOST</span> <span class="o">=</span> <span class="s1">&#39;localhost&#39;</span>
+<span class="n">STATSD_PORT</span> <span class="o">=</span> <span class="mi">8125</span>
+</pre></div>
+<p>Assuming &quot;say_hello&quot; is available at &quot;/hello&quot; URL path, we can start a web server.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>python manage.py runserver
+<span class="gp">$ </span>curl http://localhost:8000/hello
+<span class="go">Hello, World!</span>
+</pre></div>
+<p>The Olympus application is ready to emit metrics. To make sure this is the case,
+we can use tcpdump to capture UDP packets on loopback interface on port 8125
+and print each packet in ASCII.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>tcpdump -i lo0 udp port <span class="m">8125</span> -A
+<span class="go">tcpdump: verbose output suppressed, use -v or -vv for full protocol decode</span>
+<span class="go">listening on lo0, link-type NULL (BSD loopback), capture size 262144 bytes</span>
+<span class="go">11:19:05.460810 IP localhost.57776 &gt; localhost.8125: UDP, length 24</span>
+<span class="go">E..4....@................ .3hello.requests.total:1|c</span>
+</pre></div>
+<p>As we can see, &quot;hello.requests.total:1|c&quot; is sent every time we hit <cite>http://localhost:8000/hello</cite>.</p>
+<div class="section" id="statsd-exporter-1">
+<h2>StatsD Exporter</h2>
+<p>Since we have StatsD metrics being sent, we can expose them for Prometheus via statsd_exporter.
+Let's download the latest version and install it (the binary will be in &quot;$GOPATH/bin/&quot;).</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>go get -u github.com/prometheus/statsd_exporter
+</pre></div>
+<p>Run statsd_exporter so it gets StatsD metrics from our Django application.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>statsd_exporter -statsd.listen-address<span class="o">=</span><span class="s2">&quot;localhost:8125&quot;</span>
+</pre></div>
+<p>By default it exposes generated Prometheus metrics at <a class="reference external" href="http://localhost:9102/metrics">http://localhost:9102/metrics</a>.
+Check out the output, among many metrics there will be our counter from &quot;say_hello&quot; view.</p>
+<div class="highlight"><pre><span></span># HELP hello_requests_total_counter Metric autogenerated by statsd_exporter.
+# TYPE hello_requests_total_counter counter
+hello_requests_total_counter 2
+</pre></div>
+</div>
+<div class="section" id="run-everything-on-kubernetes">
+<h2>Run Everything on Kubernetes</h2>
+<p>Of course we will deploy everything on Kubernetes.
+Minikube will help us here.
+Minukube is an easy way to run Kubernetes locally.
+When we want to build a Docker image in Minukube (so Kubernetes has an access to it),
+we can configure our Docker client to communicate with the Minikube Docker daemon.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>minikube start
+<span class="go">Starting local Kubernetes cluster...</span>
+<span class="go">Kubectl is now configured to use the cluster.</span>
+<span class="gp">$ </span><span class="nb">eval</span> <span class="k">$(</span>minikube docker-env<span class="k">)</span>
+</pre></div>
+<div class="section" id="django-application">
+<h3>Django application</h3>
+<p>First, we shall deploy our Django application with statsd_exporter running in the same Kubernetes Pod.
+It exposes 8000 (uWSGI) and 9102 (statsd_exporter's generated Prometheus metrics) container ports.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>docker build -t marselester/olympus:v1.0.0 ./olympus-app/
+<span class="gp">$ </span>kubectl apply -f ./kube/olympus-app/deployment.yml
+<span class="gp">$ </span>kubectl apply -f ./kube/olympus-app/service.yml
+</pre></div>
+<p>Though we don't need Nginx in the demo, it's ubiquitous on production servers.
+Nginx proxies HTTP requests using uWSGI protocol to &quot;olympus-service&quot; Kubernetes Service
+we created above.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create configmap olympus-nginx-conf --from-file<span class="o">=</span>./kube/nginx/olympus.conf
+<span class="gp">$ </span>kubectl apply -f ./kube/nginx/deployment.yml
+</pre></div>
+</div>
+<div class="section" id="prometheus">
+<h3>Prometheus</h3>
+<p>Next is Prometheus server's turn to be deployed. It is configured to scrape
+own metrics from 9102 port and metrics from Pods that have &quot;app: olympus&quot; label.</p>
+<p>Prometheus server listens on port 9090. On production servers you'll likely run
+it behind Nginx with basic authentication and make it accessible via VPN only.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create configmap prometheus-server-conf --from-file<span class="o">=</span>./kube/prometheus/prometheus.yml
+<span class="gp">$ </span>kubectl apply -f ./kube/prometheus/deployment.yml
+</pre></div>
+<p>But in our case we'll use Kubernetes port forwarding to test whether Django
+metrics show up in Prometheus dashboard.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl port-forward nginx-deployment-3580857522-tn332 <span class="m">8080</span>:80
+<span class="gp">$ </span>kubectl port-forward prometheus-deployment-2456821496-8zdg8 <span class="m">9090</span>
+<span class="gp">$ </span>curl http://localhost:8080/hello
+<span class="go">Hello, World!</span>
+</pre></div>
+<p>&quot;hello_requests_total_counter&quot; should be searchable at the expression browser
+<a class="reference external" href="http://localhost:9090/graph">http://localhost:9090/graph</a>.</p>
+</div>
+<div class="section" id="prometheus-helm-chart">
+<h3>Prometheus Helm Chart</h3>
+<p>There are other ways to install Prometheus on Kubernetes:</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/kubernetes/charts/tree/master/stable/prometheus">Helm</a> (recommended Kubernetes &gt;= 1.4.1)</li>
+<li><a class="reference external" href="https://github.com/coreos/prometheus-operator">Prometheus Operator</a> (requires Kubernetes &gt;= 1.5.0)</li>
+</ul>
+<p>Prometheus Operator and Helm look awesome, though I have not played with Operator yet.
+Here is how you can set up Prometheus via Helm (package manager for Kubernetes).
+You will need the Helm client</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>brew install kubernetes-helm
+</pre></div>
+<p>and Helm server (Tiller). The following command installs it into the Kubernetes cluster.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>helm init
+</pre></div>
+<p>Now you can install Prometheus Helm package (chart).</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>helm repo update
+<span class="gp">$ </span>helm install --name team-ops stable/prometheus
+</pre></div>
+<p>Nice, we have full-blown Prometheus &quot;team-ops&quot; chart release running
+with alert manager and node exporter.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>helm list
+<span class="go">NAME        REVISION    UPDATED                     STATUS      CHART               NAMESPACE</span>
+<span class="go">team-ops    1           Thu Jun  8 21:40:29 2017    DEPLOYED    prometheus-3.0.2    default</span>
+</pre></div>
+<p>Let's add one more Prometheus to the cluster (call it &quot;team-dev&quot;),
+but this time we want only Prometheus server with a custom prometheus.yml config.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>helm install --name team-dev <span class="se">\</span>
+    --set alertmanager.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
+    --set kubeStateMetrics.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
+    --set nodeExporter.enabled<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
+    stable/prometheus
+</pre></div>
+<p>The config is stored in &quot;team-dev-prometheus-server&quot; ConfigMap.
+Let's overwrite it with our prometheus.yml.</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl create configmap team-dev-prometheus-server <span class="se">\</span>
+    --from-file<span class="o">=</span>./kube/prometheus/prometheus.yml <span class="se">\</span>
+    -o yaml <span class="se">\</span>
+    --dry-run <span class="p">|</span> kubectl replace -f -
+</pre></div>
+<p>To see whether &quot;team-dev&quot; Prometheus started, we can run a port forwarding:</p>
+<div class="highlight"><pre><span></span><span class="gp">$ </span>kubectl port-forward team-dev-prometheus-server-4131857549-c98j0 <span class="m">9091</span>:9090
+</pre></div>
+<p>Prometheus &quot;team-dev&quot; release is accessible at <a class="reference external" href="http://localhost:9091/graph">http://localhost:9091/graph</a>.</p>
+<p>I hope this helps. Cheers!</p>
+</div>
+</div>
+<p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/prometheus.html">prometheus </a>
+    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
+    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
+    <a href="https://marselester.com/tag/statsd.html">statsd </a>
+    <a href="https://marselester.com/tag/helm.html">helm </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-prometheus-via-statsd.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/drf-pagination.html"><h3 class="article-title">Django REST framework: pagination on PostgreSQL triggers</h3></a>
+<h6 class="subheader" title="2016-04-02T00:00:00+07:00">Sat 02 April 2016
+</h6>
+
+
+<p>Django and Django REST Framework use SQL COUNT in pagination.
+As your database grows SQL COUNT becomes too slow. Fortunately the frameworks
+are well designed and allow to customize a way items are count.
+Let me illustrate that on a typical &quot;books&quot; example.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Author</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField …</span></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/postgresql.html">postgresql </a>
+    <a href="https://marselester.com/tag/django-rest-framework.html">django rest framework </a>
+    <a href="https://marselester.com/tag/pagination.html">pagination </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/drf-pagination.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/drf-pagination.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html"><h3 class="article-title">Developing &amp; Deploying Django project with SaltStack</h3></a>
+<h6 class="subheader" title="2013-11-28T00:00:00+07:00">Thu 28 November 2013
+</h6>
+
+
+<p>Eventually you will need to deploy project,
+but deployment was not considered in the <a class="reference external" href="https://marselester.com/developing-django-project-with-saltstack.html">previous post</a>. Let's find it out.</p>
+<p>Server configuration is different from local, thus environments will be needed
+(at least production <strong>prod</strong> and development <strong>dev</strong>). Salt uses <strong>base</strong>
+environment by default.</p>
+<p>Environments are set in <tt class="docutils literal">minion.conf …</tt></p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="https://marselester.com/tag/salt.html">salt </a>
+    <a href="https://marselester.com/tag/saltstack.html">saltstack </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/developing-and-deploying-django-project-with-saltstack.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/developing-django-project-with-saltstack.html"><h3 class="article-title">Developing Django project with SaltStack</h3></a>
+<h6 class="subheader" title="2013-11-09T00:00:00+07:00">Sat 09 November 2013
+</h6>
+
+
+<p>Let's use <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> as an example of Django project. I want it to
+run in VirtualBox which is managed by Vagrant. Infrastructure management
+is provided by SaltStack.</p>
+<p>I advise you to create separate folder for repositories (currently there
+is only one) of project and clone <a class="reference external" href="https://github.com/marselester/abstract-internal-messaging">Messaging System</a> there.
+Also …</p><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/vagrant.html">vagrant </a>
+    <a href="https://marselester.com/tag/salt.html">salt </a>
+    <a href="https://marselester.com/tag/saltstack.html">saltstack </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/developing-django-project-with-saltstack.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/developing-django-project-with-saltstack.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-testing-during-construction.html"><h3 class="article-title">Django TODO: тестирование во время конструирования</h3></a>
+<h6 class="subheader" title="2012-06-29T13:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
+стратегии тестирования.</p>
+<p>Тестирование может указать только на отдельные дефектные области программы --
+оно не сделает программу удобнее в использовании, более быстрой, компактной,
+удобочитаемой или расширяемой.</p>
+<p>Цель тестирования противоположна целям других этапов разработки. Его целью
+является нахождение ошибок. Успешным считается тест, нарушающий работу ПО …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/testing.html">testing </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-testing-during-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-testing-during-construction.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-system-construction.html"><h3 class="article-title">Django TODO: конструирование системы</h3></a>
+<h6 class="subheader" title="2012-06-29T12:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>При работе над проектом конструирование включает другие процессы, в том числе
+проектирование. Формальная архитектура дает ответы только на вопросы
+системного уровня, при этом значительная часть проектирования может быть
+намеренно оставлена на этап конструирования. Проектирование -- это
+&quot;постепенный&quot; процесс. Проекты приложений не возникают в умах разработчиков
+сразу в готовом виде. Они развиваются …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/construction.html">construction </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-system-construction.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-system-construction.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-design-architecture.html"><h3 class="article-title">Django TODO: проектирование архитектуры системы</h3></a>
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Следующим этапом разработки системы является проектирование архитектуры.</p>
+<p>Архитектура должна быть продуманным концептуальным целым. Главный тезис самой
+популярной книги по разработке ПО &quot;Мифический человеко-месяц&quot; гласит, что
+основной проблемой, характерной для крупных систем, является поддержание их
+концептуальной целостности. Хорошая архитектура должна соответствовать
+проблеме <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
+<p>Разделение системы на подсистемы на уровне архитектуры, позволяет …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/architecture.html">architecture </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-design-architecture.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-design-architecture.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>После прочтения Макконелла захотелось спроецировать его советы на Django.
+Для этого я взял за основу разработку системы <a class="reference external" href="https://github.com/marselester/django-todo">Django TODO</a>. Итак, первый этап -- выработка требований к
+системе.</p>
+<p>Требования подробно описывают, что должна делать система. Внимание к
+требованиям помогает свести к минимуму изменения системы после начала
+разработки. Явные требования помогают гарантировать, что …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/requirements.html">requirements </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-development-of-system-requirements.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/django-todo-development-of-system-requirements.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/links-to-best-practices-of-python-django.html"><h3 class="article-title">Соглашения по разработке на Python/Django</h3></a>
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>Во время разработки я часто сверяюсь с известными мне соглашениями,
+стараюсь следовать рекомендациям. Цитировать их не имеет смысла -- лучше
+приведу ссылки.</p>
+<p><a class="reference external" href="http://www.python.org/dev/peps/pep-0008/">PEP 8 -- Style Guide for Python Code</a>.</p>
+<p><a class="reference external" href="http://python.net/~goodger/projects/pycon/2007/idiomatic/handout.html#long-lines-continuations">Code Like a Pythonista: Idiomatic Python</a>.
+В нем я нашел ответы на вопросы форматирования длинных строк:</p>
+<pre class="literal-block">
+expended_time = (self.finish_date() - self.start_date
+                 + datetime …</pre><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/best-practices.html">best practices </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/links-to-best-practices-of-python-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/links-to-best-practices-of-python-django.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/splitting-settings-in-django.html"><h3 class="article-title">Разделение настроек в Django</h3></a>
+<h6 class="subheader" title="2012-06-29T00:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>В <a class="reference external" href="https://code.djangoproject.com/wiki/SplitSettings">Django wiki</a> собраны
+различные способы разделения настроек. Мне нравится <a class="reference external" href="http://senko.net/en/django-quickstart-skeleton-project/">вариант</a>, описанный в блоге
+Senko Rašić:</p>
+<pre class="literal-block">
+settings/
+├── __init__.py
+├── base.py
+├── development.py
+├── local.py
+└── production.py
+</pre>
+<p><tt class="docutils literal">base.py</tt> содержит общие настройки для <tt class="docutils literal">development.py</tt> и
+<tt class="docutils literal">production.py</tt>, например:</p>
+<div class="highlight"><pre><span></span><span class="n">ADMINS</span> <span class="o">=</span> <span class="p">()</span>
+<span class="n">MANAGERS</span> <span class="o">=</span> <span class="n">ADMINS</span>
+
+<span class="n">TIME_ZONE</span> <span class="o">=</span> <span class="s1">&#39;Asia/Yekaterinburg&#39;</span>
+<span class="c1"># ...</span>
+</pre></div>
+<p><tt class="docutils literal">production.py</tt> содержит настройки для …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/settings.html">settings </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/splitting-settings-in-django.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/splitting-settings-in-django.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+        
+
+
+            <article>
+                <a href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html"><h3 class="article-title">Краткий обзор инфраструктуры для разработки reusable Django приложений</h3></a>
+<h6 class="subheader" title="2012-06-13T00:00:00+07:00">Wed 13 June 2012
+</h6>
+
+
+<p>Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
+зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
+веб-приложений на Django к этим проблемам необходимо отнести организацию
+файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
+организации автоматизированного тестирования. В данной статье приведены пути
+решения этих проблем.</p>
+<p>Важно знать различия между двумя …</p><p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/infrastructure.html">infrastructure </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html">Read More</a>
+                <hr  class="gradient"/>
+            </article>
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

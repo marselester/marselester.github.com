@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - requirements</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/django-todo-development-of-system-requirements.html"><h3 class="article-title">Django TODO: выработка требований к системе</h3></a>
+<h6 class="subheader" title="2012-06-29T11:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+<p>После прочтения Макконелла захотелось спроецировать его советы на Django.
+Для этого я взял за основу разработку системы <a class="reference external" href="https://github.com/marselester/django-todo">Django TODO</a>. Итак, первый этап -- выработка требований к
+системе.</p>
+<p>Требования подробно описывают, что должна делать система. Внимание к
+требованиям помогает свести к минимуму изменения системы после начала
+разработки. Явные требования помогают гарантировать, что функциональность
+системы определяется пользователем, а не программистом. Если явных требований
+нет, программисту обычно самому приходится вырабатывать их во время
+программирования <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
+<p>В данном случае приложение должно предоставлять простой механизм создания
+цепочек задач, мониторинг статуса их выполнения, а также должно отображать
+актуальные задачи для исполнителя.</p>
+<p>Для каждой задачи цепочки устанавливается дедлайн, который должен быть больше,
+чем дедлайн предыдущей задачи. Под дедлайном подразумевается дата в формате
+<em>дд.мм.гггг</em>, до которой задача должна быть завершена.</p>
+<p>В списке задач отображаются актуальные задачи, в которых пользователь
+фигурирует как исполнитель. Пользователь сам отправляет задачи в архив, тем
+самым он решает, какие задачи для него актуальны.</p>
+<p>Отображение дополнительной информации о сроке задачи зависит от ее статуса.
+Пример возможных вариантов для статуса <em>WAIT</em>:</p>
+<ul class="simple">
+<li>задача начнет работать через десять дней;</li>
+<li>дата начала работы не прогнозируема, так как предыдущая задача превысила
+свой дедлайн и использует рабочие дни текущей задачи;</li>
+<li>дедлайн просрочен на один день, так как предыдущая задача превысила свой
+дедлайн и дедлайн текущей задачи.</li>
+</ul>
+<p>Пример возможных вариантов для статусов <em>WORK</em> и <em>STOP</em>: до дедлайна осталось
+два дня, дедлайн просрочен на один день. Пример возможных вариантов для
+статуса <em>DONE</em>: выполнено в срок за пять дней, дедлайн просрочен на один день.</p>
+<p>В списке цепочек задач необходимо отображать актуальные цепочки пользователя,
+отсортированные по дедлайну (сверху старые, внизу новые). Актуальность цепочки
+определяет ее владелец. Каждая цепочка задач должна содержать:</p>
+<ul class="simple">
+<li>название;</li>
+<li>дедлайн;</li>
+<li>информацию об исполнителе задачи, ее статусе, выделенный и фактический срок
+исполнения;</li>
+<li>информацию о сроке цепочки, которая зависит от статуса цепочки.</li>
+</ul>
+<table class="docutils footnote" frame="void" id="mcconnell" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-1">[1]</a></td><td>Макконелл С. Совершенный код. Мастер-класс /
+Пер. с англ. – М. : Издательство &quot;Русская редакция&quot;, 2012. – 896 стр. : ил.</td></tr>
+</tbody>
+</table>
+<p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/requirements.html">requirements </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/django-todo-development-of-system-requirements.html#disqus_thread">comments</a></p>            </article>
+
+
+
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

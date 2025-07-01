@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>marselester's blog - infrastructure</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html"><h3 class="article-title">Краткий обзор инфраструктуры для разработки reusable Django приложений</h3></a>
+<h6 class="subheader" title="2012-06-13T00:00:00+07:00">Wed 13 June 2012
+</h6>
+
+
+<p>Начиная впервые разрабатывать веб-приложения на новом фреймворке программист
+зачастую сталкивается с некоторыми трудностями. При разработке отчуждаемых
+веб-приложений на Django к этим проблемам необходимо отнести организацию
+файлов в проекте, обнаружение тестов, вопросы пакетирования приложений и
+организации автоматизированного тестирования. В данной статье приведены пути
+решения этих проблем.</p>
+<p>Важно знать различия между двумя способами разработки Django приложений.
+Первый способ заключается в создании приложения внутри каталога проекта с
+помощью команды <tt class="docutils literal">manage.py startapp</tt>. Второй способ – разработка
+независимого приложения. Автономное приложение проще использовать и
+распространять <a class="footnote-reference" href="#bennett" id="footnote-reference-1">[1]</a>.</p>
+<div class="section" id="section-1">
+<h2>Системы пакетирования</h2>
+<p>Для того чтобы Django смог найти изолированное приложение, нужно чтобы оно
+находилось в Python пути. Python путь – это список каталогов, в которых Python
+ищет модули, всякий раз исполняя оператор <tt class="docutils literal">import</tt>. При установке
+интерпретатора Python создается директория <tt class="docutils literal"><span class="pre">site-packages</span></tt> и добавляется в
+Python путь. Все сторонние приложения устанавливаются в <tt class="docutils literal"><span class="pre">site-packages</span></tt>.</p>
+<p>Python имеет систему пакетов, которая позволяет распространять программы и
+библиотеки в стандартном формате, что помогает легко устанавливать и
+использовать их. Помимо распространения пакетов Python также обеспечивает
+централизованный сервис для контрибуции пакетов. Этот сервис называется Индекс
+Python Пакетов (PyPI). Он позволяет разработчикам распространять пакет
+большому сообществу с небольшими затратами усилий. Использование пакетов дает
+такие преимущества, как:</p>
+<ul class="simple">
+<li>управление зависимостями пакетов;</li>
+<li>получение информации об установленных пакетах (например, версия пакета);</li>
+<li>удаление пакетов;</li>
+<li>поиск пакетов по PyPI <a class="footnote-reference" href="#ziade" id="footnote-reference-2">[2]</a>.</li>
+</ul>
+<p>Текущее состояние систем пакетирования показано на рисунке. Если
+разрабатываемому пакету необходим модуль <em>Setuptools</em>, рекомендуется
+установить <em>Distribute</em>, который является обновленной версией оригинального
+<em>Setuptools</em>. <em>Distribute</em> был создан так как <em>Setuptools</em> больше не
+поддерживается разработчиками. Модуль <em>distutils</em> является частью стандартной
+библиотеки Python и обеспечивает основу для пакетирования. В будущем
+<em>distutils2</em> заменит <em>Setuptools</em> и <em>distutils</em>, а также устранит
+необходимость в <em>Distribute</em>. До завершения работ над <em>distutils2</em>
+разработчикам рекомендуют использовать <em>distutils</em> <a class="footnote-reference" href="#ziade" id="footnote-reference-3">[2]</a>.</p>
+<a class="reference external image-reference" href="http://ziade.org/2012/11/17/chronology-of-packaging/"><img alt="" src="http://blog.ziade.org/history-part1.png" /></a>
+<a class="reference external image-reference" href="http://ziade.org/2012/11/17/chronology-of-packaging/"><img alt="" src="http://blog.ziade.org/history-part2.png" /></a>
+</div>
+<div class="section" id="section-2">
+<h2>Управление экосистемой пакетирования</h2>
+<p>Для манипулирования экосистемой пакетирования были разработаны такие
+инструменты, как Pip и Virtualenv. Pip – это инструмент для установки и
+управления Python пакетами. С его помощью можно:</p>
+<ul class="simple">
+<li>устанавливать пакеты, например, <tt class="docutils literal">pip install Django</tt>;</li>
+<li>показывать список установленных пакетов и их версии, например,
+<tt class="docutils literal">pip freeze</tt> отобразит <tt class="docutils literal"><span class="pre">Django==1.3.1,</span> <span class="pre">pep8==0.6.1,</span>
+<span class="pre">virtualenv==1.7.1.2</span></tt>;</li>
+<li>устанавливать пакеты определенных версий, например,
+<tt class="docutils literal">pip install <span class="pre">'Mark-down&gt;2.0,&lt;2.0.3'</span></tt>;</li>
+<li>обновлять пакеты, например, <tt class="docutils literal">pip install <span class="pre">--upgrade</span> Django</tt>;</li>
+<li>удалять пакеты, например, <tt class="docutils literal">pip uninstall Markdown</tt>.</li>
+</ul>
+<p>Для того чтобы не смешивать экспериментальные пакеты со стабильными пакетами,
+разработчики используют Virtualenv. Данный инструмент позволяет создавать
+изолированные Python окружения и устанавливать в них пакеты, не модифицируя
+системное окружение Python. Например, <tt class="docutils literal">virtualenv <span class="pre">--no-site-packages</span> my_env</tt>
+создаст окружение <tt class="docutils literal">my_env</tt> без пакетов, <tt class="docutils literal">source my_env/bin/activate</tt>
+активирует окружение <tt class="docutils literal">my_env</tt>, а <tt class="docutils literal">deactivate</tt> отключит его.</p>
+</div>
+<div class="section" id="section-3">
+<h2>Метаданные проекта</h2>
+<p>Наименьший проект на Python состоит из двух файлов. Файл <tt class="docutils literal">setup.py</tt>, который
+содержит метаданные о проекте и файл, который содержит Python код для
+реализации функциональности проекта. В <tt class="docutils literal">setup.py</tt> есть только три поля,
+необходимые для заполнения: <em>name</em>, <em>version</em> и <em>packages</em>. Поле <em>name</em> должно
+быть уникальным для публикации в PyPI. Поле <em>version</em> следит за различными
+версиями проекта. Поле <em>packages</em> описывает, где размещен Python код проекта
+<a class="footnote-reference" href="#ziade" id="footnote-reference-4">[2]</a>. Ниже приведен пример файла <tt class="docutils literal">setup.py</tt>, который также включает
+информацию о лицензии и описание проекта:</p>
+<div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="kn">from</span> <span class="nn">distutils.core</span> <span class="kn">import</span> <span class="n">setup</span>
+
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;django-todo&#39;</span><span class="p">,</span>
+    <span class="n">version</span><span class="o">=</span><span class="s1">&#39;0.1dev&#39;</span><span class="p">,</span>
+    <span class="n">long_description</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;README.rst&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
+    <span class="n">licence</span><span class="o">=</span><span class="s1">&#39;MIT license&#39;</span><span class="p">,</span>
+    <span class="n">packages</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;todo&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;todo.templatetags&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="section-4">
+<h2>Структура репозитория</h2>
+<p>Для удобства разработки в Django существует стандарт организации проекта и
+стиль кодирования <a class="footnote-reference" href="#django" id="footnote-reference-5">[3]</a>. При разработке приложений автор в большей
+степени опирается на них, а также на практический опыт компании Lincoln Loop
+<a class="footnote-reference" href="#lincolnloop" id="footnote-reference-6">[4]</a>. Руководство по стилю кодирования и автоматизация имеет важное
+значение для цикла разработки. Структура репозитория в той же степени является
+важной частью архитектуры проекта. Рассмотрим некоторые особенности:</p>
+<ul class="simple">
+<li><tt class="docutils literal">README.rst</tt> должен содержать описание проекта в формате reST;</li>
+<li><tt class="docutils literal">LICENSE</tt> должен содержать полный текст лицензии;</li>
+<li>аргумент <em>install_requires</em> в <tt class="docutils literal">setup.py</tt> нужен для перечисления
+зависимостей проекта;</li>
+<li><tt class="docutils literal">MANIFEST.in</tt> – это шаблон, который определяет, какие файлы должны быть
+включены в пакет, например, <tt class="docutils literal">include README.rst</tt>;</li>
+<li>в <tt class="docutils literal">requirements.txt</tt> следует указывать зависимости, необходимые для
+участия в разработке проекта (тестирование, генерация документации)
+<a class="footnote-reference" href="#reitz" id="footnote-reference-7">[5]</a>;</li>
+<li><tt class="docutils literal">todo/__init__.py</tt>;</li>
+<li><tt class="docutils literal">todo/models.py</tt>;</li>
+<li><tt class="docutils literal">docs/conf.py</tt>;</li>
+<li><tt class="docutils literal">docs/index.rst</tt>;</li>
+<li><tt class="docutils literal">tests/__init__.py</tt>;</li>
+<li><tt class="docutils literal">tests/models.py</tt>.</li>
+</ul>
+</div>
+<div class="section" id="section-5">
+<h2>Обнаружение и запуск тестов</h2>
+<p>Тесты не следует распространять вместе с модулем, так как это приводит к
+увеличению сложности для конечных пользователей – наборы тестов требуют
+дополнительных зависимостей. На конференции <em>PyCon US 2012</em> Карл Майер
+предложил решение <a class="footnote-reference" href="#meyer" id="footnote-reference-8">[6]</a>, которое позволило отделить тесты от приложений в
+проекте и реализовать обнаружение и запуск всех тестов из каталога <tt class="docutils literal">tests</tt>.
+Автор применил данное решение для организации тестов в многоразовых Django
+приложениях <a class="footnote-reference" href="#app-skeleton" id="footnote-reference-9">[7]</a>. В корне репозитория располагается скрипт
+<tt class="docutils literal">runtests.py</tt>, который запускает тесты:</p>
+<div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DJANGO_SETTINGS_MODULE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;tests.settings&#39;</span>
+
+<span class="kn">from</span> <span class="nn">django.test.utils</span> <span class="kn">import</span> <span class="n">get_runner</span>
+<span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+
+
+<span class="k">def</span> <span class="nf">runtests</span><span class="p">():</span>
+    <span class="n">TestRunner</span> <span class="o">=</span> <span class="n">get_runner</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+
+    <span class="n">test_runner</span> <span class="o">=</span> <span class="n">TestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interactive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">failfast</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">failures</span> <span class="o">=</span> <span class="n">test_runner</span><span class="o">.</span><span class="n">run_tests</span><span class="p">([])</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">failures</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">runtests</span><span class="p">()</span>
+</pre></div>
+<p>Настройки для их запуска указаны в файле <tt class="docutils literal">tests/settings.py</tt>:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="n">DATABASES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;ENGINE&#39;</span><span class="p">:</span> <span class="s1">&#39;django.db.backends.sqlite3&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s1">&#39;app_name&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">BASE_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="n">TEST_DISCOVERY_ROOT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">BASE_PATH</span><span class="p">,</span> <span class="s1">&#39;tests&#39;</span><span class="p">)</span>
+
+<span class="n">TEST_RUNNER</span> <span class="o">=</span> <span class="s1">&#39;tests.runner.DiscoveryDjangoTestSuiteRunner&#39;</span>
+
+<span class="n">FIXTURE_DIRS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">TEST_DISCOVERY_ROOT</span><span class="p">,</span> <span class="s1">&#39;fixtures&#39;</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+<p>Обнаружение тестов осуществляется во всех файлах, которые находятся в каталоге
+<tt class="docutils literal">tests</tt> и название которых совпадает с <em>models.py</em>, <em>tests.py</em> или
+<em>test*.py</em>.</p>
+</div>
+<div class="section" id="section-6">
+<h2>Автоматизация тестирования</h2>
+<p>Для автоматизации тестирования Python проектов автор использует инструмент
+tox. Он может быть использован:</p>
+<ul class="simple">
+<li>для проверки, что пакеты устанавливаются правильно в разных версиях Python;</li>
+<li>для запуска тестов в каждой из сред;</li>
+<li>в качестве интерфейса для сервера непрерывной интеграции, например, Jenkins.</li>
+</ul>
+<p>Ниже приведен пример конфигурации <tt class="docutils literal">tox.ini</tt> со средами <em>Python 2.6</em>,
+<em>Python 2.7</em> и <em>Django 1.3</em> <a class="footnote-reference" href="#django-todo" id="footnote-reference-10">[8]</a>:</p>
+<pre class="literal-block">
+[tox]
+envlist=py26,py27,dj13
+
+[testenv]
+deps=
+    django==1.4.0
+    git+https://github.com/rbarrois/factory_boy.git
+    webtest
+    django-webtest
+
+commands=python runtests.py
+
+[testenv:dj13]
+deps=
+    django==1.3.1
+    git+https://github.com/rbarrois/factory_boy.git
+    webtest
+    django-webtest
+</pre>
+<p>Окружение <em>testenv</em> является средой по умолчанию. В ней описаны пакеты с
+указаниями версий, которые необходимы для тестирования проекта (в данном
+случае это фреймворк Django версии 1.4.1, последние версии инструментов для
+тестирования – factory_boy, webtest, django-webtest).</p>
+<table class="docutils footnote" frame="void" id="bennett" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-1">[1]</a></td><td>Bennett B. Practical Django Projects.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="ziade" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[2]</td><td><em>(<a class="fn-backref" href="#footnote-reference-2">1</a>, <a class="fn-backref" href="#footnote-reference-3">2</a>, <a class="fn-backref" href="#footnote-reference-4">3</a>)</em> Ziadé T. <a class="reference external" href="http://guide.python-distribute.org/">The Hitchhiker's Guide to Packaging</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="django" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-5">[3]</a></td><td>Django community. <a class="reference external" href="https://docs.djangoproject.com/en/dev/internals/contributing/writing-code/coding-style/">Django Coding Style</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="lincolnloop" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-6">[4]</a></td><td>Lincoln Loop company. <a class="reference external" href="http://lincolnloop.com/django-best-practices/">Django Best Practices</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="reitz" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-7">[5]</a></td><td>Reitz K. <a class="reference external" href="http://kennethreitz.com/repository-structure-and-python.html">Repository Structure and Python</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="meyer" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-8">[6]</a></td><td>Meyer C. <a class="reference external" href="http://carljm.github.com/django-testing-slides/">Testing and Django</a> at PyCon US 2012.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="app-skeleton" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-9">[7]</a></td><td>Мавлеткулов М. <a class="reference external" href="https://github.com/marselester/reusable-django-app-skeleton">Reusable Django app skeleton</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="django-todo" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-10">[8]</a></td><td>Мавлеткулов М. <a class="reference external" href="https://github.com/marselester/django-todo">Система управления цепочками задач</a>.</td></tr>
+</tbody>
+</table>
+</div>
+<p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/infrastructure.html">infrastructure </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/short-overview-of-infrastructure-for-developing-reusable-django-apps.html#disqus_thread">comments</a></p>            </article>
+
+
+
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>

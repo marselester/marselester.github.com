@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>Django TODO: тестирование во время конструирования</title>
+
+    <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/style.css" />
+    <link rel="stylesheet" href="https://marselester.com/theme/css/pygments.css" />	
+    <script src="https://marselester.com/theme/js/custom.modernizr.js"></script>
+
+    <!-- So Firefox can bookmark->"abo this site" -->
+        <link href="feeds/all.atom.xml" rel="alternate" title="marselester's blog" type="application/atom+xml">
+
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="https://marselester.com">marselester's blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+            <li><a href="https://marselester.com/pages/about.html" class="button secondary small">About</a></li>
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/django-todo-testing-during-construction.html" rel="bookmark"
+        title="Permalink to Django TODO: тестирование во время конструирования">Django TODO: тестирование во время конструирования</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
+
+<h6 class="subheader" title="2012-06-29T13:00:00+07:00">Fri 29 June 2012
+</h6>
+
+
+    <p>Тестирование, выполняемое разработчиками -- один из важнейших элементов полной
+стратегии тестирования.</p>
+<p>Тестирование может указать только на отдельные дефектные области программы --
+оно не сделает программу удобнее в использовании, более быстрой, компактной,
+удобочитаемой или расширяемой.</p>
+<p>Цель тестирования противоположна целям других этапов разработки. Его целью
+является нахождение ошибок. Успешным считается тест, нарушающий работу ПО. Все
+остальные этапы разработки направлены на предотвращение ошибок и недопущение
+нарушения работы программы <a class="footnote-reference" href="#mcconnell" id="footnote-reference-1">[1]</a>.</p>
+<div class="section" id="section-1">
+<h2>Виды тестирования</h2>
+<p>Виды тестирования, выполняемые разработчиком: блочное тестирование,
+интеграционное тестирование.</p>
+<p>Блочным тестированием называют тестирование полного класса, метода или
+небольшого приложения, выполняемое отдельно от прочих частей системы. Данный
+тип тестирования позволяет структурировать код.</p>
+<p>Интеграционное тестирование -- это совместное выполнение двух или более
+классов, пакетов, компонентов или подсистем. Этот вид тестирования начинают
+вводить, как только созданы два класса, которые можно протестировать. Такое
+тестирование позволяет определить регрессию, но является медленным и менее
+информативным, чем блочное тестирование.</p>
+<p>Тестирование разделяют на две обширные категории: &quot;тестирование методом
+черного ящика&quot; и &quot;тестирование методом белого (прозрачного) ящика&quot;. В первом
+случае тестирощик не владеет сведениями о внутренней работе тестируемого
+элемента. При тестировании методом белого ящика внутренняя реализация
+тестируемого элемента тестировщику известна. Тестируя собственный код,
+программист использует именно этот вид тестирования.</p>
+<p>Тестирование требует, чтобы программист рассчитывал найти ошибки в своем коде
+<a class="footnote-reference" href="#mcconnell" id="footnote-reference-2">[1]</a>.</p>
+</div>
+<div class="section" id="django">
+<h2>Рекомендации по тестированию Django приложений</h2>
+<p>Карл Майер дал следующие рекомендации по тестированию Django приложений
+<a class="footnote-reference" href="#meyer" id="footnote-reference-3">[2]</a>:</p>
+<ul class="simple">
+<li>для представлений следует писать интеграционные тесты;</li>
+<li>для тестирования Ajax и других JavaScript взаимодействий нужно использовать
+<em>Selenium</em>, который позволяет автоматизировать тестирование веб-приложений в
+браузере;</li>
+<li>для всех остальных случаев необходимо использовать блочное тестирование.</li>
+</ul>
+<p>Он также выступил против использования <em>fixtures</em> (набор данных, которые
+Django использует для импорта в БД), аргументируя тем, что они медленно
+загружаются, их трудно поддерживать и обновлять. Также применение <em>fixtures</em>
+приводит к росту взаимозависимости тестов. Для замены <em>fixtures</em> был
+разработан инструмент <em>factory_boy</em>, который имеет следующие преимущества:
+близость тестовых данных к тестовому коду, не требует от тестирования введение
+избыточных данных, прост в обслуживании.</p>
+<div class="section" id="section-2">
+<h3>Что именно тестировать?</h3>
+<p>Ответ на вопрос <em>&quot;Что именно тестировать в Django приложении?&quot;</em> дал Дэниэл
+Линдсли <a class="footnote-reference" href="#lindsley" id="footnote-reference-4">[3]</a>:</p>
+<ul class="simple">
+<li>не следует тестировать стандартные функции Python и Django;</li>
+<li>если модель данных содержит пользовательские методы, их необходимо
+тестировать;</li>
+<li>нужно тестировать пользовательские формы, шаблонные теги, контекстные
+процессоры, команды управления;</li>
+<li>следует тестировать бизнес логику в представлениях.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="section-3">
+<h2>Тестирование моделей данных</h2>
+<p>Для тестирования Django моделей используют блочное тестирование. В качестве
+инструмента блочного тестирования автор выбрал библиотеку <em>unittest</em>, так как
+она входит в стандартную библиотеку Python. Тесты, написанные на <em>unittest</em>
+работают быстрее при тестировании Django приложений <a class="footnote-reference" href="#lindsley" id="footnote-reference-5">[3]</a>.</p>
+<p>В качестве примера проектирования тестов приводятся методы
+<em>days_quantity_after_deadline</em> (определяет количество просроченных дней
+задачи) и <em>start_date</em> (определяет дату начала работы над задачей).</p>
+<div class="section" id="section-4">
+<h3>Количество просроченных дней задачи</h3>
+<p>Определение количества просроченных дней задачи. Для этого рассмотрим все
+возможные случаи наступления дедлайна:</p>
+<ul class="simple">
+<li>просрочен дедлайн у ожидающей задачи из-за предыдущей задачи. Предыдущая
+задача превысила свой дедлайн и дедлайн текущей задачи;</li>
+<li>работающая задача превысила дедлайн;</li>
+<li>задача выполнена с превышением дедлайна;</li>
+<li>просрочен дедлайн у остановленной задачи. Владелец цепочки не решил проблему
+остановки задачи.</li>
+</ul>
+<p>Из вышеперечисленных случаев следует два правила расчета количества
+просроченных дней:</p>
+<ul class="simple">
+<li>если статус <strong>DONE</strong> и дата окончания задачи больше или равна дедлайну, то
+количество дней равно разности даты окончания и дедлайна, плюс один день
+(день дедлайна);</li>
+<li>если статус <strong>WAIT/WORK/STOP</strong> и текущая дата больше или равна дедлайну, то
+количество дней равно разности текущей даты и дедлайна, плюс один день (день
+дедлайна).</li>
+</ul>
+<p>Определив все возможные случаи наступления дедлайна можно спроектировать
+&quot;чистые тесты&quot; для метода <em>days_quantity_after_deadline</em>:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DeadlineDaysTest</span><span class="p">(</span><span class="n">TaskTest</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Тестирует определение количества просроченных дней.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">task_wait_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Просрочен дедлайн у ожидающей задачи из-за предыдущей задачи.</span>
+
+<span class="sd">        Предыдущая задача превысила свой дедлайн и дедлайн текущей задачи.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">task_work_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Работающая задача превысила дедлайн.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">task_done_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Задача выполнена с превышением дедлайна.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">task_stop_overdue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Просрочен дедлайн у остановленной задачи.</span>
+
+<span class="sd">        Владелец цепочки не решил проблему остановки задачи.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+</pre></div>
+<p>Под &quot;чистыми тестами&quot; подразумеваются тесты, которые проверяют работает ли
+код, а не пытаются нарушить его работу всевозможными способами (&quot;грязные
+тесты&quot;). В организациях со зрелым процессом тестирования на каждый &quot;чистый
+тест&quot; обычно приходятся пять &quot;грязных&quot; <a class="footnote-reference" href="#mcconnell" id="footnote-reference-6">[1]</a>.</p>
+</div>
+<div class="section" id="section-5">
+<h3>Дата начала работы над задачей</h3>
+<p>Рассмотрим проектирование тестов для более сложного метода -- метода, который
+определяет дату начала работы над задачей.</p>
+<p>Чтобы определить дату начала работы над задачей необходимо рассмотреть все
+возможные комбинации предшествующих задач по статусам.</p>
+<div class="section" id="wait">
+<h4>Статус текущей задачи WAIT</h4>
+<p>Задача стоит первой в цепочке, дата начала работы над цепочкой не наступила.
+В этом случае дата начала работы над задачей равна дате начала цепочки.</p>
+<p>Предыдущая задача имеет статус <em>WAIT</em>, к тому же:</p>
+<ul class="simple">
+<li><em>дата начала предыдущей задачи</em> не наступила. В данном случае дата начала
+текущей задачи равна дедлайну предыдущей задачи;</li>
+<li>наступила <em>дата начала предыдущей задачи</em>, но еще не наступил <em>дедлайн
+предыдущей задачи</em>. В данном случае дата начала текущей задачи равна
+дедлайну предыдущей задачи;</li>
+<li>наступил <em>дедлайн предыдущей задачи</em>. В данном случае дата начала текущей
+задачи не прогнозируема.</li>
+</ul>
+<p>Предыдущая задача имеет статус <em>WORK</em> или <em>STOP</em>, к тому же:</p>
+<ul class="simple">
+<li>не наступил <em>дедлайн предыдущей задачи</em>. В данном случае дата начала текущей
+задачи равна дедлайну предыдущей задачи;</li>
+<li>наступил <em>дедлайн предыдущей задачи</em>. В данном случае дата начала текущей
+задачи не прогнозируема.</li>
+</ul>
+</div>
+<div class="section" id="work-done-stop">
+<h4>Статус текущей задачи WORK или DONE или STOP</h4>
+<p>Задача стоит первой в цепочке, наступила дата начала работы над цепочкой.
+В данном случае дата начала работы над задачей равна дате начала цепочки.</p>
+<p>Предыдущая задача имеет статус <em>DONE</em>. В данном случае дата начала задачи
+равна дедлайну предыдущей задачи.</p>
+</div>
+<div class="section" id="section-6">
+<h4>Правило определения даты</h4>
+<p>Проанализировав вышеперечисленные случаи автор сформулировал правила
+определения даты начала работы над задачей:</p>
+<ul class="simple">
+<li>для первой задачи равна дате начала работы над цепочкой;</li>
+<li>для статуса <em>WAIT</em> равна дедлайну предыдущей задачи. Если дедлайн просрочен,
+дата начала задачи не прогнозируема;</li>
+<li>для статусов <em>WORK</em>, <em>DONE</em>, <em>STOP</em> равна дате окончания предыдущей задачи.</li>
+</ul>
+<p>Демонстрация фрагмента блочного тестирования для метода <em>start_date</em> приведена
+ниже:</p>
+<div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="kn">from</span> <span class="nn">django.test</span> <span class="kn">import</span> <span class="n">TestCase</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">User</span>
+
+<span class="kn">from</span> <span class="nn">todo.models</span> <span class="kn">import</span> <span class="n">Chain</span><span class="p">,</span> <span class="n">Task</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">factories</span>
+
+
+<span class="k">class</span> <span class="nc">TaskTest</span><span class="p">(</span><span class="n">TestCase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">factories</span><span class="o">.</span><span class="n">make_fixtures</span><span class="p">()</span>
+        <span class="c1"># Сотрудники.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s1">&#39;alexander&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">designer</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s1">&#39;kazimir&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">programmer</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s1">&#39;ada&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">StartDateTest</span><span class="p">(</span><span class="n">TaskTest</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Тестирует определение даты начала работы над задачей.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">test_first_task</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Тестирует дату начала работы первой задачи.</span>
+
+<span class="sd">        Дата начала первой задачи совпадает с датой начала цепочки. Это условие</span>
+<span class="sd">        верно для задач с любым статусом.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">today</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
+        <span class="n">chain_start_date</span> <span class="o">=</span> <span class="n">today</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">chain</span> <span class="o">=</span> <span class="n">Chain</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Chain&#39;</span><span class="p">,</span> <span class="n">start_date</span><span class="o">=</span><span class="n">chain_start_date</span><span class="p">,</span>
+                                     <span class="n">owner</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="p">)</span>
+        <span class="n">deadline</span> <span class="o">=</span> <span class="n">chain_start_date</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">first_task</span> <span class="o">=</span> <span class="n">Task</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">worker</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">designer</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="s1">&#39;Design&#39;</span><span class="p">,</span>
+                                         <span class="n">deadline</span><span class="o">=</span><span class="n">deadline</span><span class="p">,</span> <span class="n">chain</span><span class="o">=</span><span class="n">chain</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">first_task</span><span class="o">.</span><span class="n">start_date</span><span class="p">(),</span> <span class="n">chain</span><span class="o">.</span><span class="n">start_date</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="section-7">
+<h3>Заключение</h3>
+<p>Организация библиотеки <em>unittest</em> по классам и методам подходит в случае, когда
+есть потребность в написании тестов, которые используют одинаковый код. Такой
+подход упрощает абстракцию общих задач в общие методы. Библиотека также
+поддерживает явные процедуры настройки и очистки, которые предоставляют
+высокий уровень контроля над средой, в которой происходит выполнение тестов.</p>
+</div>
+</div>
+<div class="section" id="section-8">
+<h2>Тестирование представлений</h2>
+<p>Для тестирования Django представлений рекомендуется <a class="footnote-reference" href="#korobov" id="footnote-reference-7">[4]</a> использовать
+библиотеку <em>WebTest</em>. Ближайшим аналогом <em>WebTest</em> является <em>twill</em>, но он не
+поддерживает юникод и давно не развивается (последний релиз был в 2007 году).</p>
+<p>В качестве примера приводится тестирование посещения пользователем страницы
+актуальных задач:</p>
+<div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">django_webtest</span> <span class="kn">import</span> <span class="n">WebTest</span>
+
+<span class="kn">from</span> <span class="nn">django.core.urlresolvers</span> <span class="kn">import</span> <span class="n">reverse</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">factories</span>
+
+
+<span class="k">class</span> <span class="nc">ActualTasksTest</span><span class="p">(</span><span class="n">WebTest</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">factories</span><span class="o">.</span><span class="n">make_fixtures</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_user_not_logined</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s1">&#39;todo_actual_tasks&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_int</span><span class="p">,</span> <span class="mi">302</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_designer_logined</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">reverse</span><span class="p">(</span><span class="s1">&#39;todo_actual_tasks&#39;</span><span class="p">),</span> <span class="n">user</span><span class="o">=</span><span class="s1">&#39;kazimir&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="s1">&#39;Казимир Малевич&#39;</span> <span class="ow">in</span> <span class="n">response</span>
+</pre></div>
+<p>В первом случае пользователь не авторизован (метод <em>test_user_not_logined</em>) и
+браузер должен вернуть статус <em>302</em> (перенаправление на страницу авторизации),
+во втором случае (метод <em>test_designer_logined</em>) пользователь авторизован под
+именем <em>Казимир Малевич</em>. Данные тесты не такие полезные, как блочные тесты.
+Но даже если они просто проверят основные страницы системы на отсутствие
+сообщений об исключении, то они уже принесут большую пользу разработчику.</p>
+<p>Представления имеют много связей и зависимостей (шаблоны, база данных,
+конфигурация URL), поэтому их трудно тестировать. Карл Майер рекомендует
+писать как можно меньше кода на уровне представлений <a class="footnote-reference" href="#meyer" id="footnote-reference-8">[2]</a>.</p>
+<table class="docutils footnote" frame="void" id="mcconnell" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[1]</td><td><em>(<a class="fn-backref" href="#footnote-reference-1">1</a>, <a class="fn-backref" href="#footnote-reference-2">2</a>, <a class="fn-backref" href="#footnote-reference-6">3</a>)</em> Макконелл С. Совершенный код. Мастер-класс /
+Пер. с англ. – М. : Издательство &quot;Русская редакция&quot;, 2012. – 896 стр. : ил.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="meyer" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[2]</td><td><em>(<a class="fn-backref" href="#footnote-reference-3">1</a>, <a class="fn-backref" href="#footnote-reference-8">2</a>)</em> Meyer C. <a class="reference external" href="http://carljm.github.com/django-testing-slides/">Testing and Django</a> at PyCon US 2012.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="lindsley" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[3]</td><td><em>(<a class="fn-backref" href="#footnote-reference-4">1</a>, <a class="fn-backref" href="#footnote-reference-5">2</a>)</em> Линдсли Д. <a class="reference external" href="http://toastdriven.com/blog/2011/apr/10/guide-to-testing-in-django/">Guide to Testing in Django</a>.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="korobov" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#footnote-reference-7">[4]</a></td><td>Коробов М. <a class="reference external" href="http://habrahabr.ru/post/91471/">Пишем функциональные/интеграционные тесты для
+проекта на Django</a>.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="subheader">Category: <a href="https://marselester.com/category/python.html">Python</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/python.html">python </a>
+    <a href="https://marselester.com/tag/django.html">django </a>
+    <a href="https://marselester.com/tag/django-todo.html">django-todo </a>
+    <a href="https://marselester.com/tag/testing.html">testing </a>
+</p>
+
+
+
+
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "django-todo-testing-during-construction.html";
+        var disqus_url = "https://marselester.com/django-todo-testing-during-construction.html";
+
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/archives.html">Archives</a>
+            <li><a href="https://marselester.com/tags.html">Tags</a>
+
+
+                <li><a href="https://marselester.com/feeds/all.atom.xml" rel="alternate">Atom feed</a></li>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="https://marselester.com/category/go.html">Go</a></li>
+            <li><a href="https://marselester.com/category/infrastructure.html">Infrastructure</a></li>
+            <li><a href="https://marselester.com/category/misc.html">Misc</a></li>
+            <li><a href="https://marselester.com/category/performance.html">Performance</a></li>
+            <li><a href="https://marselester.com/category/profiler.html">Profiler</a></li>
+            <li><a href="https://marselester.com/category/python.html">Python</a></li>
+   
+        </ul>
+
+		
+        <h5 class="sidebar-title">Social</h5>
+        <ul class="side-nav">
+            <li><a href="https://github.com/marselester">GitHub</a></li>
+        </ul>
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+                <p>marselester's blog by Marsel</p>
+            </div>
+            </div>
+    </div>
+</footer>
