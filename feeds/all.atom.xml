@@ -1,5 +1,310 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/all.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2023-04-02T00:00:00+07:00</updated><entry><title>DIY CPU profiler: position independent executable 🥧</title><link href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html" rel="alternate"></link><published>2023-04-02T00:00:00+07:00</published><updated>2023-04-02T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2023-04-02:/diy-cpu-profiler-position-independent-executable.html</id><summary type="html">&lt;p&gt;In the &lt;a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"&gt;simplest case of symbolization&lt;/a&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/all.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2025-12-02T00:00:00+07:00</updated><entry><title>Hello World in avo 🥑</title><link href="https://marselester.com/hello-world-in-avo.html" rel="alternate"></link><published>2025-12-02T00:00:00+07:00</published><updated>2025-12-02T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2025-12-02:/hello-world-in-avo.html</id><summary type="html">&lt;p&gt;Let's learn together how to write some Go assembly using &lt;a href="https://github.com/mmcloughlin/avo"&gt;avo&lt;/a&gt;
+aka writing assembly-like Go code to generate assembly.
+To make it more clear, here is an &lt;a href="https://github.com/mmcloughlin/avo/tree/master/examples/add"&gt;avo program&lt;/a&gt; &lt;code&gt;add/asm.go&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;github.com/mmcloughlin/avo/build&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;TEXT&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Add&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NOSPLIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;func(x …&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</summary><content type="html">&lt;p&gt;Let's learn together how to write some Go assembly using &lt;a href="https://github.com/mmcloughlin/avo"&gt;avo&lt;/a&gt;
+aka writing assembly-like Go code to generate assembly.
+To make it more clear, here is an &lt;a href="https://github.com/mmcloughlin/avo/tree/master/examples/add"&gt;avo program&lt;/a&gt; &lt;code&gt;add/asm.go&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;github.com/mmcloughlin/avo/build&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;TEXT&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Add&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NOSPLIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;func(x, y uint64) uint64&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Load&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Param&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;x&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Load&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Param&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;y&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ADDQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Store&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ReturnIndex&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;RET&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Generate&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;And this is its output &lt;code&gt;add/add.s&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;// func Add(x uint64, y uint64) uint64&lt;/span&gt;
+&lt;span class="nf"&gt;TEXT&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;·&lt;/span&gt;&lt;span class="no"&gt;Add&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;SB&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;NOSPLIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;$0-24&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;x&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;AX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;y&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;ADDQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;AX&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ret&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;RET&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;As we can see, the program generates Go assembly for &lt;code&gt;Add&lt;/code&gt; function along with &lt;code&gt;add/stub.go&lt;/code&gt; file
+to access our function from Go.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ go run asm.go -out add.s -stubs stub.go&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here is a usage example &lt;code&gt;main.go&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;myprog/add&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Import the stub.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nb"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;add&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Add&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we build this program &lt;code&gt;myprog&lt;/code&gt; for amd64 architecture and inspect its binary contents,
+we'll see that &lt;code&gt;Add&lt;/code&gt; function looks slightly different:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;TEXT ·Add&lt;/code&gt; became &lt;code&gt;TEXT myprog/add.Add.abi0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; are gone&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;FP&lt;/code&gt; (frame pointer) usage is replaced with &lt;code&gt;SP&lt;/code&gt; (stack pointer)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ go mod init myprog&lt;/span&gt;
+&lt;span class="go"&gt;﹩ GOOS=linux GOARCH=amd64 go build -o myprog main.go&lt;/span&gt;
+&lt;span class="go"&gt;﹩ go tool objdump -s add.Add myprog&lt;/span&gt;
+&lt;span class="go"&gt;TEXT myprog/add.Add.abi0(SB) /Users/u/code/myprog/add/add.s&lt;/span&gt;
+&lt;span class="go"&gt;  add.s:7       0x46fac0        488b442408      MOVQ 0x8(SP), AX&lt;/span&gt;
+&lt;span class="go"&gt;  add.s:8       0x46fac5        488b4c2410      MOVQ 0x10(SP), CX&lt;/span&gt;
+&lt;span class="go"&gt;  add.s:9       0x46faca        4801c1          ADDQ AX, CX&lt;/span&gt;
+&lt;span class="go"&gt;  add.s:10      0x46facd        48894c2418      MOVQ CX, 0x18(SP)&lt;/span&gt;
+&lt;span class="go"&gt;  add.s:11      0x46fad2        c3              RET&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Why is that so?
+&lt;a href="https://go.dev/doc/asm"&gt;Go's assembler docs&lt;/a&gt; state that their assembler is not a direct representation
+of the underlying machine (amd64 in our case).
+That sort of explains the difference 🤔.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The assembler works on the semi-abstract form...
+In general, machine-specific operations tend to appear as themselves,
+while more general concepts like memory move and subroutine call and return are more abstract.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;To sum up, we would write an assembly-like Go code which generates a Go assembly
+which ends up an architecture specific assembly.&lt;/p&gt;
+&lt;h2&gt;Go assembly&lt;/h2&gt;
+&lt;p&gt;Now, let's have a closer look at Go assembly.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;// func Add(x uint64, y uint64) uint64&lt;/span&gt;
+&lt;span class="nf"&gt;TEXT&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;·&lt;/span&gt;&lt;span class="no"&gt;Add&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;SB&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;NOSPLIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;$0-24&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;x&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;AX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;y&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;ADDQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;AX&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ret&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;RET&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;TEXT&lt;/code&gt; directive declares the symbol &lt;code&gt;·Add&lt;/code&gt; (our function name with a leading dot &lt;code&gt;U+00B7&lt;/code&gt; character).
+The full name of the symbol is &lt;code&gt;myprog∕add·Add&lt;/code&gt; — the package path followed by a dot and the function name
+(note the division slash &lt;code&gt;U+2215&lt;/code&gt; character).&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;avo&lt;/code&gt; didn't need to hard-code the package's import path &lt;code&gt;myprog∕add&lt;/code&gt; in &lt;code&gt;add.s&lt;/code&gt; because
+the linker inserts the package path at the beginning of any name starting with a dot &lt;code&gt;·&lt;/code&gt; character,
+If we had a global variable &lt;code&gt;mySum&lt;/code&gt; in the &lt;code&gt;add&lt;/code&gt; package, we could access it with a dot as well &lt;code&gt;·mySum&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;add&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kd"&gt;var&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;mySum&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int64&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The function name &lt;code&gt;Add&lt;/code&gt; is followed by &lt;code&gt;(SB)&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;SB&lt;/code&gt; stands for static base pointer. It's a pseudo-register maintained by the Go toolchain.&lt;/li&gt;
+&lt;li&gt;all global symbols such as &lt;code&gt;·Add&lt;/code&gt; and &lt;code&gt;·mySum&lt;/code&gt; are written as offsets from the pseudo-register &lt;code&gt;SB&lt;/code&gt;,
+  for example, &lt;code&gt;TEXT ·Add(SB)&lt;/code&gt; or &lt;code&gt;MOV ·mySum(SB), R1&lt;/code&gt;, so we can think of the symbols as named offsets&lt;/li&gt;
+&lt;li&gt;parenthesis around &lt;code&gt;SB&lt;/code&gt; pseudo-register mean register indirect, i.e., we're dereferencing &lt;code&gt;SB&lt;/code&gt; like this &lt;code&gt;*SB&lt;/code&gt;
+  (that's merely an analogy, not an actual code)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;After the symbol, we have &lt;code&gt;NOSPLIT&lt;/code&gt; flag which is an argument to the &lt;code&gt;TEXT&lt;/code&gt; directive.
+It tells the linker not to insert the preamble that checks if the goroutine stack must be split.
+Normally, Go inserts code to check if the stack needs to grow, but &lt;code&gt;NOSPLIT&lt;/code&gt; disables this.
+This reduces the &lt;code&gt;Add&lt;/code&gt; function call overhead, but limits the size of the stack.
+The stack frame for a given function, plus anything it calls, must fit in the spare space
+remaining in the current stack segment whose minimum size is 2 KB.
+That's not a problem for a leaf function like ours.&lt;/p&gt;
+&lt;p&gt;After the flag, there is a &lt;code&gt;TEXT&lt;/code&gt; argument &lt;code&gt;$0-24&lt;/code&gt; stating:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;$0&lt;/code&gt; — the stack frame size,&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-24&lt;/code&gt; — the &lt;code&gt;Add&lt;/code&gt; function's arguments size in bytes (a minus sign is just a separator).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;In our case, the &lt;code&gt;Add&lt;/code&gt; function has no local stack frame (its size is zero bytes),
+meaning there are no local variables, but the frame itself still gets allocated
+since we didn't use &lt;code&gt;NOFRAME&lt;/code&gt; flag.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;Add&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;uint64&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;uint64&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;uint64&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The function has two 8-bytes arguments and one 8-bytes return value that add up to a total size of 24 bytes.
+These 24 bytes live on the caller's stack frame, located at positive offsets from the &lt;code&gt;FP&lt;/code&gt; pseudo-register.
+&lt;code&gt;FP&lt;/code&gt; stands for frame pointer which is used to refer to function arguments.
+Thus &lt;code&gt;0(FP)&lt;/code&gt; is the argument &lt;code&gt;x&lt;/code&gt;, &lt;code&gt;8(FP)&lt;/code&gt; is the second argument &lt;code&gt;y&lt;/code&gt;,
+and &lt;code&gt;16(FP)&lt;/code&gt; is the return argument named by default as &lt;code&gt;ret&lt;/code&gt;.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;x&lt;/th&gt;
+&lt;th&gt;y&lt;/th&gt;
+&lt;th&gt;ret&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0(FP)&lt;/td&gt;
+&lt;td&gt;8(FP)&lt;/td&gt;
+&lt;td&gt;16(FP)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Note, the assembler enforces &lt;code&gt;x+0(FP)&lt;/code&gt;, &lt;code&gt;y+8(FP)&lt;/code&gt;, and &lt;code&gt;ret+16(FP)&lt;/code&gt; convention for readability,
+rejecting plain &lt;code&gt;0(FP)&lt;/code&gt; syntax.
+Therefore we must place an argument name at the beginning.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nf"&gt;TEXT&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;·&lt;/span&gt;&lt;span class="no"&gt;Add&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;SB&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;NOSPLIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;$0-24&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;x&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;AX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;y&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;ADDQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;AX&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ret&lt;/span&gt;&lt;span class="err"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;FP&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;RET&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The instructions after the &lt;code&gt;TEXT&lt;/code&gt; directive form the body of the &lt;code&gt;Add&lt;/code&gt; function:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;MOVQ x+0(FP), AX&lt;/code&gt; copies the argument &lt;code&gt;x&lt;/code&gt; to the &lt;code&gt;AX&lt;/code&gt; general-purpose register, i.e.,
+  it performs a 64-bit &lt;code&gt;MOV&lt;/code&gt; (&lt;code&gt;Q&lt;/code&gt; stands for quad on amd64)
+  from the caller's stack frame at &lt;code&gt;0(FP)&lt;/code&gt; offset to the register&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;MOVQ y+8(FP), CX&lt;/code&gt; copies the argument &lt;code&gt;y&lt;/code&gt; to the &lt;code&gt;CX&lt;/code&gt; general-purpose register&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;ADDQ AX, CX&lt;/code&gt; adds 64-bit numbers stored in &lt;code&gt;AX&lt;/code&gt; and &lt;code&gt;CX&lt;/code&gt; registers, and places the result in the &lt;code&gt;CX&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;MOVQ CX, ret+16(FP)&lt;/code&gt; copies the 64 bits from the &lt;code&gt;CX&lt;/code&gt; register to the return argument &lt;code&gt;ret&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;RET&lt;/code&gt; is a pseudo-instruction to return from a function&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;avo&lt;/code&gt; package took care of:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;allocating the &lt;code&gt;AX&lt;/code&gt; and &lt;code&gt;CX&lt;/code&gt; registers (we used &lt;code&gt;asm.GP64()&lt;/code&gt; virtual registers in an avo program)&lt;/li&gt;
+&lt;li&gt;declaring the function using its signature (the stack frame size and arguments size were calculated for us)&lt;/li&gt;
+&lt;li&gt;loading the function arguments &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; into those registers,
+  ensuring memory offsets are correct&lt;/li&gt;
+&lt;li&gt;appending &lt;code&gt;ADDQ&lt;/code&gt; instruction with allocated registers &lt;code&gt;AX&lt;/code&gt; and &lt;code&gt;CX&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;storing function return value (again, with correct offset).
+  Note, &lt;code&gt;asm.ReturnIndex(0)&lt;/code&gt; returns the first return argument of the active function.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;TEXT&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Add&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NOSPLIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;func(x, y uint64) uint64&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// TEXT ·Add(SB), NOSPLIT, $0-24&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Load&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Param&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;x&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;                              &lt;/span&gt;&lt;span class="c1"&gt;// MOVQ x+0(FP), AX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Load&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Param&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;y&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;                              &lt;/span&gt;&lt;span class="c1"&gt;// MOVQ y+8(FP), CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ADDQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;x&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="c1"&gt;// ADDQ AX, CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Store&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;y&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ReturnIndex&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt;                         &lt;/span&gt;&lt;span class="c1"&gt;// MOVQ CX, ret+16(FP)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;RET&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;                                                &lt;/span&gt;&lt;span class="c1"&gt;// RET&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;That's neat.&lt;/p&gt;
+&lt;h2&gt;Go stack&lt;/h2&gt;
+&lt;p&gt;Previously we mentioned pseudo-registers such as &lt;code&gt;FP&lt;/code&gt; and positive offsets from it
+like &lt;code&gt;y+8(FP)&lt;/code&gt; to access function arguments.
+If our function had local variables &lt;code&gt;var fizz, bazz int64&lt;/code&gt;, we would have spotted
+negative offsets from &lt;code&gt;SP&lt;/code&gt; like &lt;code&gt;fizz-8(SP)&lt;/code&gt; and &lt;code&gt;bazz-16(SP)&lt;/code&gt; in the code.
+&lt;code&gt;SP&lt;/code&gt; is yet another pseudo-register, and actually there are four of them that exist in all architectures:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;SP&lt;/code&gt; stack pointer points to the top of the space allocated for local variables&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;FP&lt;/code&gt; frame pointer points to the bottom of the space allocated for the arguments&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;SB&lt;/code&gt; static base pointer is a global base for global symbols&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;PC&lt;/code&gt; program counter counts pseudo-instructions (we can use the true R name, e.g.,
+  &lt;code&gt;R15&lt;/code&gt; on ARM to access the hardware program counter register)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Note, if we omit the local variable name &lt;code&gt;fizz&lt;/code&gt; from &lt;code&gt;fizz-8(SP)&lt;/code&gt; like this &lt;code&gt;-8(SP)&lt;/code&gt;,
+we would reference the hardware register &lt;code&gt;SP&lt;/code&gt;.
+Therefore we can use positive offsets from hardware register &lt;code&gt;SP&lt;/code&gt; on amd64 architecture
+to refer to &lt;code&gt;fizz&lt;/code&gt; as follows &lt;code&gt;8(SP)&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;With a diagram of the Go stack everything should be a little more clear.
+Here we've got the top stack frame depicting the &lt;code&gt;Add&lt;/code&gt; function call:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;the stack grows from high to low memory addresses&lt;/li&gt;
+&lt;li&gt;arguments are located above &lt;code&gt;FP&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;local variables (if &lt;code&gt;Add&lt;/code&gt; had them) would have been below &lt;code&gt;SP&lt;/code&gt; pseudo-register
+  or above &lt;code&gt;SP&lt;/code&gt; hardware register&lt;/li&gt;
+&lt;li&gt;return address is pushed on the stack by the caller, e.g., on architecture independent
+  pseudo-instruction &lt;code&gt;CALL myprog∕add·Add(SB)&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;caller's &lt;code&gt;RBP&lt;/code&gt; register is saved as well as the frame pointer to link the stack frames&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;|          ...            | high address&lt;/span&gt;
+&lt;span class="go"&gt;|      caller frame       |&lt;/span&gt;
+&lt;span class="go"&gt;|          ...            |&lt;/span&gt;
+&lt;span class="go"&gt;+-------------------------+&lt;/span&gt;
+&lt;span class="go"&gt;| arguments, e.g.,        |&lt;/span&gt;
+&lt;span class="go"&gt;| ret+16(FP)              |&lt;/span&gt;
+&lt;span class="go"&gt;| y+8(FP)                 |&lt;/span&gt;
+&lt;span class="go"&gt;| x+0(FP)                 |  ⬆️&lt;/span&gt;
+&lt;span class="go"&gt;|-------------------------|← FP pseudo-register&lt;/span&gt;
+&lt;span class="go"&gt;| return address (PC)     |&lt;/span&gt;
+&lt;span class="go"&gt;|-------------------------|&lt;/span&gt;
+&lt;span class="go"&gt;| frame pointer (RBP)     |&lt;/span&gt;
+&lt;span class="go"&gt;|-------------------------|← SP pseudo-register&lt;/span&gt;
+&lt;span class="go"&gt;| local variables, e.g.,  |  ⬇️&lt;/span&gt;
+&lt;span class="go"&gt;| fizz-8(SP)              |&lt;/span&gt;
+&lt;span class="go"&gt;| bazz-16(SP)             |  ⬆️&lt;/span&gt;
+&lt;span class="go"&gt;+-------------------------+← SP hardware register (the top of the stack)&lt;/span&gt;
+&lt;span class="go"&gt;|          ...            |&lt;/span&gt;
+&lt;span class="go"&gt;|       free space        |&lt;/span&gt;
+&lt;span class="go"&gt;|          ...            | low address&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Zooming out we see the whole stack (just two stack frames in our case).
+By the way, we can &lt;a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/"&gt;get a stack trace&lt;/a&gt;
+if we follow the &lt;code&gt;RBP&lt;/code&gt; hardware register's value:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;grab the current value of &lt;code&gt;PC&lt;/code&gt; register&lt;/li&gt;
+&lt;li&gt;get to the first frame pointer stored in the frame #1&lt;/li&gt;
+&lt;li&gt;grab the return address of the caller that sits above the frame pointer&lt;/li&gt;
+&lt;li&gt;proceed to the next frame pointer by following the value (caller's &lt;code&gt;RBP&lt;/code&gt;)
+   of the current frame pointer&lt;/li&gt;
+&lt;li&gt;grab the return address above it&lt;/li&gt;
+&lt;li&gt;end the stack walk since the current frame pointer's value is &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"&gt;symbolize the caller addresses&lt;/a&gt;
+   we've collected, i.e., resolve those memory addresses to function names&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;    |          ...            |&lt;/span&gt;
+&lt;span class="go"&gt;    +-------------------------+&lt;/span&gt;
+&lt;span class="go"&gt;    | arguments               | stack frame #0 (caller) is at the bottom of the stack&lt;/span&gt;
+&lt;span class="go"&gt;    |-------------------------|&lt;/span&gt;
+&lt;span class="go"&gt;    | return address (PC)     |&lt;/span&gt;
+&lt;span class="go"&gt;    |-------------------------|&lt;/span&gt;
+&lt;span class="go"&gt; ↗- | frame pointer (0)       |&lt;/span&gt;
+&lt;span class="go"&gt;|   |-------------------------|&lt;/span&gt;
+&lt;span class="go"&gt;↑   | local variables         |&lt;/span&gt;
+&lt;span class="go"&gt;|   +-------------------------+&lt;/span&gt;
+&lt;span class="go"&gt;↑   | arguments               | stack frame #1 (callee) is at the top of the stack&lt;/span&gt;
+&lt;span class="go"&gt;|   |-------------------------|&lt;/span&gt;
+&lt;span class="go"&gt;↑   | return address (PC)     |&lt;/span&gt;
+&lt;span class="go"&gt;|   |-------------------------|&lt;/span&gt;
+&lt;span class="go"&gt; ↖_ | frame pointer (RBP)     |&lt;/span&gt;
+&lt;span class="go"&gt;    |-------------------------|← RBP hardware register (starting point for unwinding frame pointers)&lt;/span&gt;
+&lt;span class="go"&gt;    | local variables         |&lt;/span&gt;
+&lt;span class="go"&gt;    +-------------------------+&lt;/span&gt;
+&lt;span class="go"&gt;    |          ...            |&lt;/span&gt;
+&lt;span class="go"&gt;    |       free space        |&lt;/span&gt;
+&lt;span class="go"&gt;    |          ...            |&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;That should cover the basics to get started writing Go assembly,
+though I would like to finish this post with a cheat sheet taken from
+&lt;a href="https://youtu.be/9jpnFmJr2PE?t=712"&gt;Michael Munday's slides&lt;/a&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="w"&gt;                      &lt;/span&gt;&lt;span class="c1"&gt;; Data moves from left to right&lt;/span&gt;
+&lt;span class="nf"&gt;ADD&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R2&lt;/span&gt;&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;; R2 += R1&lt;/span&gt;
+&lt;span class="nf"&gt;SUB&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R5&lt;/span&gt;&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;; R5 = R4 - R3&lt;/span&gt;
+&lt;span class="nf"&gt;MUL&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;$7&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R6&lt;/span&gt;&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;; R6 *= 7                 $7 is a literal value 7&lt;/span&gt;
+
+&lt;span class="w"&gt;                      &lt;/span&gt;&lt;span class="c1"&gt;; Memory operands&lt;/span&gt;
+&lt;span class="nf"&gt;MOV&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;R1&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R2&lt;/span&gt;&lt;span class="w"&gt;          &lt;/span&gt;&lt;span class="c1"&gt;; R2 = *R1                register indirect&lt;/span&gt;
+&lt;span class="nf"&gt;MOV&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;R3&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R4&lt;/span&gt;&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="c1"&gt;; R4 = *(8 + R3)          register indirect with offset&lt;/span&gt;
+&lt;span class="nf"&gt;MOV&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;R5&lt;/span&gt;&lt;span class="p"&gt;)(&lt;/span&gt;&lt;span class="no"&gt;R6&lt;/span&gt;&lt;span class="p"&gt;*&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R7&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="c1"&gt;; R7 = *(16 + R5 + R6*1)  offset + reg1 + reg2*scale&lt;/span&gt;
+&lt;span class="nf"&gt;MOV&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;·&lt;/span&gt;&lt;span class="no"&gt;mySum&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;SB&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R8&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; R8 = *mySum             access mySum global variable&lt;/span&gt;
+
+&lt;span class="w"&gt;                      &lt;/span&gt;&lt;span class="c1"&gt;; Addresses&lt;/span&gt;
+&lt;span class="nf"&gt;MOV&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;$8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;R1&lt;/span&gt;&lt;span class="p"&gt;)(&lt;/span&gt;&lt;span class="no"&gt;R2&lt;/span&gt;&lt;span class="p"&gt;*&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R3&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="c1"&gt;; R3 = 8 + R1 + R2&lt;/span&gt;
+&lt;span class="nf"&gt;MOV&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;$&lt;/span&gt;&lt;span class="err"&gt;·&lt;/span&gt;&lt;span class="no"&gt;mySum&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;SB&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;R4&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="c1"&gt;; R4 = &amp;amp;mySum             dollar sign takes the absolute address&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;References:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://www.youtube.com/watch?v=9jpnFmJr2PE"&gt;Dropping Down Go Functions in Assembly&lt;/a&gt; by Michael Munday&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://go.dev/doc/asm"&gt;A Quick Guide to Go's Assembler&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://github.com/DataDog/go-profiler-notes/blob/main/stack-traces.md"&gt;Stack Traces in Go&lt;/a&gt; by Felix Geisendörfer&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/"&gt;Reducing Go Execution Tracer Overhead With Frame Pointer Unwinding&lt;/a&gt; by Felix Geisendörfer&lt;/li&gt;
+&lt;/ul&gt;</content><category term="assembler"></category><category term="golang"></category></entry><entry><title>DIY CPU profiler: position independent executable 🥧</title><link href="https://marselester.com/diy-cpu-profiler-position-independent-executable.html" rel="alternate"></link><published>2023-04-02T00:00:00+07:00</published><updated>2023-04-02T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2023-04-02:/diy-cpu-profiler-position-independent-executable.html</id><summary type="html">&lt;p&gt;In the &lt;a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html"&gt;simplest case of symbolization&lt;/a&gt;
 we used &lt;code&gt;-fno-pie -no-pie&lt;/code&gt; flags, so
 gcc wouldn't produce a position independent executable (PIE).
 It is produced by default for security measures such as

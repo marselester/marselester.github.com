@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - assembler</title>
+    <title>Hello World in avo 🥑</title>
 
     <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/hello-world-in-avo.html" rel="bookmark"
+        title="Permalink to Hello World in avo 🥑">Hello World in avo 🥑</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="https://marselester.com/hello-world-in-avo.html"><h3 class="article-title">Hello World in avo 🥑</h3></a>
 <h6 class="subheader" title="2025-12-02T00:00:00+07:00">Tue 02 December 2025
 </h6>
 
 
-<p>Let's learn together how to write some Go assembly using <a href="https://github.com/mmcloughlin/avo">avo</a>
+    <p>Let's learn together how to write some Go assembly using <a href="https://github.com/mmcloughlin/avo">avo</a>
 aka writing assembly-like Go code to generate assembly.
 To make it more clear, here is an <a href="https://github.com/mmcloughlin/avo/tree/master/examples/add">avo program</a> <code>add/asm.go</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
@@ -353,7 +355,8 @@ though I would like to finish this post with a cheat sheet taken from
 <li><a href="https://go.dev/doc/asm">A Quick Guide to Go's Assembler</a></li>
 <li><a href="https://github.com/DataDog/go-profiler-notes/blob/main/stack-traces.md">Stack Traces in Go</a> by Felix Geisendörfer</li>
 <li><a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">Reducing Go Execution Tracer Overhead With Frame Pointer Unwinding</a> by Felix Geisendörfer</li>
-</ul><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+</ul>
+<p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/assembler.html">assembler </a>
@@ -362,43 +365,22 @@ though I would like to finish this post with a cheat sheet taken from
 
 
 
-<p><a href="https://marselester.com/hello-world-in-avo.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "hello-world-in-avo.html";
+        var disqus_url = "https://marselester.com/hello-world-in-avo.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html"><h3 class="article-title">Определение нажатия комбинации клавиш средствами BIOS на ассемблере</h3></a>
-<h6 class="subheader" title="2009-12-03T00:00:00+07:00">Thu 03 December 2009
-</h6>
-
-
-<p>По учебе понадобилось написать программу на ассемблере, которая должна
-распознать нажатие «горячей» комбинации клавиш <tt class="docutils literal">LeftCtrl+RightShift+F3</tt> и
-реагировать на него звуковым сигналом. Информации/примеров по этой теме
-маловато, по этому решил опубликовать свою программку.</p>
-<div class="highlight"><pre><span></span><span class="nf">masm</span><span class="w"></span>
-<span class="nf">.model</span><span class="w"> </span><span class="nv">small</span><span class="w"></span>
-<span class="nf">.stack</span><span class="w"> </span><span class="mi">256</span><span class="w"></span>
-<span class="nf">.data</span><span class="w"></span>
-<span class="w">    </span><span class="nf">Msg_about</span><span class="w"> </span><span class="nv">db</span><span class="w"> </span><span class="s">&#39;Распознать нажатие «горячей» комбинации клавиш&#39;</span><span class="p">,</span><span class="w"> </span><span class="mh">0Ah</span><span class="p">,</span><span class="w"> </span><span class="mh">0Dh …</span></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/misc.html">Misc</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/assembler.html">assembler </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/definition-of-pressing-of-a-combination-of-keys-by-means-BIOS-on-the-assembler.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

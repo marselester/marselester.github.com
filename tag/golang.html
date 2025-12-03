@@ -51,6 +51,327 @@
         
 
             <article>
+                <a href="https://marselester.com/hello-world-in-avo.html"><h3 class="article-title">Hello World in avo 🥑</h3></a>
+<h6 class="subheader" title="2025-12-02T00:00:00+07:00">Tue 02 December 2025
+</h6>
+
+
+<p>Let's learn together how to write some Go assembly using <a href="https://github.com/mmcloughlin/avo">avo</a>
+aka writing assembly-like Go code to generate assembly.
+To make it more clear, here is an <a href="https://github.com/mmcloughlin/avo/tree/master/examples/add">avo program</a> <code>add/asm.go</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nx">asm</span><span class="w"> </span><span class="s">&quot;github.com/mmcloughlin/avo/build&quot;</span><span class="w"></span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">TEXT</span><span class="p">(</span><span class="s">&quot;Add&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;func(x, y uint64) uint64&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">(),</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;x&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">x</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;y&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">y</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ADDQ</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Store</span><span class="p">(</span><span class="nx">y</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ReturnIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">RET</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Generate</span><span class="p">()</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>And this is its output <code>add/add.s</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// func Add(x uint64, y uint64) uint64</span>
+<span class="nf">TEXT</span><span class="w"> </span><span class="err">·</span><span class="no">Add</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="no">$0-24</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">x</span><span class="err">+</span><span class="mi">0</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">y</span><span class="err">+</span><span class="mi">8</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">ADDQ</span><span class="w"> </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">ret</span><span class="err">+</span><span class="mi">16</span><span class="p">(</span><span class="no">FP</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nf">RET</span><span class="w"></span>
+</code></pre></div>
+
+<p>As we can see, the program generates Go assembly for <code>Add</code> function along with <code>add/stub.go</code> file
+to access our function from Go.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ go run asm.go -out add.s -stubs stub.go</span>
+</code></pre></div>
+
+<p>Here is a usage example <code>main.go</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
+
+<span class="kn">import</span><span class="w"> </span><span class="s">&quot;myprog/add&quot;</span><span class="w"> </span><span class="c1">// Import the stub.</span><span class="w"></span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nb">println</span><span class="p">(</span><span class="nx">add</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">))</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>If we build this program <code>myprog</code> for amd64 architecture and inspect its binary contents,
+we'll see that <code>Add</code> function looks slightly different:</p>
+<ul>
+<li><code>TEXT ·Add</code> became <code>TEXT myprog/add.Add.abi0</code></li>
+<li><code>x</code> and <code>y</code> are gone</li>
+<li><code>FP</code> (frame pointer) usage is replaced with <code>SP</code> (stack pointer)</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ go mod init myprog</span>
+<span class="go">﹩ GOOS=linux GOARCH=amd64 go build -o myprog main.go</span>
+<span class="go">﹩ go tool objdump -s add.Add myprog</span>
+<span class="go">TEXT myprog/add.Add.abi0(SB) /Users/u/code/myprog/add/add.s</span>
+<span class="go">  add.s:7       0x46fac0        488b442408      MOVQ 0x8(SP), AX</span>
+<span class="go">  add.s:8       0x46fac5        488b4c2410      MOVQ 0x10(SP), CX</span>
+<span class="go">  add.s:9       0x46faca        4801c1          ADDQ AX, CX</span>
+<span class="go">  add.s:10      0x46facd        48894c2418      MOVQ CX, 0x18(SP)</span>
+<span class="go">  add.s:11      0x46fad2        c3              RET</span>
+</code></pre></div>
+
+<p>Why is that so?
+<a href="https://go.dev/doc/asm">Go's assembler docs</a> state that their assembler is not a direct representation
+of the underlying machine (amd64 in our case).
+That sort of explains the difference 🤔.</p>
+<blockquote>
+<p>The assembler works on the semi-abstract form...
+In general, machine-specific operations tend to appear as themselves,
+while more general concepts like memory move and subroutine call and return are more abstract.</p>
+</blockquote>
+<p>To sum up, we would write an assembly-like Go code which generates a Go assembly
+which ends up an architecture specific assembly.</p>
+<h2>Go assembly</h2>
+<p>Now, let's have a closer look at Go assembly.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// func Add(x uint64, y uint64) uint64</span>
+<span class="nf">TEXT</span><span class="w"> </span><span class="err">·</span><span class="no">Add</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="no">$0-24</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">x</span><span class="err">+</span><span class="mi">0</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">y</span><span class="err">+</span><span class="mi">8</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">ADDQ</span><span class="w"> </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">ret</span><span class="err">+</span><span class="mi">16</span><span class="p">(</span><span class="no">FP</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nf">RET</span><span class="w"></span>
+</code></pre></div>
+
+<p>The <code>TEXT</code> directive declares the symbol <code>·Add</code> (our function name with a leading dot <code>U+00B7</code> character).
+The full name of the symbol is <code>myprog∕add·Add</code> — the package path followed by a dot and the function name
+(note the division slash <code>U+2215</code> character).</p>
+<p><code>avo</code> didn't need to hard-code the package's import path <code>myprog∕add</code> in <code>add.s</code> because
+the linker inserts the package path at the beginning of any name starting with a dot <code>·</code> character,
+If we had a global variable <code>mySum</code> in the <code>add</code> package, we could access it with a dot as well <code>·mySum</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">add</span><span class="w"></span>
+
+<span class="kd">var</span><span class="w"> </span><span class="nx">mySum</span><span class="w"> </span><span class="kt">int64</span><span class="w"></span>
+</code></pre></div>
+
+<p>The function name <code>Add</code> is followed by <code>(SB)</code>:</p>
+<ul>
+<li><code>SB</code> stands for static base pointer. It's a pseudo-register maintained by the Go toolchain.</li>
+<li>all global symbols such as <code>·Add</code> and <code>·mySum</code> are written as offsets from the pseudo-register <code>SB</code>,
+  for example, <code>TEXT ·Add(SB)</code> or <code>MOV ·mySum(SB), R1</code>, so we can think of the symbols as named offsets</li>
+<li>parenthesis around <code>SB</code> pseudo-register mean register indirect, i.e., we're dereferencing <code>SB</code> like this <code>*SB</code>
+  (that's merely an analogy, not an actual code)</li>
+</ul>
+<p>After the symbol, we have <code>NOSPLIT</code> flag which is an argument to the <code>TEXT</code> directive.
+It tells the linker not to insert the preamble that checks if the goroutine stack must be split.
+Normally, Go inserts code to check if the stack needs to grow, but <code>NOSPLIT</code> disables this.
+This reduces the <code>Add</code> function call overhead, but limits the size of the stack.
+The stack frame for a given function, plus anything it calls, must fit in the spare space
+remaining in the current stack segment whose minimum size is 2 KB.
+That's not a problem for a leaf function like ours.</p>
+<p>After the flag, there is a <code>TEXT</code> argument <code>$0-24</code> stating:</p>
+<ul>
+<li><code>$0</code> — the stack frame size,</li>
+<li><code>-24</code> — the <code>Add</code> function's arguments size in bytes (a minus sign is just a separator).</li>
+</ul>
+<p>In our case, the <code>Add</code> function has no local stack frame (its size is zero bytes),
+meaning there are no local variables, but the frame itself still gets allocated
+since we didn't use <code>NOFRAME</code> flag.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">Add</span><span class="p">(</span><span class="nx">x</span><span class="w"> </span><span class="kt">uint64</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="kt">uint64</span><span class="p">)</span><span class="w"> </span><span class="kt">uint64</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">y</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>The function has two 8-bytes arguments and one 8-bytes return value that add up to a total size of 24 bytes.
+These 24 bytes live on the caller's stack frame, located at positive offsets from the <code>FP</code> pseudo-register.
+<code>FP</code> stands for frame pointer which is used to refer to function arguments.
+Thus <code>0(FP)</code> is the argument <code>x</code>, <code>8(FP)</code> is the second argument <code>y</code>,
+and <code>16(FP)</code> is the return argument named by default as <code>ret</code>.</p>
+<table>
+<thead>
+<tr>
+<th>x</th>
+<th>y</th>
+<th>ret</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0(FP)</td>
+<td>8(FP)</td>
+<td>16(FP)</td>
+</tr>
+</tbody>
+</table>
+<p>Note, the assembler enforces <code>x+0(FP)</code>, <code>y+8(FP)</code>, and <code>ret+16(FP)</code> convention for readability,
+rejecting plain <code>0(FP)</code> syntax.
+Therefore we must place an argument name at the beginning.</p>
+<div class="highlight"><pre><span></span><code><span class="nf">TEXT</span><span class="w"> </span><span class="err">·</span><span class="no">Add</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="no">$0-24</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">x</span><span class="err">+</span><span class="mi">0</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">y</span><span class="err">+</span><span class="mi">8</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">ADDQ</span><span class="w"> </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">ret</span><span class="err">+</span><span class="mi">16</span><span class="p">(</span><span class="no">FP</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nf">RET</span><span class="w"></span>
+</code></pre></div>
+
+<p>The instructions after the <code>TEXT</code> directive form the body of the <code>Add</code> function:</p>
+<ul>
+<li><code>MOVQ x+0(FP), AX</code> copies the argument <code>x</code> to the <code>AX</code> general-purpose register, i.e.,
+  it performs a 64-bit <code>MOV</code> (<code>Q</code> stands for quad on amd64)
+  from the caller's stack frame at <code>0(FP)</code> offset to the register</li>
+<li><code>MOVQ y+8(FP), CX</code> copies the argument <code>y</code> to the <code>CX</code> general-purpose register</li>
+<li><code>ADDQ AX, CX</code> adds 64-bit numbers stored in <code>AX</code> and <code>CX</code> registers, and places the result in the <code>CX</code></li>
+<li><code>MOVQ CX, ret+16(FP)</code> copies the 64 bits from the <code>CX</code> register to the return argument <code>ret</code></li>
+<li><code>RET</code> is a pseudo-instruction to return from a function</li>
+</ul>
+<p><code>avo</code> package took care of:</p>
+<ul>
+<li>allocating the <code>AX</code> and <code>CX</code> registers (we used <code>asm.GP64()</code> virtual registers in an avo program)</li>
+<li>declaring the function using its signature (the stack frame size and arguments size were calculated for us)</li>
+<li>loading the function arguments <code>x</code> and <code>y</code> into those registers,
+  ensuring memory offsets are correct</li>
+<li>appending <code>ADDQ</code> instruction with allocated registers <code>AX</code> and <code>CX</code></li>
+<li>storing function return value (again, with correct offset).
+  Note, <code>asm.ReturnIndex(0)</code> returns the first return argument of the active function.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">(),</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">TEXT</span><span class="p">(</span><span class="s">&quot;Add&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;func(x, y uint64) uint64&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// TEXT ·Add(SB), NOSPLIT, $0-24</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;x&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">x</span><span class="p">)</span><span class="w">                              </span><span class="c1">// MOVQ x+0(FP), AX</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;y&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">y</span><span class="p">)</span><span class="w">                              </span><span class="c1">// MOVQ y+8(FP), CX</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">ADDQ</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="p">).</span><span class="w">                                          </span><span class="c1">// ADDQ AX, CX</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">Store</span><span class="p">(</span><span class="nx">y</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ReturnIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w">                         </span><span class="c1">// MOVQ CX, ret+16(FP)</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">RET</span><span class="p">()</span><span class="w">                                                </span><span class="c1">// RET</span><span class="w"></span>
+</code></pre></div>
+
+<p>That's neat.</p>
+<h2>Go stack</h2>
+<p>Previously we mentioned pseudo-registers such as <code>FP</code> and positive offsets from it
+like <code>y+8(FP)</code> to access function arguments.
+If our function had local variables <code>var fizz, bazz int64</code>, we would have spotted
+negative offsets from <code>SP</code> like <code>fizz-8(SP)</code> and <code>bazz-16(SP)</code> in the code.
+<code>SP</code> is yet another pseudo-register, and actually there are four of them that exist in all architectures:</p>
+<ul>
+<li><code>SP</code> stack pointer points to the top of the space allocated for local variables</li>
+<li><code>FP</code> frame pointer points to the bottom of the space allocated for the arguments</li>
+<li><code>SB</code> static base pointer is a global base for global symbols</li>
+<li><code>PC</code> program counter counts pseudo-instructions (we can use the true R name, e.g.,
+  <code>R15</code> on ARM to access the hardware program counter register)</li>
+</ul>
+<p>Note, if we omit the local variable name <code>fizz</code> from <code>fizz-8(SP)</code> like this <code>-8(SP)</code>,
+we would reference the hardware register <code>SP</code>.
+Therefore we can use positive offsets from hardware register <code>SP</code> on amd64 architecture
+to refer to <code>fizz</code> as follows <code>8(SP)</code>.</p>
+<p>With a diagram of the Go stack everything should be a little more clear.
+Here we've got the top stack frame depicting the <code>Add</code> function call:</p>
+<ul>
+<li>the stack grows from high to low memory addresses</li>
+<li>arguments are located above <code>FP</code></li>
+<li>local variables (if <code>Add</code> had them) would have been below <code>SP</code> pseudo-register
+  or above <code>SP</code> hardware register</li>
+<li>return address is pushed on the stack by the caller, e.g., on architecture independent
+  pseudo-instruction <code>CALL myprog∕add·Add(SB)</code></li>
+<li>caller's <code>RBP</code> register is saved as well as the frame pointer to link the stack frames</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">|          ...            | high address</span>
+<span class="go">|      caller frame       |</span>
+<span class="go">|          ...            |</span>
+<span class="go">+-------------------------+</span>
+<span class="go">| arguments, e.g.,        |</span>
+<span class="go">| ret+16(FP)              |</span>
+<span class="go">| y+8(FP)                 |</span>
+<span class="go">| x+0(FP)                 |  ⬆️</span>
+<span class="go">|-------------------------|← FP pseudo-register</span>
+<span class="go">| return address (PC)     |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| frame pointer (RBP)     |</span>
+<span class="go">|-------------------------|← SP pseudo-register</span>
+<span class="go">| local variables, e.g.,  |  ⬇️</span>
+<span class="go">| fizz-8(SP)              |</span>
+<span class="go">| bazz-16(SP)             |  ⬆️</span>
+<span class="go">+-------------------------+← SP hardware register (the top of the stack)</span>
+<span class="go">|          ...            |</span>
+<span class="go">|       free space        |</span>
+<span class="go">|          ...            | low address</span>
+</code></pre></div>
+
+<p>Zooming out we see the whole stack (just two stack frames in our case).
+By the way, we can <a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">get a stack trace</a>
+if we follow the <code>RBP</code> hardware register's value:</p>
+<ol>
+<li>grab the current value of <code>PC</code> register</li>
+<li>get to the first frame pointer stored in the frame #1</li>
+<li>grab the return address of the caller that sits above the frame pointer</li>
+<li>proceed to the next frame pointer by following the value (caller's <code>RBP</code>)
+   of the current frame pointer</li>
+<li>grab the return address above it</li>
+<li>end the stack walk since the current frame pointer's value is <code>0</code></li>
+<li><a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">symbolize the caller addresses</a>
+   we've collected, i.e., resolve those memory addresses to function names</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="go">    |          ...            |</span>
+<span class="go">    +-------------------------+</span>
+<span class="go">    | arguments               | stack frame #0 (caller) is at the bottom of the stack</span>
+<span class="go">    |-------------------------|</span>
+<span class="go">    | return address (PC)     |</span>
+<span class="go">    |-------------------------|</span>
+<span class="go"> ↗- | frame pointer (0)       |</span>
+<span class="go">|   |-------------------------|</span>
+<span class="go">↑   | local variables         |</span>
+<span class="go">|   +-------------------------+</span>
+<span class="go">↑   | arguments               | stack frame #1 (callee) is at the top of the stack</span>
+<span class="go">|   |-------------------------|</span>
+<span class="go">↑   | return address (PC)     |</span>
+<span class="go">|   |-------------------------|</span>
+<span class="go"> ↖_ | frame pointer (RBP)     |</span>
+<span class="go">    |-------------------------|← RBP hardware register (starting point for unwinding frame pointers)</span>
+<span class="go">    | local variables         |</span>
+<span class="go">    +-------------------------+</span>
+<span class="go">    |          ...            |</span>
+<span class="go">    |       free space        |</span>
+<span class="go">    |          ...            |</span>
+</code></pre></div>
+
+<p>That should cover the basics to get started writing Go assembly,
+though I would like to finish this post with a cheat sheet taken from
+<a href="https://youtu.be/9jpnFmJr2PE?t=712">Michael Munday's slides</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="w">                      </span><span class="c1">; Data moves from left to right</span>
+<span class="nf">ADD</span><span class="w"> </span><span class="no">R1</span><span class="p">,</span><span class="w"> </span><span class="no">R2</span><span class="w">            </span><span class="c1">; R2 += R1</span>
+<span class="nf">SUB</span><span class="w"> </span><span class="no">R3</span><span class="p">,</span><span class="w"> </span><span class="no">R4</span><span class="p">,</span><span class="w"> </span><span class="no">R5</span><span class="w">        </span><span class="c1">; R5 = R4 - R3</span>
+<span class="nf">MUL</span><span class="w"> </span><span class="no">$7</span><span class="p">,</span><span class="w"> </span><span class="no">R6</span><span class="w">            </span><span class="c1">; R6 *= 7                 $7 is a literal value 7</span>
+
+<span class="w">                      </span><span class="c1">; Memory operands</span>
+<span class="nf">MOV</span><span class="w"> </span><span class="p">(</span><span class="no">R1</span><span class="p">),</span><span class="w"> </span><span class="no">R2</span><span class="w">          </span><span class="c1">; R2 = *R1                register indirect</span>
+<span class="nf">MOV</span><span class="w"> </span><span class="mi">8</span><span class="p">(</span><span class="no">R3</span><span class="p">),</span><span class="w"> </span><span class="no">R4</span><span class="w">         </span><span class="c1">; R4 = *(8 + R3)          register indirect with offset</span>
+<span class="nf">MOV</span><span class="w"> </span><span class="mi">16</span><span class="p">(</span><span class="no">R5</span><span class="p">)(</span><span class="no">R6</span><span class="p">*</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="no">R7</span><span class="w">  </span><span class="c1">; R7 = *(16 + R5 + R6*1)  offset + reg1 + reg2*scale</span>
+<span class="nf">MOV</span><span class="w"> </span><span class="err">·</span><span class="no">mySum</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">R8</span><span class="w">    </span><span class="c1">; R8 = *mySum             access mySum global variable</span>
+
+<span class="w">                      </span><span class="c1">; Addresses</span>
+<span class="nf">MOV</span><span class="w"> </span><span class="no">$8</span><span class="p">(</span><span class="no">R1</span><span class="p">)(</span><span class="no">R2</span><span class="p">*</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="no">R3</span><span class="w">  </span><span class="c1">; R3 = 8 + R1 + R2</span>
+<span class="nf">MOV</span><span class="w"> </span><span class="no">$</span><span class="err">·</span><span class="no">mySum</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">R4</span><span class="w">   </span><span class="c1">; R4 = &amp;mySum             dollar sign takes the absolute address</span>
+</code></pre></div>
+
+<p>References:</p>
+<ul>
+<li><a href="https://www.youtube.com/watch?v=9jpnFmJr2PE">Dropping Down Go Functions in Assembly</a> by Michael Munday</li>
+<li><a href="https://go.dev/doc/asm">A Quick Guide to Go's Assembler</a></li>
+<li><a href="https://github.com/DataDog/go-profiler-notes/blob/main/stack-traces.md">Stack Traces in Go</a> by Felix Geisendörfer</li>
+<li><a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">Reducing Go Execution Tracer Overhead With Frame Pointer Unwinding</a> by Felix Geisendörfer</li>
+</ul><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/assembler.html">assembler </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/hello-world-in-avo.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"><h3 class="article-title">DIY CPU profiler: from BPF maps to pprof</h3></a>
 <h6 class="subheader" title="2022-10-20T00:00:00+07:00">Thu 20 October 2022
 </h6>
@@ -64,362 +385,7 @@ though they were not very helpful.</p>
 <span class="go">{PID:15958 UserStackID:132 KernelStackID:114} seen 1 times</span>
 </code></pre></div>
 
-<p>Let's try to show more useful information this time,
-i.e., sampled memory addresses.
-You can find the results of my experiments in
-<a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
-<h2>Reading addresses from BPF maps</h2>
-<p>I continued to explore
-<a href="https://github.com/parca-dev/parca-agent/blob/1e935f4d5f7b4484f6cf3d4ee26340f3718ff37d/pkg/profiler/profiler.go#L336">github.com/parca-dev/parca-agent/pkg/profiler/profiler.go</a>
-and found the place where stack trace samples are read from the BPF maps — <code>profileLoop()</code> method.
-Here is its simplified version.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Always needs to be sync with MAX_STACK_DEPTH in parca-agent.bpf.c.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">stackDepth</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">127</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Twice the stack depth because we have a User and a potential Kernel stack.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">doubleStackDepth</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">254</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-
-<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">CgroupProfiler</span><span class="p">)</span><span class="w"> </span><span class="nx">profileLoop</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">captureTime</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">it</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">counts</span><span class="p">.</span><span class="nx">Iterator</span><span class="p">()</span><span class="w"></span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// Note, pid, userStackID, and kernelStackID are read from it.Key().</span><span class="w"></span>
-<span class="w">        </span><span class="nx">stack</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[</span><span class="nx">doubleStackDepth</span><span class="p">]</span><span class="kt">uint64</span><span class="p">{}</span><span class="w"></span>
-
-<span class="w">        </span><span class="c1">// Collect user-space stack trace samples.</span><span class="w"></span>
-<span class="w">        </span><span class="nx">stackBytes</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">stackTraces</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">(</span><span class="w"></span>
-<span class="w">            </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">userStackID</span><span class="p">),</span><span class="w"></span>
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">stackBytes</span><span class="p">),</span><span class="w"> </span><span class="nx">byteOrder</span><span class="p">,</span><span class="w"> </span><span class="nx">stack</span><span class="p">[:</span><span class="nx">stackDepth</span><span class="p">])</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">stack</span><span class="p">[:</span><span class="nx">stackDepth</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nx">m</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mapping</span><span class="p">.</span><span class="nx">PIDAddrMapping</span><span class="p">(</span><span class="nx">pid</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">        </span><span class="c1">// Collect kernel-space stack trace samples.</span><span class="w"></span>
-<span class="w">        </span><span class="nx">stackBytes</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">bpfMaps</span><span class="p">.</span><span class="nx">stackTraces</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">(</span><span class="w"></span>
-<span class="w">            </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">kernelStackID</span><span class="p">),</span><span class="w"></span>
-<span class="w">        </span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="nx">binary</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">bytes</span><span class="p">.</span><span class="nx">NewBuffer</span><span class="p">(</span><span class="nx">stackBytes</span><span class="p">),</span><span class="w"> </span><span class="nx">byteOrder</span><span class="p">,</span><span class="w"> </span><span class="nx">stack</span><span class="p">[</span><span class="nx">stackDepth</span><span class="p">:])</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">stack</span><span class="p">[</span><span class="nx">stackDepth</span><span class="p">:]</span><span class="w"> </span><span class="p">{}</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>From looking at it I can tell that PID, user-space stack ID, and kernel-space stack ID are read
-from the <code>counts</code> BPF map on each iteration.</p>
-<table>
-<thead>
-<tr>
-<th>{ pid; userStackID; kernelStackID }</th>
-<th>seen</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>{ 10342; 1253; 0234 }</td>
-<td>45</td>
-</tr>
-</tbody>
-</table>
-<p>A stack ID allows to fetch a stack trace
-(an array of memory addresses that represent the code executed during profiling)
-from the <code>stack_traces</code> BPF map.</p>
-<table>
-<thead>
-<tr>
-<th>stack ID</th>
-<th>memory addresses</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1253</td>
-<td>[ 0xdeadbeef; 0x123abcde; ... ]</td>
-</tr>
-<tr>
-<td>0234</td>
-<td>[ 0x597be95a; 0xae5ee03; ... ]</td>
-</tr>
-</tbody>
-</table>
-<p>A user-space stack trace indexed by <code>userStackID=1253</code> is placed
-in the beginning of the <code>stack [254]uint64</code> array.
-The <code>kernelStackID=0234</code> kernel-space stack trace is placed in the middle of the array.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// User-space stack trace is limited by stackDepth=127.</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xdeadbeef</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x123abcde</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">126</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">...</span><span class="w"></span>
-
-<span class="c1">// Kernel-space stack trace is limited by doubleStackDepth=254.</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">127</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0x597be95a</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mh">0xae5ee03</span><span class="w"></span>
-<span class="nx">stack</span><span class="p">[</span><span class="mi">253</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">...</span><span class="w"></span>
-</code></pre></div>
-
-<h2>Memory mapping</h2>
-<p>Alright, but what does
-<code>m, err := mapping.PIDAddrMapping(pid, addr)</code> line do?
-Basically the function call does the following
-(see <a href="https://github.com/parca-dev/parca-agent/blob/1e935f4d5f7b4484f6cf3d4ee26340f3718ff37d/pkg/maps/maps.go#L85">maps.go</a>):</p>
-<ol>
-<li>opens a memory map file of a given process <code>/proc/PID/maps</code></li>
-<li>parses a memory map using <code>github.com/google/pprof/profile</code> package</li>
-<li>looks up a mapping for a given memory address previously found in a stack trace (e.g., <code>0xdeadbeef</code>),
-   i.e., it should be located between <code>m.Start</code> and <code>m.Limit</code> inclusively.
-   For example, in <code>[0x55dd2d5eb000; 0x55dd2d65f000]</code> interval.</li>
-</ol>
-<div class="highlight"><pre><span></span><code><span class="nx">f</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;/proc/%d/maps&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">pid</span><span class="p">),</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-
-<span class="nx">mm</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">ParseProcMaps</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span><span class="w"></span>
-
-<span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">mm</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Start</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">Limit</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">m</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>Note, <code>mm</code> is a slice of <code>*profile.Mapping{}</code> structs
-that could look as it's shown below.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">mm</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Mapping</span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">                     </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Start</span><span class="p">:</span><span class="w">                  </span><span class="mi">94408437313536</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x55dd2d5eb000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Limit</span><span class="p">:</span><span class="w">                  </span><span class="mi">94408437788672</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x55dd2d65f000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Offset</span><span class="p">:</span><span class="w">                 </span><span class="mi">45056</span><span class="p">,</span><span class="w">          </span><span class="c1">// 0xb000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">File</span><span class="p">:</span><span class="w">                   </span><span class="s">&quot;/usr/sbin/sshd&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">BuildID</span><span class="p">:</span><span class="w">                </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasFunctions</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasFilenames</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasLineNumbers</span><span class="p">:</span><span class="w">         </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasInlineFrames</span><span class="p">:</span><span class="w">        </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">KernelRelocationSymbol</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">ID</span><span class="p">:</span><span class="w">                     </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Start</span><span class="p">:</span><span class="w">                  </span><span class="mi">140349706260480</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x7fa5b662d000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Limit</span><span class="p">:</span><span class="w">                  </span><span class="mi">140349706448896</span><span class="p">,</span><span class="w"> </span><span class="c1">// 0x7fa5b665b000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Offset</span><span class="p">:</span><span class="w">                 </span><span class="mi">24576</span><span class="p">,</span><span class="w">           </span><span class="c1">// 0x6000</span><span class="w"></span>
-<span class="w">        </span><span class="nx">File</span><span class="p">:</span><span class="w">                   </span><span class="s">&quot;/usr/lib/x86_64-linux-gnu/libnss_systemd.so.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">BuildID</span><span class="p">:</span><span class="w">                </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasFunctions</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasFilenames</span><span class="p">:</span><span class="w">           </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasLineNumbers</span><span class="p">:</span><span class="w">         </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">HasInlineFrames</span><span class="p">:</span><span class="w">        </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">KernelRelocationSymbol</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>Here is the corresponding memory map file.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo cat /proc/4068/maps</span>
-<span class="go">55dd2d5e0000-55dd2d5eb000 r--p 00000000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d5eb000-55dd2d65f000 r-xp 0000b000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d65f000-55dd2d69d000 r--p 0007f000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d69e000-55dd2d6a1000 r--p 000bd000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d6a1000-55dd2d6a2000 rw-p 000c0000 08:01 2869         /usr/sbin/sshd</span>
-<span class="go">55dd2d6a2000-55dd2d6a6000 rw-p 00000000 00:00 0</span>
-<span class="go">55dd2e9d6000-55dd2ea68000 rw-p 00000000 00:00 0            [heap]</span>
-<span class="go">55dd2ea68000-55dd2ea8a000 rw-p 00000000 00:00 0            [heap]</span>
-<span class="go">7fa5b6627000-7fa5b662d000 r--p 00000000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b662d000-7fa5b665b000 r-xp 00006000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b665b000-7fa5b666a000 r--p 00034000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b666a000-7fa5b666e000 r--p 00042000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b666e000-7fa5b666f000 rw-p 00046000 08:01 4761         /usr/lib/x86_64-linux-gnu/libnss_systemd.so.2</span>
-<span class="go">7fa5b6675000-7fa5b6676000 r--p 00000000 08:01 3974         /usr/lib/x86_64-linux-gnu/security/pam_env.so</span>
-
-<span class="go">...</span>
-
-<span class="go">7fa5b72f4000-7fa5b72f6000 rw-p 00034000 08:01 3657         /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span>
-<span class="go">7fff5522d000-7fff55271000 rw-p 00000000 00:00 0            [stack]</span>
-<span class="go">7fff55285000-7fff55289000 r--p 00000000 00:00 0            [vvar]</span>
-<span class="go">7fff55289000-7fff5528b000 r-xp 00000000 00:00 0            [vdso]</span>
-<span class="go">ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0    [vsyscall]</span>
-</code></pre></div>
-
-<p>🤔</p>
-<p>Let's do a similar thing in a new profiler called profiler2.
-The v2 DIY profiler is able to print a memory map file of a given process
-and show the traced memory addresses of user and kernel space.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler2 -pid=4068</span>
-<span class="go">/proc/4068/maps</span>
-<span class="go">start=0x55dd2d5eb000 limit=0x55dd2d65f000 offset=0xb000 /usr/sbin/sshd</span>
-<span class="go">...</span>
-
-<span class="go">Waiting for stack traces...</span>
-</code></pre></div>
-
-<h2>pprof</h2>
-<p>It would be great to finally see symbols (function names) instead of memory addresses
-and pprof is going to help us with that.
-pprof is a tool for visualization and analysis of profiling data.
-It reads a collection of profiling samples in
-<a href="https://github.com/google/pprof/blob/main/proto/profile.proto">profile.proto</a> format
-and generates reports to visualize the collected profiles.</p>
-<p>Let's get back to <code>profileLoop()</code> method and see what else it's doing:</p>
-<ol>
-<li>it prepares <code>prof := profile.Profile{}</code> struct which is an in-memory representation of profile.proto</li>
-<li>using addresses from BPF maps it fills <code>Profile.Location</code> — the set of program locations;
-   each location describes function and line table debug information</li>
-<li>it fills <code>Profile.Sample</code> — the set of samples recorded in a profile</li>
-<li>it fills <code>Profile.Mapping</code> — mapping from address ranges to the object file</li>
-<li>it uploads object files to Parca server</li>
-<li>it uploads pprof profile</li>
-</ol>
-<p>The first step is to create a CPU profile which will be saved somewhere by <code>prof.Write()</code>
-after a profile was filled with samples.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">Profile</span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// SampleType is a description of the samples associated with each Sample.Value.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// By convention the number of events should use unit &quot;count&quot; and</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// it should be at index 0.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">SampleType</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">ValueType</span><span class="p">{{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;samples&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Unit</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;count&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">}},</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// TimeNanos is a time of collection (UTC) represented as nanoseconds past the epoch.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">TimeNanos</span><span class="p">:</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">UnixNano</span><span class="p">(),</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// DurationNanos is a profiling duration in nanoseconds, Parca uses 10s by default.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">DurationNanos</span><span class="p">:</span><span class="w"> </span><span class="nb">int64</span><span class="p">(</span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// PeriodType is the kind of events between sampled ocurrences,</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// i.e., [&quot;cpu&quot;, &quot;nanoseconds&quot;].</span><span class="w"></span>
-<span class="w">    </span><span class="c1">//</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ValueType describes the semantics and measurement units of a value.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">PeriodType</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">ValueType</span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cpu&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Unit</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;nanoseconds&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Period is the number of events between sampled occurrences.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// We sample at 100Hz (100 times per second),</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// which is every 0.01s or 10 million nanoseconds.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Period</span><span class="p">:</span><span class="w"> </span><span class="mi">10000000</span><span class="p">,</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>A simplified version of the steps 2 to 4 show
-how user-space stack traces (samples) are added to a pprof profile.</p>
-<p>For every non-zero unique address found in stack traces
-we create a <code>profile.Location{}</code> to describe a function.
-A corresponding memory mapping is added to that newly created location
-("Memory mapping" section above shows how to find a mapping for an address).
-All the locations are appended to <code>prof.Location</code> slice.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ID is a unique nonzero id for the location.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">locIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Address is the instruction address for this location.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// It should be within [Mapping.memory_start...Mapping.memory_limit]</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// for the corresponding mapping.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Address</span><span class="p">:</span><span class="w"> </span><span class="nx">addr</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Mapping is the corresponding profile.Mapping for this location.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// It can be nil if the mapping is unknown.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Mapping</span><span class="p">:</span><span class="w"> </span><span class="nx">m</span><span class="p">,</span><span class="w"></span>
-<span class="p">})</span><span class="w"></span>
-</code></pre></div>
-
-<p>Locations related to a given stack trace are added to a sample.
-Each <code>profile.Sample</code> records how many times a particular stack trace was seen.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Sample</span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Value</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">int64</span><span class="p">{</span><span class="nb">int64</span><span class="p">(</span><span class="nx">seen</span><span class="p">)},</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Location</span><span class="p">:</span><span class="w"> </span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"></span>
-<span class="p">})</span><span class="w"></span>
-</code></pre></div>
-
-<p>At the end, all the mappings get assigned IDs starting with one
-because ID zero is reserved.
-The pprof tool will show the following error if ID zero is used:
-<code>malformed profile: found mapping with reserved ID=0</code>.
-See the whole code snippet in the details below.</p>
-<details>
-
-
-<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">locationIndex</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">PID</span><span class="w">  </span><span class="kt">int</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Addr</span><span class="w"> </span><span class="kt">uint64</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-
-<span class="c1">// locationIndices maps {pid; addr} found in the sample</span><span class="w"></span>
-<span class="c1">// to an index in the Profile.Location slice</span><span class="w"></span>
-<span class="c1">// to look up a respective Location.</span><span class="w"></span>
-<span class="nx">locationIndices</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="nx">locationIndex</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span><span class="w"></span>
-
-<span class="k">for</span><span class="w"> </span><span class="nx">it</span><span class="p">.</span><span class="nx">Next</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Collect user-space stack trace samples.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">sampleLocations</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="o">*</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{}</span><span class="w"></span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">userStack</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">addr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="k">continue</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">        </span><span class="c1">// Look up a location for the given PID and address</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// and append it to the current sample&#39;s locations.</span><span class="w"></span>
-<span class="w">        </span><span class="c1">//</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// In case a location wasn&#39;t found, create one.</span><span class="w"></span>
-<span class="w">        </span><span class="nx">key</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">locationIndex</span><span class="p">{</span><span class="nx">pid</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="nx">locIndex</span><span class="p">,</span><span class="w"> </span><span class="nx">found</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">locationIndices</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"></span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">found</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mappingForAddr</span><span class="p">(</span><span class="nx">mm</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nx">log</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;failed to get process mapping for addr: %x&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">addr</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">            </span><span class="nx">locIndex</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="c1">// Each Location describes function and line table debug information.</span><span class="w"></span>
-<span class="w">            </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Location</span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// ID is a unique nonzero id for the location.</span><span class="w"></span>
-<span class="w">                </span><span class="nx">ID</span><span class="p">:</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">locIndex</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// Address is the instruction address for this location.</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// It should be within [Mapping.memory_start...Mapping.memory_limit]</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// for the corresponding mapping.</span><span class="w"></span>
-<span class="w">                </span><span class="nx">Address</span><span class="p">:</span><span class="w"> </span><span class="nx">addr</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// Mapping is the corresponding profile.Mapping for this location.</span><span class="w"></span>
-<span class="w">                </span><span class="c1">// It can be nil if the mapping is unknown.</span><span class="w"></span>
-<span class="w">                </span><span class="nx">Mapping</span><span class="p">:</span><span class="w"> </span><span class="nx">m</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="p">})</span><span class="w"></span>
-<span class="w">            </span><span class="nx">locationIndices</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">locIndex</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">        </span><span class="nx">sampleLocations</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"> </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Location</span><span class="p">[</span><span class="nx">locIndex</span><span class="p">])</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">    </span><span class="c1">// Each Sample records how many times a particular stack trace was seen</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// along with the corresponding locations.</span><span class="w"></span>
-<span class="w">    </span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">prof</span><span class="p">.</span><span class="nx">Sample</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">profile</span><span class="p">.</span><span class="nx">Sample</span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Value</span><span class="p">:</span><span class="w">    </span><span class="p">[]</span><span class="kt">int64</span><span class="p">{</span><span class="nb">int64</span><span class="p">(</span><span class="nx">seen</span><span class="p">)},</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Location</span><span class="p">:</span><span class="w"> </span><span class="nx">sampleLocations</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">})</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-
-<span class="c1">// Mappings in pprof must have IDs and need to start with 1.</span><span class="w"></span>
-<span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">mm</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">m</span><span class="p">.</span><span class="nx">ID</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">uint64</span><span class="p">(</span><span class="nx">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-<span class="nx">prof</span><span class="p">.</span><span class="nx">Mapping</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">mm</span><span class="w"></span>
-</code></pre></div>
-
-
-
-</details>
-
-<p>🧪</p>
-<p>Putting those steps together gives us profiler3.
-In v3 DIY profiler we write a CPU profile to <code>cpu.pprof</code> file
-instead of uploading it to a Parca server.
-Let's run profiler3 and make sure the profiled program does something instead of idling,
-so there will be enough CPU samples.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler3 -pid=4068</span>
-<span class="go">/proc/4068/maps</span>
-<span class="go">start=0x55dd2d5eb000 limit=0x55dd2d65f000 offset=0xb000 /usr/sbin/sshd</span>
-<span class="go">...</span>
-
-<span class="go">Waiting for stack traces for 10s...</span>
-</code></pre></div>
-
-<p>After ten seconds the profiler will terminate leaving you with <code>cpu.pprof</code> file.
-You can inspect it with <code>go tool pprof cpu.pprof</code> command.</p>
-<p>Exploring Parca Agent's internals and reconstructing it in the simplest form
-helped me demystify some of aspects of BPF CPU profilers.</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
+<p>Let's try to show more useful information …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/bpf.html">bpf </a>
@@ -429,11 +395,9 @@ helped me demystify some of aspects of BPF CPU profilers.</p><p class="subheader
 
 
 
-<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 
