@@ -1,5 +1,309 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Marsel</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/marsel.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2025-12-02T00:00:00+07:00</updated><entry><title>Hello World in avo 🥑</title><link href="https://marselester.com/hello-world-in-avo.html" rel="alternate"></link><published>2025-12-02T00:00:00+07:00</published><updated>2025-12-02T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2025-12-02:/hello-world-in-avo.html</id><summary type="html">&lt;p&gt;Let's learn together how to write some Go assembly using &lt;a href="https://github.com/mmcloughlin/avo"&gt;avo&lt;/a&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog - Marsel</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/marsel.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2025-12-21T00:00:00+07:00</updated><entry><title>Intro to SIMD in avo</title><link href="https://marselester.com/intro-to-simd-in-avo.html" rel="alternate"></link><published>2025-12-21T00:00:00+07:00</published><updated>2025-12-21T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2025-12-21:/intro-to-simd-in-avo.html</id><summary type="html">&lt;p&gt;In the previous post we wrote a &lt;a href="https://marselester.com/hello-world-in-avo.html"&gt;Hello World in avo&lt;/a&gt;.
+Let's do something practical this time, e.g., related to performance
+since we go into all this trouble of writing Go assembly.
+You can find the code examples in
+&lt;a href="https://github.com/marselester/misc/tree/main/simd/go/intro"&gt;github.com/marselester/misc&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Processing more data in a single …&lt;/p&gt;</summary><content type="html">&lt;p&gt;In the previous post we wrote a &lt;a href="https://marselester.com/hello-world-in-avo.html"&gt;Hello World in avo&lt;/a&gt;.
+Let's do something practical this time, e.g., related to performance
+since we go into all this trouble of writing Go assembly.
+You can find the code examples in
+&lt;a href="https://github.com/marselester/misc/tree/main/simd/go/intro"&gt;github.com/marselester/misc&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Processing more data in a single CPU instruction makes our programs faster.
+That's what SIMD (Single Instruction Multiple Data) technique is for.
+The caveat is that we need to think in terms of vectors, not scalars.
+For example, let's say we want to find a sum of eight 64-bit integers.
+Our options look as follows:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;sum of scalars: &lt;code&gt;1 + 2 + 3 + 4 + 5 + 6 + 7 + 8&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;sum of vectors: &lt;code&gt;[1, 2, 3, 4] + [5, 6, 7, 8]&lt;/code&gt; or &lt;code&gt;[1, 2] + [3, 4] + [5, 6] + [7, 8]&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The first option is straightforward.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;Sum&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;input&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt;&lt;span class="kt"&gt;int64&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int64&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;var&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int64&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;_&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;v&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;range&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;input&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;+=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;v&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The second one — not so much 😬.
+At least my CPU (Intel i5-10600) supports &lt;a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Advanced_Vector_Extensions_2"&gt;AVX2&lt;/a&gt;,
+meaning it can execute 256-bit SIMD instructions.
+That's exactly enough to add our vectors &lt;code&gt;[1, 2, 3, 4]&lt;/code&gt; and &lt;code&gt;[5, 6, 7, 8]&lt;/code&gt; with just a single CPU instruction.&lt;/p&gt;
+&lt;p&gt;The plan is to add the 4-element vectors, then keep folding the resulting vectors adding their halfes,
+see the calculations below.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;[1,  2,  3,  4]       [6,   8]       [16, 20]&lt;/span&gt;
+&lt;span class="go"&gt;             +              +              +&lt;/span&gt;
+&lt;span class="go"&gt;[5,  6,  7,  8]   ➡   [10, 12]   ➡   [0,  16]&lt;/span&gt;
+&lt;span class="go"&gt;             =              =              =&lt;/span&gt;
+&lt;span class="go"&gt;[6,  8, 10, 12]       [16, 20]       [16, 36]&lt;/span&gt;
+&lt;span class="go"&gt;                                          🏁&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;With this in mind, let's implement it in Go assembly!&lt;/p&gt;
+&lt;h2&gt;Adding vectors&lt;/h2&gt;
+&lt;p&gt;We can start small and just focus on adding 8 numbers.
+The first step is to create a dummy function &lt;code&gt;SumVec&lt;/code&gt; and a corresponding test.
+It always returns zero no matter the input it gets.
+Note, we used &lt;code&gt;asm.XORQ(sum, sum)&lt;/code&gt; to set the register associated with &lt;code&gt;sum&lt;/code&gt; variable to zero.
+We'll see &lt;code&gt;Q&lt;/code&gt; postfix quite often later on, it stands for quad word (8 bytes) on amd64.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;//go:build ignore&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;github.com/mmcloughlin/avo/build&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="c1"&gt;//go:generate go run asm.go -out sum.s -stubs sum.go&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;TEXT&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;SumVec&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NOSPLIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;func(input []int64) int64&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;XORQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Store&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ReturnIndex&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;RET&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Generate&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;details&gt;
+
+&lt;summary&gt;sum_test.go&lt;/summary&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;testing&amp;quot;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;TestSumVec&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;testing&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;T&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;input&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt;&lt;span class="kt"&gt;int64&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;6&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;var&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;want&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int64&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;36&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;got&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;SumVec&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;input&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;got&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;!=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;want&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Fatalf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;expected %d got %d&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;want&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;got&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+
+&lt;/details&gt;
+
+&lt;p&gt;Not surprisingly, the test fails as it expects the sum to be &lt;code&gt;36&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ go generate ./sum/asm.go &amp;amp;&amp;amp; go test ./sum&lt;/span&gt;
+&lt;span class="go"&gt;--- FAIL: TestSumVec (0.00s)&lt;/span&gt;
+&lt;span class="go"&gt;    sum_test.go:10: expected 36 got 0&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The second step is to learn the &lt;code&gt;input []int64&lt;/code&gt; slice length and
+where its backing array is located in memory,
+so we could load its elements into a vector register.
+When the function is called, a three-field &lt;code&gt;slice&lt;/code&gt; structure is passed on the stack.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kd"&gt;type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;slice&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;struct&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;array&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;unsafe&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Pointer&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;len&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;cap&lt;/span&gt;&lt;span class="w"&gt;   &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Its fields can be accessed in assembler as follows:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;input_base+0(FP)&lt;/code&gt; pointer to the underlying array (the base memory address)&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;input_len+8(FP)&lt;/code&gt; length of the slice&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;input_cap+16(FP)&lt;/code&gt; capacity of the slice&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href="https://github.com/mmcloughlin/avo/blob/master/examples/args/README.md"&gt;avo API&lt;/a&gt; is very similar,
+here is how we can load the array pointer and the length
+into general-purpose registers &lt;code&gt;AX&lt;/code&gt; and &lt;code&gt;CX&lt;/code&gt; assigned by &lt;code&gt;avo&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;inputData&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Base pointer of the slice is in AX.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;inputLen&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="c1"&gt;// Number of elements in the slice is in CX.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// MOVQ input_base+0(FP), AX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Load&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Param&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;input&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="nx"&gt;Base&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;inputData&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// MOVQ input_len+8(FP), CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Load&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Param&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;input&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;).&lt;/span&gt;&lt;span class="nx"&gt;Len&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;inputLen&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The third step is to load the left half of the array into a vector register.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;vecLeft&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;YMM&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// 256-bit vector register Y0.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// VMOVDQU (AX), Y0&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VMOVDQU&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;operand&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Mem&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nx"&gt;Base&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;inputData&lt;/span&gt;&lt;span class="p"&gt;},&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeft&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Examining a generated Go assembly, we'll see &lt;code&gt;VMOVDQU (AX), Y0&lt;/code&gt; instruction:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;VMOVDQU&lt;/code&gt; stands for &lt;strong&gt;V&lt;/strong&gt;ector &lt;strong&gt;MOV&lt;/strong&gt;e &lt;strong&gt;D&lt;/strong&gt;ouble &lt;strong&gt;Q&lt;/strong&gt;uadword &lt;strong&gt;U&lt;/strong&gt;naligned.
+  It copies the &lt;code&gt;[1, 2, 3, 4]&lt;/code&gt; elements from a possibly unaligned
+  memory address stored in &lt;code&gt;AX&lt;/code&gt; to vector register &lt;code&gt;Y0&lt;/code&gt;.
+  Unaligned means not starting at a memory address that is a multiple of the vector's size.
+  We don't use &lt;code&gt;VMOVDQA&lt;/code&gt; (the aligned version) since we don't know
+  if the array's address is aligned to 256.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Despite its "double quadword" (128-bit vector) naming, the instruction is capable of moving 256 bits.
+- &lt;code&gt;(AX)&lt;/code&gt; operand means use address from register &lt;code&gt;AX&lt;/code&gt;.
+  Its &lt;code&gt;avo&lt;/code&gt; equivalent is &lt;code&gt;operand.Mem{Base: inputData}&lt;/code&gt;.
+- &lt;code&gt;Y0&lt;/code&gt; operand is a 256-bit vector register allocated by &lt;code&gt;vecLeft := asm.YMM()&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;🦉 Since we mentioned vectors of different sizes, let's name them for reference:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;512-bit ZMM registers: &lt;code&gt;Z0&lt;/code&gt; ... &lt;code&gt;Z31&lt;/code&gt; for AVX-512 (not our case)&lt;/li&gt;
+&lt;li&gt;256-bit YMM registers: &lt;code&gt;Y0&lt;/code&gt; ... &lt;code&gt;Y15&lt;/code&gt; for AVX and &lt;code&gt;Y31&lt;/code&gt; for AVX-512&lt;/li&gt;
+&lt;li&gt;128-bit XMM registers: &lt;code&gt;X0&lt;/code&gt; ... &lt;code&gt;X15&lt;/code&gt; for AVX and &lt;code&gt;X31&lt;/code&gt; for AVX-512&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Moving on to the fourth step — loading the right half of the array into another vector register.
+The important part is to determine the memory address from which to copy four 64-bit integers.
+As we can see from the diagram below, we need to start at the array index &lt;code&gt;4&lt;/code&gt;.
+We can deduce the address of element &lt;code&gt;5&lt;/code&gt; like this
+&lt;code&gt;inputData + index * int64InBytes = 0xc000054760 + 4 * 8&lt;/code&gt; assuming the array is stored at &lt;code&gt;0xc000054760&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;        0xc000054760&lt;/span&gt;
+&lt;span class="go"&gt;        ⬇️&lt;/span&gt;
+&lt;span class="go"&gt;array: [1, 2, 3, 4, 5, 6, 7, 8]&lt;/span&gt;
+&lt;span class="go"&gt;index:  0  1  2  3  4  5  6  7&lt;/span&gt;
+&lt;span class="go"&gt;                    ⬆️&lt;/span&gt;
+&lt;span class="go"&gt;                    0xc000054760 + 4 * 8&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The assembly code looks similar to what we saw in the previous step:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;MOVQ&lt;/code&gt; copies 64 bits of a literal value &lt;code&gt;0x00000004&lt;/code&gt; (our index &lt;code&gt;4&lt;/code&gt; represented as 32-bit unsigned integer)
+   to &lt;code&gt;CX&lt;/code&gt; register.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;VMOVDQU&lt;/code&gt; copies 256 bits starting from memory address defined by operand &lt;code&gt;(AX)(CX*8)&lt;/code&gt; to vector register &lt;code&gt;Y1&lt;/code&gt;.
+  The operand &lt;code&gt;(AX)(CX*8)&lt;/code&gt; reads as &lt;code&gt;AX + CX * 8&lt;/code&gt;, i.e., take memory address stored in &lt;code&gt;AX&lt;/code&gt; register
+  (&lt;code&gt;0xc000054760&lt;/code&gt; in our example), then add it to a product of value stored in &lt;code&gt;CX&lt;/code&gt; register (&lt;code&gt;$0x00000004&lt;/code&gt;)
+  and a scaling factor &lt;code&gt;8&lt;/code&gt; since the array contains 64-bit integers.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nf"&gt;MOVQ&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="no"&gt;$0x00000004&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nf"&gt;VMOVDQU&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;AX&lt;/span&gt;&lt;span class="p"&gt;)(&lt;/span&gt;&lt;span class="no"&gt;CX&lt;/span&gt;&lt;span class="p"&gt;*&lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;Y1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The assembler DSL is a little bit verbose, but it provides type safety.
+For instance, it makes sure we pass a valid immediate value when setting up the index to &lt;code&gt;4&lt;/code&gt;
+(&lt;code&gt;asm.MOVQ()&lt;/code&gt; docs indicate &lt;code&gt;imm32&lt;/code&gt; and &lt;code&gt;imm64&lt;/code&gt;) as the first operand in &lt;code&gt;asm.MOVQ(operand.U32(4), index)&lt;/code&gt;.
+Note, &lt;code&gt;operand.U64(4)&lt;/code&gt; would also work.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;index&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// The array index is stored in register CX.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// MOVQ $0x00000004, CX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;MOVQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;operand&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;U32&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;index&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="nx"&gt;vecRight&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;YMM&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// 256-bit vector register Y1.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// VMOVDQU (AX)(CX*8), Y1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VMOVDQU&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;operand&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Mem&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nx"&gt;Base&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="nx"&gt;inputData&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Array starts at 0xc000054760 address.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nx"&gt;Index&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;index&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;     &lt;/span&gt;&lt;span class="c1"&gt;// Array index is 4.&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="nx"&gt;Scale&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;         &lt;/span&gt;&lt;span class="c1"&gt;// The multiplier of the index is 8 bytes (int64).&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="p"&gt;},&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nx"&gt;vecRight&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we've got both vectors filled, we can finally add them up!
+It's done with &lt;code&gt;VPADDQ Y0, Y1, Y0&lt;/code&gt; instruction which reads
+as &lt;strong&gt;V&lt;/strong&gt;ector &lt;strong&gt;P&lt;/strong&gt;acked &lt;strong&gt;ADD&lt;/strong&gt; &lt;strong&gt;Q&lt;/strong&gt;uadword, i.e., 64-bit elements of vectors &lt;code&gt;Y0&lt;/code&gt; and &lt;code&gt;Y1&lt;/code&gt; are added
+and the result is stored in &lt;code&gt;Y0&lt;/code&gt;.
+"Packed" signifies that the instruction operates on all the elements packed within the register,
+i.e., it is not a scalar operation.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;// VPADDQ Y0, Y1, Y0&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VPADDQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vecLeft&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRight&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeft&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now &lt;code&gt;Y0&lt;/code&gt; contains &lt;code&gt;[6, 8, 10, 12]&lt;/code&gt;.&lt;/p&gt;
+&lt;h2&gt;Adding half-vectors&lt;/h2&gt;
+&lt;p&gt;We summarize the &lt;code&gt;Y0 = [6, 8, 10, 12]&lt;/code&gt; vector by adding its halfes &lt;code&gt;[6, 8]&lt;/code&gt; and &lt;code&gt;[10, 12]&lt;/code&gt;.
+That's called a horizontal reduction summation.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;[6,   8]&lt;/span&gt;
+&lt;span class="go"&gt;      +&lt;/span&gt;
+&lt;span class="go"&gt;[10, 12]&lt;/span&gt;
+&lt;span class="go"&gt;      =&lt;/span&gt;
+&lt;span class="go"&gt;[16, 20]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;To do that, we can copy its left half (bits 128-255) to a 128-bit XMM vector register &lt;code&gt;X1&lt;/code&gt;
+using &lt;code&gt;VEXTRACTI128&lt;/code&gt; (&lt;strong&gt;V&lt;/strong&gt;ector &lt;strong&gt;E&lt;/strong&gt;xtract &lt;strong&gt;I&lt;/strong&gt;nteger &lt;strong&gt;128&lt;/strong&gt;-bit) instruction.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Y0 = [6, 8, 10, 12]&lt;/span&gt;
+&lt;span class="go"&gt;      ⬇️ ⬇️&lt;/span&gt;
+&lt;span class="go"&gt;X1 = [6, 8]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The first operand &lt;code&gt;$0x01&lt;/code&gt; in &lt;code&gt;VEXTRACTI128 $0x01, Y0, X1&lt;/code&gt; is a control byte
+that refers to extracting the upper 128-bit lane.
+The second operand is the source YMM register (&lt;code&gt;vecLeft&lt;/code&gt; in our &lt;code&gt;avo&lt;/code&gt; program),
+and the third one is an XMM register (we use &lt;code&gt;vecRight.AsX()&lt;/code&gt;
+which is the lower portion of &lt;code&gt;vecRight&lt;/code&gt; register).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;vecRightLow&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRight&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;AsX&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// VEXTRACTI128 $0x01, Y0, X1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VEXTRACTI128&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;operand&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;U8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeft&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRightLow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Since &lt;code&gt;X0&lt;/code&gt; represents the right half of &lt;code&gt;Y0&lt;/code&gt;, we can add &lt;code&gt;X0&lt;/code&gt; and &lt;code&gt;X1&lt;/code&gt;
+which by now contains the left half of &lt;code&gt;Y0&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Y0 = [6, 8, 10, 12]&lt;/span&gt;
+&lt;span class="go"&gt;      ⬇️ ⬇️ [10, 12] = X0&lt;/span&gt;
+&lt;span class="go"&gt;X1 = [6, 8]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Go code looks familiar.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeft&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;AsX&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// VPADDQ X0, X1, X0&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VPADDQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRightLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;At this point &lt;code&gt;X0&lt;/code&gt; contains &lt;code&gt;[16, 20]&lt;/code&gt;.
+Our goal is to line up &lt;code&gt;16&lt;/code&gt; with &lt;code&gt;20&lt;/code&gt; to get our scalar result &lt;code&gt;36&lt;/code&gt;.
+We can shift &lt;code&gt;16&lt;/code&gt; right by 8 bytes since we're dealing with 64-bit integers.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Before: [16, 20]&lt;/span&gt;
+&lt;span class="go"&gt;         ➡️&lt;/span&gt;
+&lt;span class="go"&gt;After:  [    16] 20&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;VPSRLDQ $0x08, X0, X1&lt;/code&gt; instruction does that, i.e., it shifts &lt;code&gt;X0&lt;/code&gt; bits right,
+fills the empty space with zeros, and stores the result in &lt;code&gt;X1&lt;/code&gt;.
+The addition instruction is the same &lt;code&gt;VPADDQ X0, X1, X0&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;[16, 20]    X0&lt;/span&gt;
+&lt;span class="go"&gt;      +&lt;/span&gt;
+&lt;span class="go"&gt;[0,  16]    X1&lt;/span&gt;
+&lt;span class="go"&gt;      =&lt;/span&gt;
+&lt;span class="go"&gt;[16, 36]    X0&lt;/span&gt;
+&lt;span class="go"&gt;     🏁&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Here is an &lt;code&gt;avo&lt;/code&gt; code.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;// VPSRLDQ $0x08, X0, X1&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VPSRLDQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;operand&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;U8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;8&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRightLow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// VPADDQ X0, X1, X0&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VPADDQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRightLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;That's it, we got out final result &lt;code&gt;36&lt;/code&gt; in the &lt;code&gt;X0 = [16, 36]&lt;/code&gt; vector.
+We just need to somehow return it from the &lt;code&gt;SumVec&lt;/code&gt; function 🤔.&lt;/p&gt;
+&lt;p&gt;The cool thing about &lt;code&gt;VMOVQ&lt;/code&gt; instruction is that it can copy the lower quad word
+(our &lt;code&gt;36&lt;/code&gt; value) from a vector to a scalar register like this &lt;code&gt;VMOVQ X0, AX&lt;/code&gt;.
+Note, &lt;code&gt;VMOVQ Y0, AX&lt;/code&gt; wouldn't work since a YMM operand isn't supported.&lt;/p&gt;
+&lt;p&gt;These are the final lines of Go code that generate Go assembly.
+It's pretty neat that &lt;code&gt;AX&lt;/code&gt; was reused by &lt;code&gt;avo&lt;/code&gt; to store the &lt;code&gt;sum&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GP64&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// VMOVQ X0, AX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VMOVQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="c1"&gt;// MOVQ AX, ret+24(FP)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Store&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;sum&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ReturnIndex&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="c1"&gt;// RET&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;RET&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This time the tests should pass.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ go generate ./sum/asm.go &amp;amp;&amp;amp; go test ./sum&lt;/span&gt;
+&lt;span class="go"&gt;ok      myprog/sum  0.289s&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2&gt;Working with larger arrays&lt;/h2&gt;
+&lt;p&gt;Coming soon...&lt;/p&gt;
+&lt;p&gt;References:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://github.com/mmcloughlin/avo"&gt;avo docs and examples&lt;/a&gt; by Michael McLoughlin&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://sourcegraph.com/blog/slow-to-simd"&gt;From slow to SIMD: A Go optimization story&lt;/a&gt; by Camden Cheek&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions"&gt;Advanced Vector Extensions&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><category term="assembler"></category><category term="golang"></category><category term="simd"></category></entry><entry><title>Hello World in avo 🥑</title><link href="https://marselester.com/hello-world-in-avo.html" rel="alternate"></link><published>2025-12-02T00:00:00+07:00</published><updated>2025-12-02T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2025-12-02:/hello-world-in-avo.html</id><summary type="html">&lt;p&gt;Let's learn together how to write some Go assembly using &lt;a href="https://github.com/mmcloughlin/avo"&gt;avo&lt;/a&gt;
 aka writing assembly-like Go code to generate assembly.
 To make it more clear, here is an &lt;a href="https://github.com/mmcloughlin/avo/tree/master/examples/add"&gt;avo program&lt;/a&gt; &lt;code&gt;add/asm.go&lt;/code&gt;.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;main&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;

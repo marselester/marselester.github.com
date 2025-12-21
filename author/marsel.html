@@ -51,6 +51,330 @@
         
 
             <article>
+                <a href="https://marselester.com/intro-to-simd-in-avo.html"><h3 class="article-title">Intro to SIMD in avo</h3></a>
+<h6 class="subheader" title="2025-12-21T00:00:00+07:00">Sun 21 December 2025
+</h6>
+
+
+<p>In the previous post we wrote a <a href="https://marselester.com/hello-world-in-avo.html">Hello World in avo</a>.
+Let's do something practical this time, e.g., related to performance
+since we go into all this trouble of writing Go assembly.
+You can find the code examples in
+<a href="https://github.com/marselester/misc/tree/main/simd/go/intro">github.com/marselester/misc</a>.</p>
+<p>Processing more data in a single CPU instruction makes our programs faster.
+That's what SIMD (Single Instruction Multiple Data) technique is for.
+The caveat is that we need to think in terms of vectors, not scalars.
+For example, let's say we want to find a sum of eight 64-bit integers.
+Our options look as follows:</p>
+<ol>
+<li>sum of scalars: <code>1 + 2 + 3 + 4 + 5 + 6 + 7 + 8</code></li>
+<li>sum of vectors: <code>[1, 2, 3, 4] + [5, 6, 7, 8]</code> or <code>[1, 2] + [3, 4] + [5, 6] + [7, 8]</code></li>
+</ol>
+<p>The first option is straightforward.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">Sum</span><span class="p">(</span><span class="nx">input</span><span class="w"> </span><span class="p">[]</span><span class="kt">int64</span><span class="p">)</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">sum</span><span class="w"> </span><span class="kt">int64</span><span class="w"></span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">input</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">v</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">sum</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>The second one — not so much 😬.
+At least my CPU (Intel i5-10600) supports <a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Advanced_Vector_Extensions_2">AVX2</a>,
+meaning it can execute 256-bit SIMD instructions.
+That's exactly enough to add our vectors <code>[1, 2, 3, 4]</code> and <code>[5, 6, 7, 8]</code> with just a single CPU instruction.</p>
+<p>The plan is to add the 4-element vectors, then keep folding the resulting vectors adding their halfes,
+see the calculations below.</p>
+<div class="highlight"><pre><span></span><code><span class="go">[1,  2,  3,  4]       [6,   8]       [16, 20]</span>
+<span class="go">             +              +              +</span>
+<span class="go">[5,  6,  7,  8]   ➡   [10, 12]   ➡   [0,  16]</span>
+<span class="go">             =              =              =</span>
+<span class="go">[6,  8, 10, 12]       [16, 20]       [16, 36]</span>
+<span class="go">                                          🏁</span>
+</code></pre></div>
+
+<p>With this in mind, let's implement it in Go assembly!</p>
+<h2>Adding vectors</h2>
+<p>We can start small and just focus on adding 8 numbers.
+The first step is to create a dummy function <code>SumVec</code> and a corresponding test.
+It always returns zero no matter the input it gets.
+Note, we used <code>asm.XORQ(sum, sum)</code> to set the register associated with <code>sum</code> variable to zero.
+We'll see <code>Q</code> postfix quite often later on, it stands for quad word (8 bytes) on amd64.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">//go:build ignore</span><span class="w"></span>
+
+<span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nx">asm</span><span class="w"> </span><span class="s">&quot;github.com/mmcloughlin/avo/build&quot;</span><span class="w"></span>
+
+<span class="c1">//go:generate go run asm.go -out sum.s -stubs sum.go</span><span class="w"></span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">TEXT</span><span class="p">(</span><span class="s">&quot;SumVec&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;func(input []int64) int64&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">sum</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">XORQ</span><span class="p">(</span><span class="nx">sum</span><span class="p">,</span><span class="w"> </span><span class="nx">sum</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Store</span><span class="p">(</span><span class="nx">sum</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ReturnIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">RET</span><span class="p">()</span><span class="w"></span>
+
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Generate</span><span class="p">()</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<details>
+
+<summary>sum_test.go</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">sum</span><span class="w"></span>
+
+<span class="kn">import</span><span class="w"> </span><span class="s">&quot;testing&quot;</span><span class="w"></span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">TestSumVec</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">input</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="kt">int64</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">want</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">36</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">got</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">SumVec</span><span class="p">(</span><span class="nx">input</span><span class="p">);</span><span class="w"> </span><span class="nx">got</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nx">want</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Fatalf</span><span class="p">(</span><span class="s">&quot;expected %d got %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">want</span><span class="p">,</span><span class="w"> </span><span class="nx">got</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<p>Not surprisingly, the test fails as it expects the sum to be <code>36</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ go generate ./sum/asm.go &amp;&amp; go test ./sum</span>
+<span class="go">--- FAIL: TestSumVec (0.00s)</span>
+<span class="go">    sum_test.go:10: expected 36 got 0</span>
+</code></pre></div>
+
+<p>The second step is to learn the <code>input []int64</code> slice length and
+where its backing array is located in memory,
+so we could load its elements into a vector register.
+When the function is called, a three-field <code>slice</code> structure is passed on the stack.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">slice</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">array</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="w"></span>
+<span class="w">    </span><span class="nx">len</span><span class="w">   </span><span class="kt">int</span><span class="w"></span>
+<span class="w">    </span><span class="nx">cap</span><span class="w">   </span><span class="kt">int</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>Its fields can be accessed in assembler as follows:</p>
+<ul>
+<li><code>input_base+0(FP)</code> pointer to the underlying array (the base memory address)</li>
+<li><code>input_len+8(FP)</code> length of the slice</li>
+<li><code>input_cap+16(FP)</code> capacity of the slice</li>
+</ul>
+<p><a href="https://github.com/mmcloughlin/avo/blob/master/examples/args/README.md">avo API</a> is very similar,
+here is how we can load the array pointer and the length
+into general-purpose registers <code>AX</code> and <code>CX</code> assigned by <code>avo</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nx">inputData</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"> </span><span class="c1">// Base pointer of the slice is in AX.</span><span class="w"></span>
+<span class="nx">inputLen</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w">  </span><span class="c1">// Number of elements in the slice is in CX.</span><span class="w"></span>
+<span class="c1">// MOVQ input_base+0(FP), AX</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">).</span><span class="nx">Base</span><span class="p">(),</span><span class="w"> </span><span class="nx">inputData</span><span class="p">)</span><span class="w"></span>
+<span class="c1">// MOVQ input_len+8(FP), CX</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">).</span><span class="nx">Len</span><span class="p">(),</span><span class="w"> </span><span class="nx">inputLen</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>The third step is to load the left half of the array into a vector register.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">vecLeft</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">YMM</span><span class="p">()</span><span class="w"> </span><span class="c1">// 256-bit vector register Y0.</span><span class="w"></span>
+<span class="c1">// VMOVDQU (AX), Y0</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVDQU</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">Mem</span><span class="p">{</span><span class="nx">Base</span><span class="p">:</span><span class="w"> </span><span class="nx">inputData</span><span class="p">},</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>Examining a generated Go assembly, we'll see <code>VMOVDQU (AX), Y0</code> instruction:</p>
+<ul>
+<li><code>VMOVDQU</code> stands for <strong>V</strong>ector <strong>MOV</strong>e <strong>D</strong>ouble <strong>Q</strong>uadword <strong>U</strong>naligned.
+  It copies the <code>[1, 2, 3, 4]</code> elements from a possibly unaligned
+  memory address stored in <code>AX</code> to vector register <code>Y0</code>.
+  Unaligned means not starting at a memory address that is a multiple of the vector's size.
+  We don't use <code>VMOVDQA</code> (the aligned version) since we don't know
+  if the array's address is aligned to 256.</li>
+</ul>
+<p>Despite its "double quadword" (128-bit vector) naming, the instruction is capable of moving 256 bits.
+- <code>(AX)</code> operand means use address from register <code>AX</code>.
+  Its <code>avo</code> equivalent is <code>operand.Mem{Base: inputData}</code>.
+- <code>Y0</code> operand is a 256-bit vector register allocated by <code>vecLeft := asm.YMM()</code></p>
+<p>🦉 Since we mentioned vectors of different sizes, let's name them for reference:</p>
+<ul>
+<li>512-bit ZMM registers: <code>Z0</code> ... <code>Z31</code> for AVX-512 (not our case)</li>
+<li>256-bit YMM registers: <code>Y0</code> ... <code>Y15</code> for AVX and <code>Y31</code> for AVX-512</li>
+<li>128-bit XMM registers: <code>X0</code> ... <code>X15</code> for AVX and <code>X31</code> for AVX-512</li>
+</ul>
+<p>Moving on to the fourth step — loading the right half of the array into another vector register.
+The important part is to determine the memory address from which to copy four 64-bit integers.
+As we can see from the diagram below, we need to start at the array index <code>4</code>.
+We can deduce the address of element <code>5</code> like this
+<code>inputData + index * int64InBytes = 0xc000054760 + 4 * 8</code> assuming the array is stored at <code>0xc000054760</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">        0xc000054760</span>
+<span class="go">        ⬇️</span>
+<span class="go">array: [1, 2, 3, 4, 5, 6, 7, 8]</span>
+<span class="go">index:  0  1  2  3  4  5  6  7</span>
+<span class="go">                    ⬆️</span>
+<span class="go">                    0xc000054760 + 4 * 8</span>
+</code></pre></div>
+
+<p>The assembly code looks similar to what we saw in the previous step:</p>
+<ul>
+<li><code>MOVQ</code> copies 64 bits of a literal value <code>0x00000004</code> (our index <code>4</code> represented as 32-bit unsigned integer)
+   to <code>CX</code> register.</li>
+<li><code>VMOVDQU</code> copies 256 bits starting from memory address defined by operand <code>(AX)(CX*8)</code> to vector register <code>Y1</code>.
+  The operand <code>(AX)(CX*8)</code> reads as <code>AX + CX * 8</code>, i.e., take memory address stored in <code>AX</code> register
+  (<code>0xc000054760</code> in our example), then add it to a product of value stored in <code>CX</code> register (<code>$0x00000004</code>)
+  and a scaling factor <code>8</code> since the array contains 64-bit integers.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nf">MOVQ</span><span class="w">    </span><span class="no">$0x00000004</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">CX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">Y1</span><span class="w"></span>
+</code></pre></div>
+
+<p>The assembler DSL is a little bit verbose, but it provides type safety.
+For instance, it makes sure we pass a valid immediate value when setting up the index to <code>4</code>
+(<code>asm.MOVQ()</code> docs indicate <code>imm32</code> and <code>imm64</code>) as the first operand in <code>asm.MOVQ(operand.U32(4), index)</code>.
+Note, <code>operand.U64(4)</code> would also work.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">index</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"> </span><span class="c1">// The array index is stored in register CX.</span><span class="w"></span>
+<span class="c1">// MOVQ $0x00000004, CX</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">MOVQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U32</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
+
+<span class="nx">vecRight</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">YMM</span><span class="p">()</span><span class="w"> </span><span class="c1">// 256-bit vector register Y1.</span><span class="w"></span>
+<span class="c1">// VMOVDQU (AX)(CX*8), Y1</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVDQU</span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="nx">operand</span><span class="p">.</span><span class="nx">Mem</span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Base</span><span class="p">:</span><span class="w">  </span><span class="nx">inputData</span><span class="p">,</span><span class="w"> </span><span class="c1">// Array starts at 0xc000054760 address.</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Index</span><span class="p">:</span><span class="w"> </span><span class="nx">index</span><span class="p">,</span><span class="w">     </span><span class="c1">// Array index is 4.</span><span class="w"></span>
+<span class="w">        </span><span class="nx">Scale</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w">         </span><span class="c1">// The multiplier of the index is 8 bytes (int64).</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nx">vecRight</span><span class="p">,</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>Now we've got both vectors filled, we can finally add them up!
+It's done with <code>VPADDQ Y0, Y1, Y0</code> instruction which reads
+as <strong>V</strong>ector <strong>P</strong>acked <strong>ADD</strong> <strong>Q</strong>uadword, i.e., 64-bit elements of vectors <code>Y0</code> and <code>Y1</code> are added
+and the result is stored in <code>Y0</code>.
+"Packed" signifies that the instruction operates on all the elements packed within the register,
+i.e., it is not a scalar operation.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// VPADDQ Y0, Y1, Y0</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRight</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>Now <code>Y0</code> contains <code>[6, 8, 10, 12]</code>.</p>
+<h2>Adding half-vectors</h2>
+<p>We summarize the <code>Y0 = [6, 8, 10, 12]</code> vector by adding its halfes <code>[6, 8]</code> and <code>[10, 12]</code>.
+That's called a horizontal reduction summation.</p>
+<div class="highlight"><pre><span></span><code><span class="go">[6,   8]</span>
+<span class="go">      +</span>
+<span class="go">[10, 12]</span>
+<span class="go">      =</span>
+<span class="go">[16, 20]</span>
+</code></pre></div>
+
+<p>To do that, we can copy its left half (bits 128-255) to a 128-bit XMM vector register <code>X1</code>
+using <code>VEXTRACTI128</code> (<strong>V</strong>ector <strong>E</strong>xtract <strong>I</strong>nteger <strong>128</strong>-bit) instruction.</p>
+<div class="highlight"><pre><span></span><code><span class="go">Y0 = [6, 8, 10, 12]</span>
+<span class="go">      ⬇️ ⬇️</span>
+<span class="go">X1 = [6, 8]</span>
+</code></pre></div>
+
+<p>The first operand <code>$0x01</code> in <code>VEXTRACTI128 $0x01, Y0, X1</code> is a control byte
+that refers to extracting the upper 128-bit lane.
+The second operand is the source YMM register (<code>vecLeft</code> in our <code>avo</code> program),
+and the third one is an XMM register (we use <code>vecRight.AsX()</code>
+which is the lower portion of <code>vecRight</code> register).</p>
+<div class="highlight"><pre><span></span><code><span class="nx">vecRightLow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vecRight</span><span class="p">.</span><span class="nx">AsX</span><span class="p">()</span><span class="w"></span>
+<span class="c1">// VEXTRACTI128 $0x01, Y0, X1</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">VEXTRACTI128</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>Since <code>X0</code> represents the right half of <code>Y0</code>, we can add <code>X0</code> and <code>X1</code>
+which by now contains the left half of <code>Y0</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">Y0 = [6, 8, 10, 12]</span>
+<span class="go">      ⬇️ ⬇️ [10, 12] = X0</span>
+<span class="go">X1 = [6, 8]</span>
+</code></pre></div>
+
+<p>Go code looks familiar.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">vecLeftLow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">.</span><span class="nx">AsX</span><span class="p">()</span><span class="w"></span>
+<span class="c1">// VPADDQ X0, X1, X0</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>At this point <code>X0</code> contains <code>[16, 20]</code>.
+Our goal is to line up <code>16</code> with <code>20</code> to get our scalar result <code>36</code>.
+We can shift <code>16</code> right by 8 bytes since we're dealing with 64-bit integers.</p>
+<div class="highlight"><pre><span></span><code><span class="go">Before: [16, 20]</span>
+<span class="go">         ➡️</span>
+<span class="go">After:  [    16] 20</span>
+</code></pre></div>
+
+<p>The <code>VPSRLDQ $0x08, X0, X1</code> instruction does that, i.e., it shifts <code>X0</code> bits right,
+fills the empty space with zeros, and stores the result in <code>X1</code>.
+The addition instruction is the same <code>VPADDQ X0, X1, X0</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">[16, 20]    X0</span>
+<span class="go">      +</span>
+<span class="go">[0,  16]    X1</span>
+<span class="go">      =</span>
+<span class="go">[16, 36]    X0</span>
+<span class="go">     🏁</span>
+</code></pre></div>
+
+<p>Here is an <code>avo</code> code.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// VPSRLDQ $0x08, X0, X1</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">VPSRLDQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
+<span class="c1">// VPADDQ X0, X1, X0</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>That's it, we got out final result <code>36</code> in the <code>X0 = [16, 36]</code> vector.
+We just need to somehow return it from the <code>SumVec</code> function 🤔.</p>
+<p>The cool thing about <code>VMOVQ</code> instruction is that it can copy the lower quad word
+(our <code>36</code> value) from a vector to a scalar register like this <code>VMOVQ X0, AX</code>.
+Note, <code>VMOVQ Y0, AX</code> wouldn't work since a YMM operand isn't supported.</p>
+<p>These are the final lines of Go code that generate Go assembly.
+It's pretty neat that <code>AX</code> was reused by <code>avo</code> to store the <code>sum</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">sum</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
+<span class="c1">// VMOVQ X0, AX</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">sum</span><span class="p">)</span><span class="w"></span>
+
+<span class="c1">// MOVQ AX, ret+24(FP)</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">Store</span><span class="p">(</span><span class="nx">sum</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ReturnIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w"></span>
+<span class="c1">// RET</span><span class="w"></span>
+<span class="nx">asm</span><span class="p">.</span><span class="nx">RET</span><span class="p">()</span><span class="w"></span>
+</code></pre></div>
+
+<p>This time the tests should pass.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ go generate ./sum/asm.go &amp;&amp; go test ./sum</span>
+<span class="go">ok      myprog/sum  0.289s</span>
+</code></pre></div>
+
+<h2>Working with larger arrays</h2>
+<p>Coming soon...</p>
+<p>References:</p>
+<ul>
+<li><a href="https://github.com/mmcloughlin/avo">avo docs and examples</a> by Michael McLoughlin</li>
+<li><a href="https://sourcegraph.com/blog/slow-to-simd">From slow to SIMD: A Go optimization story</a> by Camden Cheek</li>
+<li><a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions">Advanced Vector Extensions</a></li>
+</ul><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/assembler.html">assembler </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/simd.html">simd </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/intro-to-simd-in-avo.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/hello-world-in-avo.html"><h3 class="article-title">Hello World in avo 🥑</h3></a>
 <h6 class="subheader" title="2025-12-02T00:00:00+07:00">Tue 02 December 2025
 </h6>
@@ -64,296 +388,7 @@ To make it more clear, here is an <a href="https://github.com/mmcloughlin/avo/tr
 <span class="kn">import</span><span class="w"> </span><span class="nx">asm</span><span class="w"> </span><span class="s">&quot;github.com/mmcloughlin/avo/build&quot;</span><span class="w"></span>
 
 <span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">TEXT</span><span class="p">(</span><span class="s">&quot;Add&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;func(x, y uint64) uint64&quot;</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">(),</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;x&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">x</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;y&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">y</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ADDQ</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Store</span><span class="p">(</span><span class="nx">y</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ReturnIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">RET</span><span class="p">()</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Generate</span><span class="p">()</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>And this is its output <code>add/add.s</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// func Add(x uint64, y uint64) uint64</span>
-<span class="nf">TEXT</span><span class="w"> </span><span class="err">·</span><span class="no">Add</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="no">$0-24</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">x</span><span class="err">+</span><span class="mi">0</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">y</span><span class="err">+</span><span class="mi">8</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">ADDQ</span><span class="w"> </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">ret</span><span class="err">+</span><span class="mi">16</span><span class="p">(</span><span class="no">FP</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nf">RET</span><span class="w"></span>
-</code></pre></div>
-
-<p>As we can see, the program generates Go assembly for <code>Add</code> function along with <code>add/stub.go</code> file
-to access our function from Go.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ go run asm.go -out add.s -stubs stub.go</span>
-</code></pre></div>
-
-<p>Here is a usage example <code>main.go</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
-
-<span class="kn">import</span><span class="w"> </span><span class="s">&quot;myprog/add&quot;</span><span class="w"> </span><span class="c1">// Import the stub.</span><span class="w"></span>
-
-<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nb">println</span><span class="p">(</span><span class="nx">add</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">))</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>If we build this program <code>myprog</code> for amd64 architecture and inspect its binary contents,
-we'll see that <code>Add</code> function looks slightly different:</p>
-<ul>
-<li><code>TEXT ·Add</code> became <code>TEXT myprog/add.Add.abi0</code></li>
-<li><code>x</code> and <code>y</code> are gone</li>
-<li><code>FP</code> (frame pointer) usage is replaced with <code>SP</code> (stack pointer)</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ go mod init myprog</span>
-<span class="go">﹩ GOOS=linux GOARCH=amd64 go build -o myprog main.go</span>
-<span class="go">﹩ go tool objdump -s add.Add myprog</span>
-<span class="go">TEXT myprog/add.Add.abi0(SB) /Users/u/code/myprog/add/add.s</span>
-<span class="go">  add.s:7       0x46fac0        488b442408      MOVQ 0x8(SP), AX</span>
-<span class="go">  add.s:8       0x46fac5        488b4c2410      MOVQ 0x10(SP), CX</span>
-<span class="go">  add.s:9       0x46faca        4801c1          ADDQ AX, CX</span>
-<span class="go">  add.s:10      0x46facd        48894c2418      MOVQ CX, 0x18(SP)</span>
-<span class="go">  add.s:11      0x46fad2        c3              RET</span>
-</code></pre></div>
-
-<p>Why is that so?
-<a href="https://go.dev/doc/asm">Go's assembler docs</a> state that their assembler is not a direct representation
-of the underlying machine (amd64 in our case).
-That sort of explains the difference 🤔.</p>
-<blockquote>
-<p>The assembler works on the semi-abstract form...
-In general, machine-specific operations tend to appear as themselves,
-while more general concepts like memory move and subroutine call and return are more abstract.</p>
-</blockquote>
-<p>To sum up, we would write an assembly-like Go code which generates a Go assembly
-which ends up an architecture specific assembly.</p>
-<h2>Go assembly</h2>
-<p>Now, let's have a closer look at Go assembly.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// func Add(x uint64, y uint64) uint64</span>
-<span class="nf">TEXT</span><span class="w"> </span><span class="err">·</span><span class="no">Add</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="no">$0-24</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">x</span><span class="err">+</span><span class="mi">0</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">y</span><span class="err">+</span><span class="mi">8</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">ADDQ</span><span class="w"> </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">ret</span><span class="err">+</span><span class="mi">16</span><span class="p">(</span><span class="no">FP</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nf">RET</span><span class="w"></span>
-</code></pre></div>
-
-<p>The <code>TEXT</code> directive declares the symbol <code>·Add</code> (our function name with a leading dot <code>U+00B7</code> character).
-The full name of the symbol is <code>myprog∕add·Add</code> — the package path followed by a dot and the function name
-(note the division slash <code>U+2215</code> character).</p>
-<p><code>avo</code> didn't need to hard-code the package's import path <code>myprog∕add</code> in <code>add.s</code> because
-the linker inserts the package path at the beginning of any name starting with a dot <code>·</code> character,
-If we had a global variable <code>mySum</code> in the <code>add</code> package, we could access it with a dot as well <code>·mySum</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">add</span><span class="w"></span>
-
-<span class="kd">var</span><span class="w"> </span><span class="nx">mySum</span><span class="w"> </span><span class="kt">int64</span><span class="w"></span>
-</code></pre></div>
-
-<p>The function name <code>Add</code> is followed by <code>(SB)</code>:</p>
-<ul>
-<li><code>SB</code> stands for static base pointer. It's a pseudo-register maintained by the Go toolchain.</li>
-<li>all global symbols such as <code>·Add</code> and <code>·mySum</code> are written as offsets from the pseudo-register <code>SB</code>,
-  for example, <code>TEXT ·Add(SB)</code> or <code>MOV ·mySum(SB), R1</code>, so we can think of the symbols as named offsets</li>
-<li>parenthesis around <code>SB</code> pseudo-register mean register indirect, i.e., we're dereferencing <code>SB</code> like this <code>*SB</code>
-  (that's merely an analogy, not an actual code)</li>
-</ul>
-<p>After the symbol, we have <code>NOSPLIT</code> flag which is an argument to the <code>TEXT</code> directive.
-It tells the linker not to insert the preamble that checks if the goroutine stack must be split.
-Normally, Go inserts code to check if the stack needs to grow, but <code>NOSPLIT</code> disables this.
-This reduces the <code>Add</code> function call overhead, but limits the size of the stack.
-The stack frame for a given function, plus anything it calls, must fit in the spare space
-remaining in the current stack segment whose minimum size is 2 KB.
-That's not a problem for a leaf function like ours.</p>
-<p>After the flag, there is a <code>TEXT</code> argument <code>$0-24</code> stating:</p>
-<ul>
-<li><code>$0</code> — the stack frame size,</li>
-<li><code>-24</code> — the <code>Add</code> function's arguments size in bytes (a minus sign is just a separator).</li>
-</ul>
-<p>In our case, the <code>Add</code> function has no local stack frame (its size is zero bytes),
-meaning there are no local variables, but the frame itself still gets allocated
-since we didn't use <code>NOFRAME</code> flag.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">Add</span><span class="p">(</span><span class="nx">x</span><span class="w"> </span><span class="kt">uint64</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="kt">uint64</span><span class="p">)</span><span class="w"> </span><span class="kt">uint64</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">y</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>The function has two 8-bytes arguments and one 8-bytes return value that add up to a total size of 24 bytes.
-These 24 bytes live on the caller's stack frame, located at positive offsets from the <code>FP</code> pseudo-register.
-<code>FP</code> stands for frame pointer which is used to refer to function arguments.
-Thus <code>0(FP)</code> is the argument <code>x</code>, <code>8(FP)</code> is the second argument <code>y</code>,
-and <code>16(FP)</code> is the return argument named by default as <code>ret</code>.</p>
-<table>
-<thead>
-<tr>
-<th>x</th>
-<th>y</th>
-<th>ret</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0(FP)</td>
-<td>8(FP)</td>
-<td>16(FP)</td>
-</tr>
-</tbody>
-</table>
-<p>Note, the assembler enforces <code>x+0(FP)</code>, <code>y+8(FP)</code>, and <code>ret+16(FP)</code> convention for readability,
-rejecting plain <code>0(FP)</code> syntax.
-Therefore we must place an argument name at the beginning.</p>
-<div class="highlight"><pre><span></span><code><span class="nf">TEXT</span><span class="w"> </span><span class="err">·</span><span class="no">Add</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="no">$0-24</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">x</span><span class="err">+</span><span class="mi">0</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">y</span><span class="err">+</span><span class="mi">8</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">ADDQ</span><span class="w"> </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">MOVQ</span><span class="w"> </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">ret</span><span class="err">+</span><span class="mi">16</span><span class="p">(</span><span class="no">FP</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nf">RET</span><span class="w"></span>
-</code></pre></div>
-
-<p>The instructions after the <code>TEXT</code> directive form the body of the <code>Add</code> function:</p>
-<ul>
-<li><code>MOVQ x+0(FP), AX</code> copies the argument <code>x</code> to the <code>AX</code> general-purpose register, i.e.,
-  it performs a 64-bit <code>MOV</code> (<code>Q</code> stands for quad on amd64)
-  from the caller's stack frame at <code>0(FP)</code> offset to the register</li>
-<li><code>MOVQ y+8(FP), CX</code> copies the argument <code>y</code> to the <code>CX</code> general-purpose register</li>
-<li><code>ADDQ AX, CX</code> adds 64-bit numbers stored in <code>AX</code> and <code>CX</code> registers, and places the result in the <code>CX</code></li>
-<li><code>MOVQ CX, ret+16(FP)</code> copies the 64 bits from the <code>CX</code> register to the return argument <code>ret</code></li>
-<li><code>RET</code> is a pseudo-instruction to return from a function</li>
-</ul>
-<p><code>avo</code> package took care of:</p>
-<ul>
-<li>allocating the <code>AX</code> and <code>CX</code> registers (we used <code>asm.GP64()</code> virtual registers in an avo program)</li>
-<li>declaring the function using its signature (the stack frame size and arguments size were calculated for us)</li>
-<li>loading the function arguments <code>x</code> and <code>y</code> into those registers,
-  ensuring memory offsets are correct</li>
-<li>appending <code>ADDQ</code> instruction with allocated registers <code>AX</code> and <code>CX</code></li>
-<li>storing function return value (again, with correct offset).
-  Note, <code>asm.ReturnIndex(0)</code> returns the first return argument of the active function.</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">(),</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">TEXT</span><span class="p">(</span><span class="s">&quot;Add&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;func(x, y uint64) uint64&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// TEXT ·Add(SB), NOSPLIT, $0-24</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;x&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">x</span><span class="p">)</span><span class="w">                              </span><span class="c1">// MOVQ x+0(FP), AX</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;y&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">y</span><span class="p">)</span><span class="w">                              </span><span class="c1">// MOVQ y+8(FP), CX</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">ADDQ</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span><span class="w"> </span><span class="nx">y</span><span class="p">).</span><span class="w">                                          </span><span class="c1">// ADDQ AX, CX</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Store</span><span class="p">(</span><span class="nx">y</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ReturnIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w">                         </span><span class="c1">// MOVQ CX, ret+16(FP)</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">RET</span><span class="p">()</span><span class="w">                                                </span><span class="c1">// RET</span><span class="w"></span>
-</code></pre></div>
-
-<p>That's neat.</p>
-<h2>Go stack</h2>
-<p>Previously we mentioned pseudo-registers such as <code>FP</code> and positive offsets from it
-like <code>y+8(FP)</code> to access function arguments.
-If our function had local variables <code>var fizz, bazz int64</code>, we would have spotted
-negative offsets from <code>SP</code> like <code>fizz-8(SP)</code> and <code>bazz-16(SP)</code> in the code.
-<code>SP</code> is yet another pseudo-register, and actually there are four of them that exist in all architectures:</p>
-<ul>
-<li><code>SP</code> stack pointer points to the top of the space allocated for local variables</li>
-<li><code>FP</code> frame pointer points to the bottom of the space allocated for the arguments</li>
-<li><code>SB</code> static base pointer is a global base for global symbols</li>
-<li><code>PC</code> program counter counts pseudo-instructions (we can use the true R name, e.g.,
-  <code>R15</code> on ARM to access the hardware program counter register)</li>
-</ul>
-<p>Note, if we omit the local variable name <code>fizz</code> from <code>fizz-8(SP)</code> like this <code>-8(SP)</code>,
-we would reference the hardware register <code>SP</code>.
-Therefore we can use positive offsets from hardware register <code>SP</code> on amd64 architecture
-to refer to <code>fizz</code> as follows <code>8(SP)</code>.</p>
-<p>With a diagram of the Go stack everything should be a little more clear.
-Here we've got the top stack frame depicting the <code>Add</code> function call:</p>
-<ul>
-<li>the stack grows from high to low memory addresses</li>
-<li>arguments are located above <code>FP</code></li>
-<li>local variables (if <code>Add</code> had them) would have been below <code>SP</code> pseudo-register
-  or above <code>SP</code> hardware register</li>
-<li>return address is pushed on the stack by the caller, e.g., on architecture independent
-  pseudo-instruction <code>CALL myprog∕add·Add(SB)</code></li>
-<li>caller's <code>RBP</code> register is saved as well as the frame pointer to link the stack frames</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="go">|          ...            | high address</span>
-<span class="go">|      caller frame       |</span>
-<span class="go">|          ...            |</span>
-<span class="go">+-------------------------+</span>
-<span class="go">| arguments, e.g.,        |</span>
-<span class="go">| ret+16(FP)              |</span>
-<span class="go">| y+8(FP)                 |</span>
-<span class="go">| x+0(FP)                 |  ⬆️</span>
-<span class="go">|-------------------------|← FP pseudo-register</span>
-<span class="go">| return address (PC)     |</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| frame pointer (RBP)     |</span>
-<span class="go">|-------------------------|← SP pseudo-register</span>
-<span class="go">| local variables, e.g.,  |  ⬇️</span>
-<span class="go">| fizz-8(SP)              |</span>
-<span class="go">| bazz-16(SP)             |  ⬆️</span>
-<span class="go">+-------------------------+← SP hardware register (the top of the stack)</span>
-<span class="go">|          ...            |</span>
-<span class="go">|       free space        |</span>
-<span class="go">|          ...            | low address</span>
-</code></pre></div>
-
-<p>Zooming out we see the whole stack (just two stack frames in our case).
-By the way, we can <a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">get a stack trace</a>
-if we follow the <code>RBP</code> hardware register's value:</p>
-<ol>
-<li>grab the current value of <code>PC</code> register</li>
-<li>get to the first frame pointer stored in the frame #1</li>
-<li>grab the return address of the caller that sits above the frame pointer</li>
-<li>proceed to the next frame pointer by following the value (caller's <code>RBP</code>)
-   of the current frame pointer</li>
-<li>grab the return address above it</li>
-<li>end the stack walk since the current frame pointer's value is <code>0</code></li>
-<li><a href="https://marselester.com/diy-cpu-profiler-the-simplest-case-of-symbolization.html">symbolize the caller addresses</a>
-   we've collected, i.e., resolve those memory addresses to function names</li>
-</ol>
-<div class="highlight"><pre><span></span><code><span class="go">    |          ...            |</span>
-<span class="go">    +-------------------------+</span>
-<span class="go">    | arguments               | stack frame #0 (caller) is at the bottom of the stack</span>
-<span class="go">    |-------------------------|</span>
-<span class="go">    | return address (PC)     |</span>
-<span class="go">    |-------------------------|</span>
-<span class="go"> ↗- | frame pointer (0)       |</span>
-<span class="go">|   |-------------------------|</span>
-<span class="go">↑   | local variables         |</span>
-<span class="go">|   +-------------------------+</span>
-<span class="go">↑   | arguments               | stack frame #1 (callee) is at the top of the stack</span>
-<span class="go">|   |-------------------------|</span>
-<span class="go">↑   | return address (PC)     |</span>
-<span class="go">|   |-------------------------|</span>
-<span class="go"> ↖_ | frame pointer (RBP)     |</span>
-<span class="go">    |-------------------------|← RBP hardware register (starting point for unwinding frame pointers)</span>
-<span class="go">    | local variables         |</span>
-<span class="go">    +-------------------------+</span>
-<span class="go">    |          ...            |</span>
-<span class="go">    |       free space        |</span>
-<span class="go">    |          ...            |</span>
-</code></pre></div>
-
-<p>That should cover the basics to get started writing Go assembly,
-though I would like to finish this post with a cheat sheet taken from
-<a href="https://youtu.be/9jpnFmJr2PE?t=712">Michael Munday's slides</a>.</p>
-<div class="highlight"><pre><span></span><code><span class="w">                      </span><span class="c1">; Data moves from left to right</span>
-<span class="nf">ADD</span><span class="w"> </span><span class="no">R1</span><span class="p">,</span><span class="w"> </span><span class="no">R2</span><span class="w">            </span><span class="c1">; R2 += R1</span>
-<span class="nf">SUB</span><span class="w"> </span><span class="no">R3</span><span class="p">,</span><span class="w"> </span><span class="no">R4</span><span class="p">,</span><span class="w"> </span><span class="no">R5</span><span class="w">        </span><span class="c1">; R5 = R4 - R3</span>
-<span class="nf">MUL</span><span class="w"> </span><span class="no">$7</span><span class="p">,</span><span class="w"> </span><span class="no">R6</span><span class="w">            </span><span class="c1">; R6 *= 7                 $7 is a literal value 7</span>
-
-<span class="w">                      </span><span class="c1">; Memory operands</span>
-<span class="nf">MOV</span><span class="w"> </span><span class="p">(</span><span class="no">R1</span><span class="p">),</span><span class="w"> </span><span class="no">R2</span><span class="w">          </span><span class="c1">; R2 = *R1                register indirect</span>
-<span class="nf">MOV</span><span class="w"> </span><span class="mi">8</span><span class="p">(</span><span class="no">R3</span><span class="p">),</span><span class="w"> </span><span class="no">R4</span><span class="w">         </span><span class="c1">; R4 = *(8 + R3)          register indirect with offset</span>
-<span class="nf">MOV</span><span class="w"> </span><span class="mi">16</span><span class="p">(</span><span class="no">R5</span><span class="p">)(</span><span class="no">R6</span><span class="p">*</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="no">R7</span><span class="w">  </span><span class="c1">; R7 = *(16 + R5 + R6*1)  offset + reg1 + reg2*scale</span>
-<span class="nf">MOV</span><span class="w"> </span><span class="err">·</span><span class="no">mySum</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">R8</span><span class="w">    </span><span class="c1">; R8 = *mySum             access mySum global variable</span>
-
-<span class="w">                      </span><span class="c1">; Addresses</span>
-<span class="nf">MOV</span><span class="w"> </span><span class="no">$8</span><span class="p">(</span><span class="no">R1</span><span class="p">)(</span><span class="no">R2</span><span class="p">*</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="no">R3</span><span class="w">  </span><span class="c1">; R3 = 8 + R1 + R2</span>
-<span class="nf">MOV</span><span class="w"> </span><span class="no">$</span><span class="err">·</span><span class="no">mySum</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">R4</span><span class="w">   </span><span class="c1">; R4 = &amp;mySum             dollar sign takes the absolute address</span>
-</code></pre></div>
-
-<p>References:</p>
-<ul>
-<li><a href="https://www.youtube.com/watch?v=9jpnFmJr2PE">Dropping Down Go Functions in Assembly</a> by Michael Munday</li>
-<li><a href="https://go.dev/doc/asm">A Quick Guide to Go's Assembler</a></li>
-<li><a href="https://github.com/DataDog/go-profiler-notes/blob/main/stack-traces.md">Stack Traces in Go</a> by Felix Geisendörfer</li>
-<li><a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">Reducing Go Execution Tracer Overhead With Frame Pointer Unwinding</a> by Felix Geisendörfer</li>
-</ul><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">TEXT</span><span class="p">(</span><span class="s">&quot;Add&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;func(x …</span></code></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/assembler.html">assembler </a>
@@ -362,11 +397,9 @@ though I would like to finish this post with a cheat sheet taken from
 
 
 
-<p><a href="https://marselester.com/hello-world-in-avo.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/hello-world-in-avo.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/hello-world-in-avo.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

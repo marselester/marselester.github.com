@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - golang</title>
+    <title>Intro to SIMD in avo</title>
 
     <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/intro-to-simd-in-avo.html" rel="bookmark"
+        title="Permalink to Intro to SIMD in avo">Intro to SIMD in avo</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="https://marselester.com/intro-to-simd-in-avo.html"><h3 class="article-title">Intro to SIMD in avo</h3></a>
 <h6 class="subheader" title="2025-12-21T00:00:00+07:00">Sun 21 December 2025
 </h6>
 
 
-<p>In the previous post we wrote a <a href="https://marselester.com/hello-world-in-avo.html">Hello World in avo</a>.
+    <p>In the previous post we wrote a <a href="https://marselester.com/hello-world-in-avo.html">Hello World in avo</a>.
 Let's do something practical this time, e.g., related to performance
 since we go into all this trouble of writing Go assembly.
 You can find the code examples in
@@ -355,7 +357,8 @@ It's pretty neat that <code>AX</code> was reused by <code>avo</code> to store th
 <li><a href="https://github.com/mmcloughlin/avo">avo docs and examples</a> by Michael McLoughlin</li>
 <li><a href="https://sourcegraph.com/blog/slow-to-simd">From slow to SIMD: A Go optimization story</a> by Camden Cheek</li>
 <li><a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions">Advanced Vector Extensions</a></li>
-</ul><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+</ul>
+<p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/assembler.html">assembler </a>
@@ -365,238 +368,22 @@ It's pretty neat that <code>AX</code> was reused by <code>avo</code> to store th
 
 
 
-<p><a href="https://marselester.com/intro-to-simd-in-avo.html#disqus_thread">comments</a></p>            </article>
 
-
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/hello-world-in-avo.html"><h3 class="article-title">Hello World in avo 🥑</h3></a>
-<h6 class="subheader" title="2025-12-02T00:00:00+07:00">Tue 02 December 2025
-</h6>
-
-
-<p>Let's learn together how to write some Go assembly using <a href="https://github.com/mmcloughlin/avo">avo</a>
-aka writing assembly-like Go code to generate assembly.
-To make it more clear, here is an <a href="https://github.com/mmcloughlin/avo/tree/master/examples/add">avo program</a> <code>add/asm.go</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nx">asm</span><span class="w"> </span><span class="s">&quot;github.com/mmcloughlin/avo/build&quot;</span><span class="w"></span>
-
-<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">TEXT</span><span class="p">(</span><span class="s">&quot;Add&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;func(x …</span></code></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/assembler.html">assembler </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/hello-world-in-avo.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/hello-world-in-avo.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html"><h3 class="article-title">DIY CPU profiler: from BPF maps to pprof</h3></a>
-<h6 class="subheader" title="2022-10-20T00:00:00+07:00">Thu 20 October 2022
-</h6>
-
-
-<p><a href="https://marselester.com/continuous-profiling-in-go.html">In previous post</a>
-I had a DIY BPF profiler printing stack trace IDs of a given process,
-though they were not very helpful.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ sudo go run ./cmd/profiler/ -pid 15958</span>
-<span class="go">Waiting for stack traces...</span>
-<span class="go">{PID:15958 UserStackID:132 KernelStackID:114} seen 1 times</span>
-</code></pre></div>
-
-<p>Let's try to show more useful information …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/profiling.html">profiling </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/diy-cpu-profiler-from-bpf-maps-to-pprof.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/continuous-profiling-in-go.html"><h3 class="article-title">Continuous profiling in Go</h3></a>
-<h6 class="subheader" title="2022-04-22T00:00:00+07:00">Fri 22 April 2022
-</h6>
-
-
-<p>In this post I explore possibilities of continuous profiling of Go programs
-using Parca and also peek under the hood of its BPF agent.
-You can find the results of my experiments in
-<a href="https://github.com/marselester/diy-parca-agent">github.com/marselester/diy-parca-agent</a>.</p>
-<h2>Ad hoc profiling</h2>
-<p>I was looking for a way to profile Go programs …</p><p class="subheader">Category: <a href="https://marselester.com/category/profiler.html">Profiler</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="https://marselester.com/tag/profiling.html">profiling </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/continuous-profiling-in-go.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/continuous-profiling-in-go.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/bpf-go-program-in-kubernetes.html"><h3 class="article-title">BPF Go program in Kubernetes</h3></a>
-<h6 class="subheader" title="2021-11-17T00:00:00+07:00">Wed 17 November 2021
-</h6>
-
-
-<p>BPF opens a lot of possibilities of making observability tools running in Kubernetes.
-One can start with <a href="https://github.com/iovisor/bcc/tree/master/libbpf-tools">BCC libbpf-tools</a> written in C,
-e.g., launch tcpconnlat program and process its stdout with another program to
-detect cases when it took too long to establish a TCP connection.
-For example, <code>curl …</code></p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/bpf-go-program-in-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-program-in-kubernetes.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html"><h3 class="article-title">BPF: Go frontend for tcpconnect</h3></a>
-<h6 class="subheader" title="2021-11-01T00:00:00+07:00">Mon 01 November 2021
-</h6>
-
-
-<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">In the previos BPF post</a>
-I shared my experiment of writing Go frontend for execsnoop.
-Here I would like to focus on tcpconnect, a BCC tool to trace new TCP active connections.
-It is useful for determining who is connecting to whom.
-This works by tracing the <code>tcp_v4_connect()</code> and <code>tcp_v6_connect …</code></p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-frontend-for-tcpconnect.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html"><h3 class="article-title">BPF: Go frontend for execsnoop</h3></a>
-<h6 class="subheader" title="2021-10-26T00:00:00+07:00">Tue 26 October 2021
-</h6>
-
-
-<p>After reading Brendan Gregg's books about BPF I was excited to try and implement something in Go.
-At a first glance it turned out I would need to install LLVM, Clang, and kernel header dependencies to run a simple program.
-Fortunately <a href="https://www.brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html">BTF, CO-RE technologies</a>
-eliminate those dependencies though kernel &gt;=5 …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/bpf.html">bpf </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/bpf-go-frontend-for-execsnoop.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/bpf-go-frontend-for-execsnoop.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/how-to-structure-go-projects.html"><h3 class="article-title">How to Structure Go Projects</h3></a>
-<h6 class="subheader" title="2018-09-28T00:00:00+07:00">Fri 28 September 2018
-</h6>
-
-
-<p>I came to Go from Django where the framework defines project layout, thus I wanted to know
-how to structure my Go applications. After reading documentation and building a few Django projects,
-you get a clear mental picture, as most of the questions are already answered.
-That helps to keep …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/project-structure.html">project structure </a>
-    <a href="https://marselester.com/tag/domain-driven-design.html">Domain-Driven Design </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/how-to-structure-go-projects.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/how-to-structure-go-projects.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/prometheus-on-kubernetes.html"><h3 class="article-title">Prometheus on Kubernetes</h3></a>
-<h6 class="subheader" title="2016-11-13T00:00:00+07:00">Sun 13 November 2016
-</h6>
-
-
-<p><a class="reference external" href="https://prometheus.io/">Prometheus</a> is a monitoring toolkit.
-Let's set it up on Kubernetes and test how it works by scraping HTTP request metrics
-from <a class="reference external" href="https://github.com/marselester/prometheus-on-kubernetes">hello web application</a>
-which also runs in the same cluster.</p>
-<p>First of all, we need Kubernetes cluster running. It's easy to bootstrap one via <a class="reference external" href="https://console.cloud.google.com">Google Container Engine</a>.</p>
-<div class="highlight"><pre><span></span><span class="gp">$ </span>gcloud …</pre></div><p class="subheader">Category: <a href="https://marselester.com/category/infrastructure.html">Infrastructure</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/prometheus.html">prometheus </a>
-    <a href="https://marselester.com/tag/kubernetes.html">kubernetes </a>
-    <a href="https://marselester.com/tag/monitoring.html">monitoring </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/google-container-engine.html">Google Container Engine </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/prometheus-on-kubernetes.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/prometheus-on-kubernetes.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "intro-to-simd-in-avo.html";
+        var disqus_url = "https://marselester.com/intro-to-simd-in-avo.html";
+
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 
