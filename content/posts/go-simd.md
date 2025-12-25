@@ -49,7 +49,7 @@ see the calculations below.
                                           🏁
 ```
 
-With this in mind, let's implement it in Go assembly!
+With this in mind, let's implement it in Go assembler!
 
 ## Adding vectors
 
@@ -57,7 +57,7 @@ We can start small and just focus on adding 8 numbers.
 The first step is to create a dummy function `SumVec` and a corresponding test.
 It always returns zero no matter the input it gets.
 Note, we used `asm.XORQ(sum, sum)` to set the register associated with `sum` variable to zero.
-We'll see `Q` postfix quite often later on, it stands for quad word (8 bytes) on amd64.
+We'll see `Q` postfix quite often later on, it stands for quadword (8 bytes) on amd64.
 
 ```go
 //go:build ignore
@@ -81,7 +81,7 @@ func main() {
 
 <details>
 
-<summary>sum_test.go</summary>
+<summary>🔻 sum_test.go</summary>
 
 ```go
 package sum
@@ -99,6 +99,8 @@ func TestSumVec(t *testing.T) {
 ```
 
 </details>
+
+---
 
 Not surprisingly, the test fails as it expects the sum to be `36`.
 
@@ -153,11 +155,12 @@ Examining a generated Go assembly, we'll see `VMOVDQU (AX), Y0` instruction:
 - `VMOVDQU` stands for **V**ector **MOV**e **D**ouble **Q**uadword **U**naligned.
   It copies the `[1, 2, 3, 4]` elements from a possibly unaligned
   memory address stored in `AX` to vector register `Y0`.
-  Unaligned means not starting at a memory address that is a multiple of the vector's size.
+  Unaligned means not starting at a memory address that is a multiple of the vector's size in bytes.
   We don't use `VMOVDQA` (the aligned version) since we don't know
-  if the array's address is aligned to 256.
+  if the array's address is aligned to 32 bytes for YMM register (256 / 8 = 32).
 
   Despite its "double quadword" (128-bit vector) naming, the instruction is capable of moving 256 bits.
+
 - `(AX)` operand means use address from register `AX`.
   Its `avo` equivalent is `operand.Mem{Base: inputData}`.
 - `Y0` operand is a 256-bit vector register allocated by `vecLeft := asm.YMM()`
@@ -316,15 +319,15 @@ asm.VPSRLDQ(operand.U8(8), vecLeftLow, vecRightLow)
 asm.VPADDQ(vecLeftLow, vecRightLow, vecLeftLow)
 ```
 
-That's it, we got out final result `36` in the `X0 = [16, 36]` vector.
+That's it, we've got out final result `36` in the `X0 = [16, 36]` vector.
 We just need to somehow return it from the `SumVec` function 🤔.
 
-The cool thing about `VMOVQ` instruction is that it can copy the lower quad word
+The cool thing about `VMOVQ` instruction is that it can copy the lower quadword
 (our `36` value) from a vector to a scalar register like this `VMOVQ X0, AX`.
 Note, `VMOVQ Y0, AX` wouldn't work since a YMM operand isn't supported.
 
 These are the final lines of Go code that generate Go assembly.
-It's pretty neat that `AX` was reused by `avo` to store the `sum`.
+[The complete example](https://github.com/marselester/misc/tree/main/simd/go/intro/sumv2) is on GitHub.
 
 ```go
 sum := asm.GP64()
@@ -337,7 +340,7 @@ asm.Store(sum, asm.ReturnIndex(0))
 asm.RET()
 ```
 
-This time the tests should pass.
+This time the tests pass 🎉.
 
 ```console
 ﹩ go generate ./sum/asm.go && go test ./sum
@@ -346,10 +349,298 @@ ok  	myprog/sum	0.289s
 
 ## Working with larger arrays
 
-Coming soon...
+It would be even better if `SumVec` worked with larger than 8 items arrays (what two YMM registers could fit).
+We can use the sum of scalars approach when an array length is less than 8,
+and leverage the SIMD technique in a loop for bigger arrays.
+Oftentimes, we would have to use a scalar sum anyways to
+add up a tail of an array if its length isn't a multiple of 4,
+e.g., `[1, 2, 3, 4] + [5, 6, 7, 8] + 9 + 10` where `9, 10` is a tail.
+
+The function starts similarly: `inputData` points to an array, `inputLen` holds its length,
+and `sum` with `index` variables set to zero.
+
+<details>
+
+<summary>🔻 asm.go part #1</summary>
+
+```go
+inputData := asm.GP64()
+inputLen := asm.GP64()
+asm.Load(asm.Param("input").Base(), inputData)
+asm.Load(asm.Param("input").Len(), inputLen)
+
+sum := asm.GP64()
+index := asm.GP64()
+asm.XORQ(sum, sum)
+asm.XORQ(index, index)
+
+asm.CMPQ(inputLen, operand.U8(8))
+asm.JL(operand.LabelRef("scalar_loop"))
+```
+
+</details>
+
+---
+
+The new thing is `CMPQ` and `JL` instructions, they implement a fallback to a scalar sum:
+
+- `CMPQ CX, $0x08` means compare quadword `inputLen` to `8`
+-  `JL scalar_loop` means jump to a code block labeled `scalar_loop` if `inputLen` is less than `8`
+
+```go
+// CMPQ CX, $0x08
+asm.CMPQ(inputLen, operand.U8(8))
+// JL scalar_loop
+asm.JL(operand.LabelRef("scalar_loop"))
+```
+
+Otherwise, keep adding the YMM vectors in the loop as shown in this pseudocode.
+
+```go
+/*
+Y0 + Y1 = [1,   2,  3,  4] + [5,   6,  7,  8]
+Y0 + Y1 = [6,   8, 10, 12] + [9,  10, 11, 12]
+Y0 + Y1 = [15, 18, 21, 24] + [13, 14, 15, 16]
+  ...
+Y0 + Y1
+*/
+index := 0
+Y0 := inputData[index:index+4]
+for index += 4; index < loopEnd; index += 4 {
+    Y1 := inputData[index:index+4]
+    Y0 = Y0 + Y1
+}
+```
+
+<details>
+
+<summary>🔻 asm.go part #2</summary>
+
+```go
+vecLeft := asm.YMM()
+vecRight := asm.YMM()
+asm.VMOVDQU(operand.Mem{Base: inputData}, vecLeft)
+
+asm.Comment("loopEnd = inputLen - (inputLen % 4)")
+loopEnd := asm.GP64()
+asm.MOVQ(inputLen, loopEnd)
+asm.ANDQ(operand.I8(-4), loopEnd)
+
+asm.Label("vector_loop")
+{
+	asm.ADDQ(operand.U32(4), index)
+	asm.CMPQ(loopEnd, index)
+	asm.JLE(operand.LabelRef("vector_loop_end")) // Exit the vector loop.
+
+	asm.VMOVDQU(
+		operand.Mem{
+			Base:  inputData,
+			Index: index,
+			Scale: 8,
+		},
+		vecRight,
+	)
+	asm.VPADDQ(vecLeft, vecRight, vecLeft)
+
+	asm.JMP(operand.LabelRef("vector_loop"))
+}
+asm.Label("vector_loop_end")
+
+asm.Comment("Horizontal reduction.")
+{
+	vecRightLow := vecRight.AsX()
+	asm.VEXTRACTI128(operand.U8(1), vecLeft, vecRightLow)
+
+	vecLeftLow := vecLeft.AsX()
+	asm.VPADDQ(vecLeftLow, vecRightLow, vecLeftLow)
+
+	asm.VPSRLDQ(operand.U8(8), vecLeftLow, vecRightLow)
+	asm.VPADDQ(vecLeftLow, vecRightLow, vecLeftLow)
+
+	asm.VMOVQ(vecLeftLow, sum)
+
+	asm.VZEROUPPER()
+}
+
+asm.Comment("Set index = loopEnd to sum the tail of the array.")
+asm.MOVQ(loopEnd, index)
+```
+
+</details>
+
+---
+
+The loop end is calculated as `loopEnd = inputLen - (inputLen % 4)`, e.g.,
+if an array length is `9`, the `loopEnd` will be `8 = 9 - (9 % 4)`,
+so `Y1` register is always fully filled with 4 integers on each iteration.
+Since 4 is a power of 2, we can efficiently calculate (in 1 CPU cycle)
+the `loopEnd` using bitwise `9 AND -4` which rounds `9` down to `8`
+which is the nearest multiple of `4`.
+
+```go
+loopEnd := asm.GP64() // The loop end is stored in SI register.
+// MOVQ CX, SI
+asm.MOVQ(inputLen, loopEnd)
+// ANDQ $-4, SI
+asm.ANDQ(operand.I8(-4), loopEnd)
+```
+
+How does it work?
+All bits on the left side starting from the third bit are a multiple of 4.
+Two bits on the right side are the remainder.
+In the example below we have number 15 (`1111` in binary) that has a remainder 3 (`11` in binary).
+Therefore, we just need to get rid of last two bits in `inputLen` to calculate the `loopEnd`.
+
+```console
+#            4 3 2 1
+               ⬅️➡️
+bits:        1 1 1 1
+powers:      8 4 2 1
+   loopEnd = 12 | remainder = 3
+```
+
+Computers use [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement)
+method to represent integers, so `-4` is represented as `1111 1100` in binary
+(i.e., invert the bits of `4` then add `1`).
+That can be used to mask the remainder bits using `ANDQ` instruction.
+
+```console
+     4 = 0000 0100
+    ^4 = 1111 1011
+^4 + 1 = 1111 1100 = -4
+     9 = 0000 1001
+9 & -4 = 0000 1000 = 8
+```
+
+With that out of the way, let's look at the loop itself:
+
+- `vector_loop:` defines the `vector_loop` label which is a named memory location
+  that denotes the beginning of our loop.
+  We jump there unconditionally with `JMP vector_loop` at the end of the loop's body.
+- `ADDQ $0x00000004, BX` increments the array `index` by `4`
+- `CMPQ SI, BX` compares the `loopEnd` to the `index`
+- `JLE vector_loop_end` exits the loop by jumping to
+  the label `vector_loop_end` if the `loopEnd <= index`
+- `VMOVDQU (AX)(BX*8), Y1` like before loads a 256-bit chunk
+  from `inputData[index:index+4]` into the `Y1` register
+- `VPADDQ Y0, Y1, Y0` adds the vectors
+
+```asm
+vector_loop:
+	ADDQ    $0x00000004, BX
+	CMPQ    SI, BX
+	JLE     vector_loop_end
+	VMOVDQU (AX)(BX*8), Y1
+	VPADDQ  Y0, Y1, Y0
+	JMP     vector_loop
+
+vector_loop_end:
+```
+
+The assembly above was generated from this Go code.
+Note, I've used curly braces to make the code look nicer.
+
+```go
+asm.Label("vector_loop")
+{
+    asm.ADDQ(operand.U32(4), index)
+    asm.CMPQ(loopEnd, index)
+    asm.JLE(operand.LabelRef("vector_loop_end")) // Exit the loop.
+
+    asm.VMOVDQU(
+        operand.Mem{
+            Base:  inputData,
+            Index: index,
+            Scale: 8,
+        },
+        vecRight,
+    )
+    asm.VPADDQ(vecLeft, vecRight, vecLeft)
+
+    asm.JMP(operand.LabelRef("vector_loop"))
+}
+asm.Label("vector_loop_end")
+```
+
+The vector loop is followed by the horizontal reduction logic we've already seen before.
+There is a new instruction though — `VZEROUPPER`.
+It clears bits 128-255 in YMM registers.
+From what I understand, we should place it right after we're done using the SIMD instructions
+to prevent a potential [performance penalty](https://www.felixcloutier.com/x86/vzeroupper).
+
+```go
+vecRightLow := vecRight.AsX()
+asm.VEXTRACTI128(operand.U8(1), vecLeft, vecRightLow)
+
+vecLeftLow := vecLeft.AsX()
+asm.VPADDQ(vecLeftLow, vecRightLow, vecLeftLow)
+
+asm.VPSRLDQ(operand.U8(8), vecLeftLow, vecRightLow)
+asm.VPADDQ(vecLeftLow, vecRightLow, vecLeftLow)
+
+asm.VMOVQ(vecLeftLow, sum)
+
+asm.VZEROUPPER()
+```
+
+After the reduction, we need to summarize the tail of the array,
+so we set our array `index = loopEnd` to start the scalar loop
+from the end of the vector loop.
+
+```go
+// MOVQ SI, BX
+asm.MOVQ(loopEnd, index)
+```
+
+And here is the scalar loop itself.
+
+```go
+for index; index < inputLen; index++ {
+	sum += inputData[index]
+}
+```
+
+You'll notice that this loop resembles the vector loop,
+except that we've got `ADDQ` instead of `VPADDQ` instruction,
+and the `index` gets incremented by one instead of four.
+
+```go
+asm.Label("scalar_loop")
+{
+	asm.CMPQ(inputLen, index)
+	asm.JLE(operand.LabelRef("scalar_loop_end"))
+
+	asm.ADDQ(
+		operand.Mem{
+			Base:  inputData,
+			Index: index,
+			Scale: 8,
+		},
+		sum,
+	)
+	asm.INCQ(index)
+	asm.JMP(operand.LabelRef("scalar_loop"))
+}
+asm.Label("scalar_loop_end")
+```
+
+Finally, let's see how SIMD `SumVec` stacks up against a scalar `Sum` implementation.
+It's x2 faster on my machine.
+
+```console
+﹩ benchstat old.txt new.txt
+name    old time/op    new time/op    delta
+Sum-12    38.9µs ± 0%    17.8µs ± 2%  -54.23%  (p=0.000 n=8+10)
+```
+
+You can find the full code and benchmarks
+[here](https://github.com/marselester/misc/tree/main/simd/go/intro/sumv3).
+Cheers!
 
 References:
 
 - [avo docs and examples](https://github.com/mmcloughlin/avo) by Michael McLoughlin
 - [From slow to SIMD: A Go optimization story](https://sourcegraph.com/blog/slow-to-simd) by Camden Cheek
 - [Advanced Vector Extensions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions)
+- [Two's complement](https://en.wikipedia.org/wiki/Two%27s_complement)
+- [x86 and amd64 instruction reference](https://www.felixcloutier.com/x86/) by Félix Cloutier
