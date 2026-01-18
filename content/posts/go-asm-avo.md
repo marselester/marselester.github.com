@@ -160,6 +160,11 @@ Note, the assembler enforces `x+0(FP)`, `y+8(FP)`, and `ret+16(FP)` convention f
 rejecting plain `0(FP)` syntax.
 Therefore we must place an argument name at the beginning.
 
+It's worth mentioning that starting from Go 1.17 the compiler uses registers to pass arguments.
+Since we're implementing the function in assembly, the compiler defaults to using the stack to pass the arguments.
+
+---
+
 ```asm
 TEXT ·Add(SB), NOSPLIT, $0-24
 	MOVQ x+0(FP), AX
