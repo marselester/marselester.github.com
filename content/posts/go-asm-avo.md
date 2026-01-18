@@ -221,31 +221,31 @@ Therefore we can use positive offsets from hardware register `SP` on amd64 archi
 to refer to `fizz` as follows `8(SP)`.
 
 With a diagram of the Go stack everything should be a little more clear.
-Here we've got the top stack frame depicting the `Add` function call:
+Here we've got the stack frames depicting the `Add` function call:
 
 - the stack grows from high to low memory addresses
-- arguments are located above `FP`
-- local variables (if `Add` had them) would have been below `SP` pseudo-register
-  or above `SP` hardware register
+- `Add`'s arguments are located above `FP` in the caller's frame
 - return address is pushed on the stack by the caller, e.g., on architecture independent
   pseudo-instruction `CALL myprog∕add·Add(SB)`
-- caller's `RBP` register is saved as well as the frame pointer to link the stack frames
+- caller's `BP` register is saved on the stack as the frame pointer to link the stack frames
+  `PUSHQ BP`, and the stack pointer is moved to `BP` register `MOVQ SP, BP`
+- local variables (if `Add` had them) would have been below `SP` pseudo-register
+  or above `SP` hardware register
 
 ```console
 |          ...            | high address
-|      caller frame       |
-|          ...            |
-+-------------------------+
-| arguments, e.g.,        |
+| caller's variables      |
+|-------------------------|
+| callee's arguments:     |
 | ret+16(FP)              |
 | y+8(FP)                 |
 | x+0(FP)                 |  ⬆️
 |-------------------------|← FP pseudo-register
-| return address (PC)     |
-|-------------------------|
-| frame pointer (RBP)     |
+| return address (PC)     | CALL myprog∕add·Add(SB)
++-------------------------+
+| frame pointer (BP)      |
 |-------------------------|← SP pseudo-register
-| local variables, e.g.,  |  ⬇️
+| callee's variables      |  ⬇️
 | fizz-8(SP)              |
 | bazz-16(SP)             |  ⬆️
 +-------------------------+← SP hardware register (the top of the stack)
@@ -254,14 +254,13 @@ Here we've got the top stack frame depicting the `Add` function call:
 |          ...            | low address
 ```
 
-Zooming out we see the whole stack (just two stack frames in our case).
 By the way, we can [get a stack trace](https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/)
-if we follow the `RBP` hardware register's value:
+if we follow the `BP` hardware register's value:
 
 0. grab the current value of `PC` register
 1. get to the first frame pointer stored in the frame #1
 2. grab the return address of the caller that sits above the frame pointer
-3. proceed to the next frame pointer by following the value (caller's `RBP`)
+3. proceed to the next frame pointer by following the value (caller's `BP`)
    of the current frame pointer
 4. grab the return address above it
 5. end the stack walk since the current frame pointer's value is `0`
@@ -270,21 +269,17 @@ if we follow the `RBP` hardware register's value:
 
 ```console
     |          ...            |
-    +-------------------------+
-    | arguments               | stack frame #0 (caller) is at the bottom of the stack
-    |-------------------------|
-    | return address (PC)     |
-    |-------------------------|
+    +-------------------------+ stack frame #0 (caller)
  ↗- | frame pointer (0)       |
 |   |-------------------------|
 ↑   | local variables         |
-|   +-------------------------+
-↑   | arguments               | stack frame #1 (callee) is at the top of the stack
+|   |-------------------------|
+↑   | x, y arguments for Add  |
 |   |-------------------------|
 ↑   | return address (PC)     |
-|   |-------------------------|
- ↖_ | frame pointer (RBP)     |
-    |-------------------------|← RBP hardware register (starting point for unwinding frame pointers)
+|   +-------------------------+ stack frame #1 (callee)
+ ↖_ | frame pointer (BP)      |
+    |-------------------------|← BP hardware register (starting point for unwinding frame pointers)
     | local variables         |
     +-------------------------+
     |          ...            |

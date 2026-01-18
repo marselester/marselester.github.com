@@ -261,30 +261,30 @@ we would reference the hardware register <code>SP</code>.
 Therefore we can use positive offsets from hardware register <code>SP</code> on amd64 architecture
 to refer to <code>fizz</code> as follows <code>8(SP)</code>.</p>
 <p>With a diagram of the Go stack everything should be a little more clear.
-Here we've got the top stack frame depicting the <code>Add</code> function call:</p>
+Here we've got the stack frames depicting the <code>Add</code> function call:</p>
 <ul>
 <li>the stack grows from high to low memory addresses</li>
-<li>arguments are located above <code>FP</code></li>
-<li>local variables (if <code>Add</code> had them) would have been below <code>SP</code> pseudo-register
-  or above <code>SP</code> hardware register</li>
+<li><code>Add</code>'s arguments are located above <code>FP</code> in the caller's frame</li>
 <li>return address is pushed on the stack by the caller, e.g., on architecture independent
   pseudo-instruction <code>CALL myprog∕add·Add(SB)</code></li>
-<li>caller's <code>RBP</code> register is saved as well as the frame pointer to link the stack frames</li>
+<li>caller's <code>BP</code> register is saved on the stack as the frame pointer to link the stack frames
+  <code>PUSHQ BP</code>, and the stack pointer is moved to <code>BP</code> register <code>MOVQ SP, BP</code></li>
+<li>local variables (if <code>Add</code> had them) would have been below <code>SP</code> pseudo-register
+  or above <code>SP</code> hardware register</li>
 </ul>
 <div class="highlight"><pre><span></span><code><span class="go">|          ...            | high address</span>
-<span class="go">|      caller frame       |</span>
-<span class="go">|          ...            |</span>
-<span class="go">+-------------------------+</span>
-<span class="go">| arguments, e.g.,        |</span>
+<span class="go">| caller&#39;s variables      |</span>
+<span class="go">|-------------------------|</span>
+<span class="go">| callee&#39;s arguments:     |</span>
 <span class="go">| ret+16(FP)              |</span>
 <span class="go">| y+8(FP)                 |</span>
 <span class="go">| x+0(FP)                 |  ⬆️</span>
 <span class="go">|-------------------------|← FP pseudo-register</span>
-<span class="go">| return address (PC)     |</span>
-<span class="go">|-------------------------|</span>
-<span class="go">| frame pointer (RBP)     |</span>
+<span class="go">| return address (PC)     | CALL myprog∕add·Add(SB)</span>
+<span class="go">+-------------------------+</span>
+<span class="go">| frame pointer (BP)      |</span>
 <span class="go">|-------------------------|← SP pseudo-register</span>
-<span class="go">| local variables, e.g.,  |  ⬇️</span>
+<span class="go">| callee&#39;s variables      |  ⬇️</span>
 <span class="go">| fizz-8(SP)              |</span>
 <span class="go">| bazz-16(SP)             |  ⬆️</span>
 <span class="go">+-------------------------+← SP hardware register (the top of the stack)</span>
@@ -293,14 +293,13 @@ Here we've got the top stack frame depicting the <code>Add</code> function call:
 <span class="go">|          ...            | low address</span>
 </code></pre></div>
 
-<p>Zooming out we see the whole stack (just two stack frames in our case).
-By the way, we can <a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">get a stack trace</a>
-if we follow the <code>RBP</code> hardware register's value:</p>
+<p>By the way, we can <a href="https://blog.felixge.de/reducing-gos-execution-tracer-overhead-with-frame-pointer-unwinding/">get a stack trace</a>
+if we follow the <code>BP</code> hardware register's value:</p>
 <ol>
 <li>grab the current value of <code>PC</code> register</li>
 <li>get to the first frame pointer stored in the frame #1</li>
 <li>grab the return address of the caller that sits above the frame pointer</li>
-<li>proceed to the next frame pointer by following the value (caller's <code>RBP</code>)
+<li>proceed to the next frame pointer by following the value (caller's <code>BP</code>)
    of the current frame pointer</li>
 <li>grab the return address above it</li>
 <li>end the stack walk since the current frame pointer's value is <code>0</code></li>
@@ -308,21 +307,17 @@ if we follow the <code>RBP</code> hardware register's value:</p>
    we've collected, i.e., resolve those memory addresses to function names</li>
 </ol>
 <div class="highlight"><pre><span></span><code><span class="go">    |          ...            |</span>
-<span class="go">    +-------------------------+</span>
-<span class="go">    | arguments               | stack frame #0 (caller) is at the bottom of the stack</span>
-<span class="go">    |-------------------------|</span>
-<span class="go">    | return address (PC)     |</span>
-<span class="go">    |-------------------------|</span>
+<span class="go">    +-------------------------+ stack frame #0 (caller)</span>
 <span class="go"> ↗- | frame pointer (0)       |</span>
 <span class="go">|   |-------------------------|</span>
 <span class="go">↑   | local variables         |</span>
-<span class="go">|   +-------------------------+</span>
-<span class="go">↑   | arguments               | stack frame #1 (callee) is at the top of the stack</span>
+<span class="go">|   |-------------------------|</span>
+<span class="go">↑   | x, y arguments for Add  |</span>
 <span class="go">|   |-------------------------|</span>
 <span class="go">↑   | return address (PC)     |</span>
-<span class="go">|   |-------------------------|</span>
-<span class="go"> ↖_ | frame pointer (RBP)     |</span>
-<span class="go">    |-------------------------|← RBP hardware register (starting point for unwinding frame pointers)</span>
+<span class="go">|   +-------------------------+ stack frame #1 (callee)</span>
+<span class="go"> ↖_ | frame pointer (BP)      |</span>
+<span class="go">    |-------------------------|← BP hardware register (starting point for unwinding frame pointers)</span>
 <span class="go">    | local variables         |</span>
 <span class="go">    +-------------------------+</span>
 <span class="go">    |          ...            |</span>
