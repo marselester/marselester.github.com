@@ -152,7 +152,7 @@ asm.VMOVDQU(operand.Mem{Base: inputData}, vecLeft)
 
 Examining a generated Go assembly, we'll see `VMOVDQU (AX), Y0` instruction:
 
-- `VMOVDQU` stands for **V**ector **MOV**e **D**ouble **Q**uadword **U**naligned.
+- `VMOVDQU` stands for **V**ector Extension (VEX) **MOV**e **D**ouble **Q**uadword **U**naligned.
   It copies the `[1, 2, 3, 4]` elements from a possibly unaligned
   memory address stored in `AX` to vector register `Y0`.
   Unaligned means not starting at a memory address that is a multiple of the vector's size in bytes.
@@ -224,7 +224,7 @@ asm.VMOVDQU(
 
 Now we've got both vectors filled, we can finally add them up!
 It's done with `VPADDQ Y0, Y1, Y0` instruction which reads
-as **V**ector **P**acked **ADD** **Q**uadword, i.e., 64-bit elements of vectors `Y0` and `Y1` are added
+as **V**ector (VEX) **P**acked **ADD** **Q**uadword, i.e., 64-bit elements of vectors `Y0` and `Y1` are added
 and the result is stored in `Y0`.
 "Packed" signifies that the instruction operates on all the elements packed within the register,
 i.e., it is not a scalar operation.
@@ -241,21 +241,25 @@ Now `Y0` contains `[6, 8, 10, 12]`.
 We summarize the `Y0 = [6, 8, 10, 12]` vector by adding its halfes `[6, 8]` and `[10, 12]`.
 That's called a horizontal reduction summation.
 
+In reality `Y0` stores `[6, 8, 10, 12]` in the reverse order `[12, 10, 8, 6]`.
+So far it was convenient to think that a vector register stores our numbers
+in the same order as in the `input` slice.
+
 ```console
-[6,   8]
+[8,   6]
       +
-[10, 12]
+[12, 10]
       =
-[16, 20]
+[20, 16]
 ```
 
-To do that, we can copy its left half (bits 128-255) to a 128-bit XMM vector register `X1`
-using `VEXTRACTI128` (**V**ector **E**xtract **I**nteger **128**-bit) instruction.
+To do the summation, we can copy `Y0`'s left half (bits 128-255) to a 128-bit XMM vector register `X1`
+using `VEXTRACTI128` (**V**ector (VEX) **E**xtract **I**nteger **128**-bit) instruction.
 
 ```console
-Y0 = [6, 8, 10, 12]
-      ⬇️ ⬇️
-X1 = [6, 8]
+Y0 = [12, 10, 8, 6]
+      ⬇️  ⬇️
+X1 = [12, 10]
 ```
 
 The first operand `$0x01` in `VEXTRACTI128 $0x01, Y0, X1` is a control byte
@@ -270,13 +274,13 @@ vecRightLow := vecRight.AsX()
 asm.VEXTRACTI128(operand.U8(1), vecLeft, vecRightLow)
 ```
 
-Since `X0` represents the right half of `Y0`, we can add `X0` and `X1`
+Since `X0` represents the right half of `Y0` (bits 0-127), we can add `X0` and `X1`
 which by now contains the left half of `Y0`.
 
 ```console
-Y0 = [6, 8, 10, 12]
-      ⬇️ ⬇️ [10, 12] = X0
-X1 = [6, 8]
+Y0 = [12, 10, 8, 6]
+X0 =         [8, 6]
+X1 = [12, 10]
 ```
 
 Go code looks familiar.
@@ -287,26 +291,26 @@ vecLeftLow := vecLeft.AsX()
 asm.VPADDQ(vecLeftLow, vecRightLow, vecLeftLow)
 ```
 
-At this point `X0` contains `[16, 20]`.
+At this point `X0` contains `[20, 16]`.
 Our goal is to line up `16` with `20` to get our scalar result `36`.
-We can shift `16` right by 8 bytes since we're dealing with 64-bit integers.
+We can shift `20` right by 8 bytes since we're dealing with 64-bit integers.
 
 ```console
-Before: [16, 20]
+Before: [20, 16]
          ➡️
-After:  [    16] 20
+After:  [    20] 16
 ```
 
-The `VPSRLDQ $0x08, X0, X1` instruction does that, i.e., it shifts `X0` bits right,
+The `VPSRLDQ $0x08, X0, X1` instruction does that, i.e., it shifts `X0`'s bits to the right by 8 bytes,
 fills the empty space with zeros, and stores the result in `X1`.
 The addition instruction is the same `VPADDQ X0, X1, X0`.
 
 ```console
-[16, 20]    X0
+[20, 16]    X0
       +
-[0,  16]    X1
+[0,  20]    X1
       =
-[16, 36]    X0
+[20, 36]    X0
      🏁
 ```
 
@@ -319,10 +323,10 @@ asm.VPSRLDQ(operand.U8(8), vecLeftLow, vecRightLow)
 asm.VPADDQ(vecLeftLow, vecRightLow, vecLeftLow)
 ```
 
-That's it, we've got out final result `36` in the `X0 = [16, 36]` vector.
+That's it, we've got out final result `36` in the `X0 = [20, 36]` vector.
 We just need to somehow return it from the `SumVec` function 🤔.
 
-The cool thing about `VMOVQ` instruction is that it can copy the lower quadword
+The cool thing about `VMOVQ` instruction is that it can copy the lower quadword (bits 0-63)
 (our `36` value) from a vector to a scalar register like this `VMOVQ X0, AX`.
 Note, `VMOVQ Y0, AX` wouldn't work since a YMM operand isn't supported.
 
@@ -585,7 +589,8 @@ asm.VZEROUPPER()
 
 After the reduction, we need to summarize the tail of the array,
 so we set our array `index = loopEnd` to start the scalar loop
-from the end of the vector loop.
+from the end of the vector loop. Actually, `index` is always equal to `loopEnd`
+at the end of the vector loop, but we can keep this instruction for clarity.
 
 ```go
 // MOVQ SI, BX

@@ -323,7 +323,7 @@ into general-purpose registers &lt;code&gt;AX&lt;/code&gt; and &lt;code&gt;CX&lt
 
 &lt;p&gt;Examining a generated Go assembly, we'll see &lt;code&gt;VMOVDQU (AX), Y0&lt;/code&gt; instruction:&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;&lt;code&gt;VMOVDQU&lt;/code&gt; stands for &lt;strong&gt;V&lt;/strong&gt;ector &lt;strong&gt;MOV&lt;/strong&gt;e &lt;strong&gt;D&lt;/strong&gt;ouble &lt;strong&gt;Q&lt;/strong&gt;uadword &lt;strong&gt;U&lt;/strong&gt;naligned.
+&lt;li&gt;&lt;code&gt;VMOVDQU&lt;/code&gt; stands for &lt;strong&gt;V&lt;/strong&gt;ector Extension (VEX) &lt;strong&gt;MOV&lt;/strong&gt;e &lt;strong&gt;D&lt;/strong&gt;ouble &lt;strong&gt;Q&lt;/strong&gt;uadword &lt;strong&gt;U&lt;/strong&gt;naligned.
   It copies the &lt;code&gt;[1, 2, 3, 4]&lt;/code&gt; elements from a possibly unaligned
   memory address stored in &lt;code&gt;AX&lt;/code&gt; to vector register &lt;code&gt;Y0&lt;/code&gt;.
   Unaligned means not starting at a memory address that is a multiple of the vector's size in bytes.
@@ -390,7 +390,7 @@ Note, &lt;code&gt;operand.U64(4)&lt;/code&gt; would also work.&lt;/p&gt;
 
 &lt;p&gt;Now we've got both vectors filled, we can finally add them up!
 It's done with &lt;code&gt;VPADDQ Y0, Y1, Y0&lt;/code&gt; instruction which reads
-as &lt;strong&gt;V&lt;/strong&gt;ector &lt;strong&gt;P&lt;/strong&gt;acked &lt;strong&gt;ADD&lt;/strong&gt; &lt;strong&gt;Q&lt;/strong&gt;uadword, i.e., 64-bit elements of vectors &lt;code&gt;Y0&lt;/code&gt; and &lt;code&gt;Y1&lt;/code&gt; are added
+as &lt;strong&gt;V&lt;/strong&gt;ector (VEX) &lt;strong&gt;P&lt;/strong&gt;acked &lt;strong&gt;ADD&lt;/strong&gt; &lt;strong&gt;Q&lt;/strong&gt;uadword, i.e., 64-bit elements of vectors &lt;code&gt;Y0&lt;/code&gt; and &lt;code&gt;Y1&lt;/code&gt; are added
 and the result is stored in &lt;code&gt;Y0&lt;/code&gt;.
 "Packed" signifies that the instruction operates on all the elements packed within the register,
 i.e., it is not a scalar operation.&lt;/p&gt;
@@ -402,18 +402,21 @@ i.e., it is not a scalar operation.&lt;/p&gt;
 &lt;h2&gt;Adding half-vectors&lt;/h2&gt;
 &lt;p&gt;We summarize the &lt;code&gt;Y0 = [6, 8, 10, 12]&lt;/code&gt; vector by adding its halfes &lt;code&gt;[6, 8]&lt;/code&gt; and &lt;code&gt;[10, 12]&lt;/code&gt;.
 That's called a horizontal reduction summation.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;[6,   8]&lt;/span&gt;
+&lt;p&gt;In reality &lt;code&gt;Y0&lt;/code&gt; stores &lt;code&gt;[6, 8, 10, 12]&lt;/code&gt; in the reverse order &lt;code&gt;[12, 10, 8, 6]&lt;/code&gt;.
+So far it was convenient to think that a vector register stores our numbers
+in the same order as in the &lt;code&gt;input&lt;/code&gt; slice.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;[8,   6]&lt;/span&gt;
 &lt;span class="go"&gt;      +&lt;/span&gt;
-&lt;span class="go"&gt;[10, 12]&lt;/span&gt;
+&lt;span class="go"&gt;[12, 10]&lt;/span&gt;
 &lt;span class="go"&gt;      =&lt;/span&gt;
-&lt;span class="go"&gt;[16, 20]&lt;/span&gt;
+&lt;span class="go"&gt;[20, 16]&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;To do that, we can copy its left half (bits 128-255) to a 128-bit XMM vector register &lt;code&gt;X1&lt;/code&gt;
-using &lt;code&gt;VEXTRACTI128&lt;/code&gt; (&lt;strong&gt;V&lt;/strong&gt;ector &lt;strong&gt;E&lt;/strong&gt;xtract &lt;strong&gt;I&lt;/strong&gt;nteger &lt;strong&gt;128&lt;/strong&gt;-bit) instruction.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Y0 = [6, 8, 10, 12]&lt;/span&gt;
-&lt;span class="go"&gt;      ⬇️ ⬇️&lt;/span&gt;
-&lt;span class="go"&gt;X1 = [6, 8]&lt;/span&gt;
+&lt;p&gt;To do the summation, we can copy &lt;code&gt;Y0&lt;/code&gt;'s left half (bits 128-255) to a 128-bit XMM vector register &lt;code&gt;X1&lt;/code&gt;
+using &lt;code&gt;VEXTRACTI128&lt;/code&gt; (&lt;strong&gt;V&lt;/strong&gt;ector (VEX) &lt;strong&gt;E&lt;/strong&gt;xtract &lt;strong&gt;I&lt;/strong&gt;nteger &lt;strong&gt;128&lt;/strong&gt;-bit) instruction.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Y0 = [12, 10, 8, 6]&lt;/span&gt;
+&lt;span class="go"&gt;      ⬇️  ⬇️&lt;/span&gt;
+&lt;span class="go"&gt;X1 = [12, 10]&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;The first operand &lt;code&gt;$0x01&lt;/code&gt; in &lt;code&gt;VEXTRACTI128 $0x01, Y0, X1&lt;/code&gt; is a control byte
@@ -426,11 +429,11 @@ which is the lower portion of &lt;code&gt;vecRight&lt;/code&gt; register).&lt;/p
 &lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VEXTRACTI128&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;operand&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;U8&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeft&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRightLow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;Since &lt;code&gt;X0&lt;/code&gt; represents the right half of &lt;code&gt;Y0&lt;/code&gt;, we can add &lt;code&gt;X0&lt;/code&gt; and &lt;code&gt;X1&lt;/code&gt;
+&lt;p&gt;Since &lt;code&gt;X0&lt;/code&gt; represents the right half of &lt;code&gt;Y0&lt;/code&gt; (bits 0-127), we can add &lt;code&gt;X0&lt;/code&gt; and &lt;code&gt;X1&lt;/code&gt;
 which by now contains the left half of &lt;code&gt;Y0&lt;/code&gt;.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Y0 = [6, 8, 10, 12]&lt;/span&gt;
-&lt;span class="go"&gt;      ⬇️ ⬇️ [10, 12] = X0&lt;/span&gt;
-&lt;span class="go"&gt;X1 = [6, 8]&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Y0 = [12, 10, 8, 6]&lt;/span&gt;
+&lt;span class="go"&gt;X0 =         [8, 6]&lt;/span&gt;
+&lt;span class="go"&gt;X1 = [12, 10]&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Go code looks familiar.&lt;/p&gt;
@@ -439,22 +442,22 @@ which by now contains the left half of &lt;code&gt;Y0&lt;/code&gt;.&lt;/p&gt;
 &lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VPADDQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRightLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;At this point &lt;code&gt;X0&lt;/code&gt; contains &lt;code&gt;[16, 20]&lt;/code&gt;.
+&lt;p&gt;At this point &lt;code&gt;X0&lt;/code&gt; contains &lt;code&gt;[20, 16]&lt;/code&gt;.
 Our goal is to line up &lt;code&gt;16&lt;/code&gt; with &lt;code&gt;20&lt;/code&gt; to get our scalar result &lt;code&gt;36&lt;/code&gt;.
-We can shift &lt;code&gt;16&lt;/code&gt; right by 8 bytes since we're dealing with 64-bit integers.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Before: [16, 20]&lt;/span&gt;
+We can shift &lt;code&gt;20&lt;/code&gt; right by 8 bytes since we're dealing with 64-bit integers.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;Before: [20, 16]&lt;/span&gt;
 &lt;span class="go"&gt;         ➡️&lt;/span&gt;
-&lt;span class="go"&gt;After:  [    16] 20&lt;/span&gt;
+&lt;span class="go"&gt;After:  [    20] 16&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;The &lt;code&gt;VPSRLDQ $0x08, X0, X1&lt;/code&gt; instruction does that, i.e., it shifts &lt;code&gt;X0&lt;/code&gt; bits right,
+&lt;p&gt;The &lt;code&gt;VPSRLDQ $0x08, X0, X1&lt;/code&gt; instruction does that, i.e., it shifts &lt;code&gt;X0&lt;/code&gt;'s bits to the right by 8 bytes,
 fills the empty space with zeros, and stores the result in &lt;code&gt;X1&lt;/code&gt;.
 The addition instruction is the same &lt;code&gt;VPADDQ X0, X1, X0&lt;/code&gt;.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;[16, 20]    X0&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;[20, 16]    X0&lt;/span&gt;
 &lt;span class="go"&gt;      +&lt;/span&gt;
-&lt;span class="go"&gt;[0,  16]    X1&lt;/span&gt;
+&lt;span class="go"&gt;[0,  20]    X1&lt;/span&gt;
 &lt;span class="go"&gt;      =&lt;/span&gt;
-&lt;span class="go"&gt;[16, 36]    X0&lt;/span&gt;
+&lt;span class="go"&gt;[20, 36]    X0&lt;/span&gt;
 &lt;span class="go"&gt;     🏁&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
@@ -465,9 +468,9 @@ The addition instruction is the same &lt;code&gt;VPADDQ X0, X1, X0&lt;/code&gt;.
 &lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;VPADDQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecRightLow&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;vecLeftLow&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;That's it, we've got out final result &lt;code&gt;36&lt;/code&gt; in the &lt;code&gt;X0 = [16, 36]&lt;/code&gt; vector.
+&lt;p&gt;That's it, we've got out final result &lt;code&gt;36&lt;/code&gt; in the &lt;code&gt;X0 = [20, 36]&lt;/code&gt; vector.
 We just need to somehow return it from the &lt;code&gt;SumVec&lt;/code&gt; function 🤔.&lt;/p&gt;
-&lt;p&gt;The cool thing about &lt;code&gt;VMOVQ&lt;/code&gt; instruction is that it can copy the lower quadword
+&lt;p&gt;The cool thing about &lt;code&gt;VMOVQ&lt;/code&gt; instruction is that it can copy the lower quadword (bits 0-63)
 (our &lt;code&gt;36&lt;/code&gt; value) from a vector to a scalar register like this &lt;code&gt;VMOVQ X0, AX&lt;/code&gt;.
 Note, &lt;code&gt;VMOVQ Y0, AX&lt;/code&gt; wouldn't work since a YMM operand isn't supported.&lt;/p&gt;
 &lt;p&gt;These are the final lines of Go code that generate Go assembly.
@@ -710,7 +713,8 @@ to prevent a potential &lt;a href="https://www.felixcloutier.com/x86/vzeroupper"
 
 &lt;p&gt;After the reduction, we need to summarize the tail of the array,
 so we set our array &lt;code&gt;index = loopEnd&lt;/code&gt; to start the scalar loop
-from the end of the vector loop.&lt;/p&gt;
+from the end of the vector loop. Actually, &lt;code&gt;index&lt;/code&gt; is always equal to &lt;code&gt;loopEnd&lt;/code&gt;
+at the end of the vector loop, but we can keep this instruction for clarity.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;// MOVQ SI, BX&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;span class="nx"&gt;asm&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;MOVQ&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;loopEnd&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;index&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;

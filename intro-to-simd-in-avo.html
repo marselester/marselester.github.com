@@ -189,7 +189,7 @@ into general-purpose registers <code>AX</code> and <code>CX</code> assigned by <
 
 <p>Examining a generated Go assembly, we'll see <code>VMOVDQU (AX), Y0</code> instruction:</p>
 <ul>
-<li><code>VMOVDQU</code> stands for <strong>V</strong>ector <strong>MOV</strong>e <strong>D</strong>ouble <strong>Q</strong>uadword <strong>U</strong>naligned.
+<li><code>VMOVDQU</code> stands for <strong>V</strong>ector Extension (VEX) <strong>MOV</strong>e <strong>D</strong>ouble <strong>Q</strong>uadword <strong>U</strong>naligned.
   It copies the <code>[1, 2, 3, 4]</code> elements from a possibly unaligned
   memory address stored in <code>AX</code> to vector register <code>Y0</code>.
   Unaligned means not starting at a memory address that is a multiple of the vector's size in bytes.
@@ -256,7 +256,7 @@ Note, <code>operand.U64(4)</code> would also work.</p>
 
 <p>Now we've got both vectors filled, we can finally add them up!
 It's done with <code>VPADDQ Y0, Y1, Y0</code> instruction which reads
-as <strong>V</strong>ector <strong>P</strong>acked <strong>ADD</strong> <strong>Q</strong>uadword, i.e., 64-bit elements of vectors <code>Y0</code> and <code>Y1</code> are added
+as <strong>V</strong>ector (VEX) <strong>P</strong>acked <strong>ADD</strong> <strong>Q</strong>uadword, i.e., 64-bit elements of vectors <code>Y0</code> and <code>Y1</code> are added
 and the result is stored in <code>Y0</code>.
 "Packed" signifies that the instruction operates on all the elements packed within the register,
 i.e., it is not a scalar operation.</p>
@@ -268,18 +268,21 @@ i.e., it is not a scalar operation.</p>
 <h2>Adding half-vectors</h2>
 <p>We summarize the <code>Y0 = [6, 8, 10, 12]</code> vector by adding its halfes <code>[6, 8]</code> and <code>[10, 12]</code>.
 That's called a horizontal reduction summation.</p>
-<div class="highlight"><pre><span></span><code><span class="go">[6,   8]</span>
+<p>In reality <code>Y0</code> stores <code>[6, 8, 10, 12]</code> in the reverse order <code>[12, 10, 8, 6]</code>.
+So far it was convenient to think that a vector register stores our numbers
+in the same order as in the <code>input</code> slice.</p>
+<div class="highlight"><pre><span></span><code><span class="go">[8,   6]</span>
 <span class="go">      +</span>
-<span class="go">[10, 12]</span>
+<span class="go">[12, 10]</span>
 <span class="go">      =</span>
-<span class="go">[16, 20]</span>
+<span class="go">[20, 16]</span>
 </code></pre></div>
 
-<p>To do that, we can copy its left half (bits 128-255) to a 128-bit XMM vector register <code>X1</code>
-using <code>VEXTRACTI128</code> (<strong>V</strong>ector <strong>E</strong>xtract <strong>I</strong>nteger <strong>128</strong>-bit) instruction.</p>
-<div class="highlight"><pre><span></span><code><span class="go">Y0 = [6, 8, 10, 12]</span>
-<span class="go">      ⬇️ ⬇️</span>
-<span class="go">X1 = [6, 8]</span>
+<p>To do the summation, we can copy <code>Y0</code>'s left half (bits 128-255) to a 128-bit XMM vector register <code>X1</code>
+using <code>VEXTRACTI128</code> (<strong>V</strong>ector (VEX) <strong>E</strong>xtract <strong>I</strong>nteger <strong>128</strong>-bit) instruction.</p>
+<div class="highlight"><pre><span></span><code><span class="go">Y0 = [12, 10, 8, 6]</span>
+<span class="go">      ⬇️  ⬇️</span>
+<span class="go">X1 = [12, 10]</span>
 </code></pre></div>
 
 <p>The first operand <code>$0x01</code> in <code>VEXTRACTI128 $0x01, Y0, X1</code> is a control byte
@@ -292,11 +295,11 @@ which is the lower portion of <code>vecRight</code> register).</p>
 <span class="nx">asm</span><span class="p">.</span><span class="nx">VEXTRACTI128</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
 </code></pre></div>
 
-<p>Since <code>X0</code> represents the right half of <code>Y0</code>, we can add <code>X0</code> and <code>X1</code>
+<p>Since <code>X0</code> represents the right half of <code>Y0</code> (bits 0-127), we can add <code>X0</code> and <code>X1</code>
 which by now contains the left half of <code>Y0</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="go">Y0 = [6, 8, 10, 12]</span>
-<span class="go">      ⬇️ ⬇️ [10, 12] = X0</span>
-<span class="go">X1 = [6, 8]</span>
+<div class="highlight"><pre><span></span><code><span class="go">Y0 = [12, 10, 8, 6]</span>
+<span class="go">X0 =         [8, 6]</span>
+<span class="go">X1 = [12, 10]</span>
 </code></pre></div>
 
 <p>Go code looks familiar.</p>
@@ -305,22 +308,22 @@ which by now contains the left half of <code>Y0</code>.</p>
 <span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
 </code></pre></div>
 
-<p>At this point <code>X0</code> contains <code>[16, 20]</code>.
+<p>At this point <code>X0</code> contains <code>[20, 16]</code>.
 Our goal is to line up <code>16</code> with <code>20</code> to get our scalar result <code>36</code>.
-We can shift <code>16</code> right by 8 bytes since we're dealing with 64-bit integers.</p>
-<div class="highlight"><pre><span></span><code><span class="go">Before: [16, 20]</span>
+We can shift <code>20</code> right by 8 bytes since we're dealing with 64-bit integers.</p>
+<div class="highlight"><pre><span></span><code><span class="go">Before: [20, 16]</span>
 <span class="go">         ➡️</span>
-<span class="go">After:  [    16] 20</span>
+<span class="go">After:  [    20] 16</span>
 </code></pre></div>
 
-<p>The <code>VPSRLDQ $0x08, X0, X1</code> instruction does that, i.e., it shifts <code>X0</code> bits right,
+<p>The <code>VPSRLDQ $0x08, X0, X1</code> instruction does that, i.e., it shifts <code>X0</code>'s bits to the right by 8 bytes,
 fills the empty space with zeros, and stores the result in <code>X1</code>.
 The addition instruction is the same <code>VPADDQ X0, X1, X0</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="go">[16, 20]    X0</span>
+<div class="highlight"><pre><span></span><code><span class="go">[20, 16]    X0</span>
 <span class="go">      +</span>
-<span class="go">[0,  16]    X1</span>
+<span class="go">[0,  20]    X1</span>
 <span class="go">      =</span>
-<span class="go">[16, 36]    X0</span>
+<span class="go">[20, 36]    X0</span>
 <span class="go">     🏁</span>
 </code></pre></div>
 
@@ -331,9 +334,9 @@ The addition instruction is the same <code>VPADDQ X0, X1, X0</code>.</p>
 <span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
 </code></pre></div>
 
-<p>That's it, we've got out final result <code>36</code> in the <code>X0 = [16, 36]</code> vector.
+<p>That's it, we've got out final result <code>36</code> in the <code>X0 = [20, 36]</code> vector.
 We just need to somehow return it from the <code>SumVec</code> function 🤔.</p>
-<p>The cool thing about <code>VMOVQ</code> instruction is that it can copy the lower quadword
+<p>The cool thing about <code>VMOVQ</code> instruction is that it can copy the lower quadword (bits 0-63)
 (our <code>36</code> value) from a vector to a scalar register like this <code>VMOVQ X0, AX</code>.
 Note, <code>VMOVQ Y0, AX</code> wouldn't work since a YMM operand isn't supported.</p>
 <p>These are the final lines of Go code that generate Go assembly.
@@ -576,7 +579,8 @@ to prevent a potential <a href="https://www.felixcloutier.com/x86/vzeroupper">pe
 
 <p>After the reduction, we need to summarize the tail of the array,
 so we set our array <code>index = loopEnd</code> to start the scalar loop
-from the end of the vector loop.</p>
+from the end of the vector loop. Actually, <code>index</code> is always equal to <code>loopEnd</code>
+at the end of the vector loop, but we can keep this instruction for clarity.</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// MOVQ SI, BX</span><span class="w"></span>
 <span class="nx">asm</span><span class="p">.</span><span class="nx">MOVQ</span><span class="p">(</span><span class="nx">loopEnd</span><span class="p">,</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
 </code></pre></div>
