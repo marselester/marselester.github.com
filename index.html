@@ -51,6 +51,214 @@
         
 
             <article>
+                <a href="https://marselester.com/go-archsimd-preview.html"><h3 class="article-title">Go archsimd preview</h3></a>
+<h6 class="subheader" title="2026-01-23T00:00:00+07:00">Fri 23 January 2026
+</h6>
+
+
+<p>In <a href="https://marselester.com/intro-to-simd-in-avo.html">the previous post</a>
+we've implemented SIMD sum in Go assembly <code>[1, 2, 3, 4] + [5, 6, 7, 8]</code>.
+This is going to be much easier to do in Go 1.26 because of
+<a href="https://pkg.go.dev/simd/archsimd">simd/archsimd</a> package,
+see <a href="https://github.com/golang/go/issues/73787">#73787</a> proposal.
+So far the package provides access to amd64-specific SIMD operations.</p>
+<p>Let's give it a go and implement the same <code>func SumVec(input []int64) int64</code>
+keeping it close to an already familiar assembly code
+<a href="https://github.com/marselester/misc/blob/main/simd/go/intro/sumv3/sum.s">sumv3/sum.s</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">//go:noinline</span><span class="w"></span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">SumVec</span><span class="p">(</span><span class="nx">input</span><span class="w"> </span><span class="p">[]</span><span class="kt">int64</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">sum</span><span class="w"> </span><span class="kt">int64</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">    </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// If we can&#39;t use two YMM vectors, fallback to a scalar sum.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Otherwise keep adding YMM vectors in the vector loop.</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">8</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">y0</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4Slice</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="nx">loopEnd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">inputLen</span><span class="o">%</span><span class="mi">4</span><span class="w"></span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nx">y1</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4Slice</span><span class="p">(</span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">i</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span><span class="w"></span>
+<span class="w">            </span><span class="nx">y0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">y1</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">        </span><span class="c1">// Horizontal reduction.</span><span class="w"></span>
+<span class="w">        </span><span class="nx">x0</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">GetHi</span><span class="p">()</span><span class="w"></span>
+<span class="w">        </span><span class="nx">x1</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">GetLo</span><span class="p">()</span><span class="w"></span>
+<span class="w">        </span><span class="nx">x0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">x0</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">x1</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="nx">sum</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">x0</span><span class="p">.</span><span class="nx">GetElem</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">x0</span><span class="p">.</span><span class="nx">GetElem</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// Summarize what we couldn&#39;t with SIMD.</span><span class="w"></span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">inputLen</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">sum</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>The most interesting part is of course the SIMD operations, i.e.,
+everything in <code>if inputLen &gt;= 8 { ... }</code> branch:</p>
+<ul>
+<li><code>y0 := archsimd.LoadInt64x4Slice(input)</code> loads the first four <code>int64</code>s from the <code>input []int64</code> slice,
+  e.g., <code>1, 2, 3, 4</code>.
+  Our 256-bit SIMD vector <code>y0</code> is represented by <a href="https://pkg.go.dev/simd/archsimd#Int64x4">Int64x4</a> type.</li>
+<li><code>loopEnd := inputLen - inputLen%4</code> calculates the slice index beyoud which we mustn't iterate, e.g.,
+  if a slice length is <code>9</code>, the <code>loopEnd</code> will be <code>8 = 9 - (9 % 4)</code>,
+  so <code>y1</code> vector register is always fully filled with 4 integers on each iteration.</li>
+<li><code>y1 := archsimd.LoadInt64x4Slice(input[i : i+4])</code> loads a next batch of 4 integers
+  into <code>y1</code> 256-bit SIMD register, e.g., <code>y1 = [5, 6, 7, 8]</code>.</li>
+<li><code>y0 = y0.Add(y1)</code> adds corresponding elements of two vectors, e.g.,
+  <code>y0 = y0 + y1 = [1, 2, 3, 4] + [5, 6, 7, 8] = [6, 8, 10, 12]</code>.</li>
+<li><code>x0 := y0.GetHi()</code> returns the upper half of <code>y0</code> register, e.g., <code>[10, 12]</code>,
+  represented by 128-bit SIMD register <code>x0</code>, see <a href="https://pkg.go.dev/simd/archsimd#Int64x2">Int64x2</a>.</li>
+<li><code>x1 := y0.GetLo()</code> returns the lower half of register <code>y0 = [6, 8, 10, 12]</code>, e.g., <code>[6,  8]</code>.
+  It sounds a bit confusing that the lower half (right side) isn't <code>[10, 12]</code>.
+  The thing is that those 4 numbers are stored in the register in "reverse order", e.g., <code>[12, 10, 8, 6]</code>.</li>
+<li><code>x0 = x0.Add(x1)</code> adds corresponding elements of two XMM registers, e.g.,
+  <code>x0 = x0 + x1 = [10, 12] + [6, 8] = [16, 20]</code></li>
+<li><code>sum = x0.GetElem(0) + x0.GetElem(1)</code> wraps up the horizontal reduction summation
+  by adding two scalars <code>16 + 20</code>. They were retrieved using <code>VPEXTRQ</code> instructions.</li>
+</ul>
+<p>I am curious to see what assembly instructions were used by the compiler.
+Go 1.26 RC2 can give us a sneak peek.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ go install golang.org/dl/go1.26rc2@latest</span>
+<span class="go">﹩ go1.26rc2 download</span>
+<span class="go">﹩ GOEXPERIMENT=simd go1.26rc2 build -gcflags -S ./sumv4/</span>
+</code></pre></div>
+
+<details>
+
+<summary>🔻 TEXT intro/sumv4.SumVec</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="err">00000</span><span class="w">   </span><span class="nf">TEXT</span><span class="w"> </span><span class="no">intro</span><span class="err">/</span><span class="no">sumv4.SumVec</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">NOSPLIT</span><span class="err">|</span><span class="no">ABIInternal</span><span class="p">,</span><span class="w"> </span><span class="no">$8-24</span><span class="w"></span>
+<span class="err">00000</span><span class="w">   </span><span class="nf">PUSHQ</span><span class="w">   </span><span class="no">BP</span><span class="w"></span>
+<span class="err">00001</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">SP</span><span class="p">,</span><span class="w"> </span><span class="no">BP</span><span class="w"></span>
+<span class="err">00004</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">intro</span><span class="err">/</span><span class="no">sumv4.input</span><span class="err">+</span><span class="mi">16</span><span class="p">(</span><span class="no">FP</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">FUNCDATA</span><span class="w">    </span><span class="no">$0</span><span class="p">,</span><span class="w"> </span><span class="no">gclocals</span><span class="err">·</span><span class="no">wvjpxkknJ4nY1JtrArJJaw</span><span class="err">==</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">FUNCDATA</span><span class="w">    </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">gclocals</span><span class="err">·</span><span class="no">J26BEvPExEQhJvjp9E8Whg</span><span class="err">==</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">FUNCDATA</span><span class="w">    </span><span class="no">$5</span><span class="p">,</span><span class="w"> </span><span class="no">intro</span><span class="err">/</span><span class="no">sumv4.SumVec.arginfo1</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">FUNCDATA</span><span class="w">    </span><span class="no">$6</span><span class="p">,</span><span class="w"> </span><span class="no">intro</span><span class="err">/</span><span class="no">sumv4.SumVec.argliveinfo</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">PCDATA</span><span class="w">  </span><span class="no">$3</span><span class="p">,</span><span class="w"> </span><span class="no">$1</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">$8</span><span class="w"></span>
+<span class="err">00013</span><span class="w">   </span><span class="nf">JLT</span><span class="w">     </span><span class="mi">39</span><span class="w"></span>
+<span class="err">00015</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00018</span><span class="w">   </span><span class="nf">ANDL</span><span class="w">    </span><span class="no">$3</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00021</span><span class="w">   </span><span class="nf">XCHGL</span><span class="w">   </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="err">00022</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">SI</span><span class="w"></span>
+<span class="err">00025</span><span class="w">   </span><span class="nf">SUBQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00028</span><span class="w">   </span><span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">AX</span><span class="p">),</span><span class="w"> </span><span class="no">Y0</span><span class="w"></span>
+<span class="err">00032</span><span class="w">   </span><span class="nf">MOVL</span><span class="w">    </span><span class="no">$4</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00037</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">87</span><span class="w"></span>
+<span class="err">00039</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="err">00041</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00043</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">52</span><span class="w"></span>
+<span class="err">00045</span><span class="w">   </span><span class="nf">ADDQ</span><span class="w">    </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">CX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00049</span><span class="w">   </span><span class="nf">INCQ</span><span class="w">    </span><span class="no">CX</span><span class="w"></span>
+<span class="err">00052</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="err">00055</span><span class="w">   </span><span class="nf">JLE</span><span class="w">     </span><span class="mi">61</span><span class="w"></span>
+<span class="err">00057</span><span class="w">   </span><span class="nf">JHI</span><span class="w">     </span><span class="mi">45</span><span class="w"></span>
+<span class="err">00059</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">66</span><span class="w"></span>
+<span class="err">00061</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="err">00064</span><span class="w">   </span><span class="nf">POPQ</span><span class="w">    </span><span class="no">BP</span><span class="w"></span>
+<span class="err">00065</span><span class="w">   </span><span class="nf">RET</span><span class="w"></span>
+<span class="err">00066</span><span class="w">   </span><span class="nf">PCDATA</span><span class="w">  </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">$1</span><span class="w"></span>
+<span class="err">00066</span><span class="w">   </span><span class="nf">PCDATA</span><span class="w">  </span><span class="no">$4</span><span class="p">,</span><span class="w"> </span><span class="no">$3591</span><span class="w"></span>
+<span class="err">00066</span><span class="w">   </span><span class="nf">CALL</span><span class="w">    </span><span class="no">runtime.panicBounds</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00071</span><span class="w">   </span><span class="nf">LEAQ</span><span class="w">    </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">BX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">R8</span><span class="w"></span>
+<span class="err">00075</span><span class="w">   </span><span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">R8</span><span class="p">),</span><span class="w"> </span><span class="no">Y1</span><span class="w"></span>
+<span class="err">00080</span><span class="w">   </span><span class="nf">NOP</span><span class="w"></span>
+<span class="err">00080</span><span class="w">   </span><span class="nf">VPADDQ</span><span class="w">  </span><span class="no">Y1</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="w"></span>
+<span class="err">00084</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DI</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00087</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00090</span><span class="w">   </span><span class="nf">JGE</span><span class="w">     </span><span class="mi">108</span><span class="w"></span>
+<span class="err">00092</span><span class="w">   </span><span class="nf">LEAQ</span><span class="w">    </span><span class="mi">4</span><span class="p">(</span><span class="no">BX</span><span class="p">),</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00096</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00099</span><span class="w">   </span><span class="nf">JCS</span><span class="w">     </span><span class="mi">153</span><span class="w"></span>
+<span class="err">00101</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00104</span><span class="w">   </span><span class="nf">JLS</span><span class="w">     </span><span class="mi">71</span><span class="w"></span>
+<span class="err">00106</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">148</span><span class="w"></span>
+<span class="err">00108</span><span class="w">   </span><span class="nf">VEXTRACTI128</span><span class="w">    </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">X1</span><span class="w"></span>
+<span class="err">00114</span><span class="w">   </span><span class="nf">VEXTRACTI128</span><span class="w">    </span><span class="no">$0</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="w"></span>
+<span class="err">00120</span><span class="w">   </span><span class="nf">VPADDQ</span><span class="w">  </span><span class="no">X0</span><span class="p">,</span><span class="w"> </span><span class="no">X1</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="w"></span>
+<span class="err">00124</span><span class="w">   </span><span class="nf">VPEXTRQ</span><span class="w"> </span><span class="no">$0</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00130</span><span class="w">   </span><span class="nf">VPEXTRQ</span><span class="w"> </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="p">,</span><span class="w"> </span><span class="no">R8</span><span class="w"></span>
+<span class="err">00136</span><span class="w">   </span><span class="nf">LEAQ</span><span class="w">    </span><span class="p">(</span><span class="no">R8</span><span class="p">)(</span><span class="no">DI</span><span class="p">*</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00140</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="err">00143</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">SI</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00146</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">52</span><span class="w"></span>
+<span class="err">00148</span><span class="w">   </span><span class="nf">PCDATA</span><span class="w">  </span><span class="no">$4</span><span class="p">,</span><span class="w"> </span><span class="no">$8346</span><span class="w"></span>
+<span class="err">00148</span><span class="w">   </span><span class="nf">CALL</span><span class="w">    </span><span class="no">runtime.panicBounds</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00153</span><span class="w">   </span><span class="nf">PCDATA</span><span class="w">  </span><span class="no">$4</span><span class="p">,</span><span class="w"> </span><span class="no">$1721</span><span class="w"></span>
+<span class="err">00153</span><span class="w">   </span><span class="nf">CALL</span><span class="w">    </span><span class="no">runtime.panicBounds</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00158</span><span class="w">   </span><span class="nf">XCHGL</span><span class="w">   </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr>
+<p>Looking at the beginning of the function, we don't see instructions that
+determine the memory address of the <code>input</code>'s underlying array <code>input_base+0(FP)</code>
+and the slice length <code>input_len+8(FP)</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="nf">MOVQ</span><span class="w"> </span><span class="no">input_base</span><span class="err">+</span><span class="mi">0</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="nf">MOVQ</span><span class="w"> </span><span class="no">input_len</span><span class="err">+</span><span class="mi">8</span><span class="p">(</span><span class="no">FP</span><span class="p">),</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+</code></pre></div>
+
+<p>It's because Go ensures that all three parts of the slice header
+(array pointer, length, and capacity) are in the registers <code>AX</code>, <code>BX</code>, <code>CX</code> respectively
+before calling the <code>sumv4.SumVec</code> function.
+Since we've implemented <a href="https://github.com/marselester/misc/blob/main/simd/go/intro/sumv3/sum.s">sumv3.SumVec</a>
+in assembly, the compiler defaulted to using the stack to pass the arguments.</p>
+<p>That explains why <code>CMPQ BX, $8</code> compares the slice length <code>BX</code> to <code>8</code>, see <code>if inputLen &gt;= 8</code>.
+If the length is less than <code>8</code>, we jump directly to the scalar loop using <code>JLT 39</code> instruction, see <code>00039</code> address.</p>
+<div class="highlight"><pre><span></span><code><span class="err">00009</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">$8</span><span class="w">          </span><span class="c1">; if inputLen &gt;= 8</span>
+<span class="err">00013</span><span class="w">   </span><span class="nf">JLT</span><span class="w">     </span><span class="mi">39</span><span class="w"></span>
+<span class="w"> </span><span class="na">...</span><span class="w"></span>
+<span class="err">00039</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w">          </span><span class="c1">; i = 0</span>
+<span class="err">00041</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w">          </span><span class="c1">; sum = 0</span>
+<span class="err">00043</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">52</span><span class="w"></span>
+<span class="err">00045</span><span class="w">   </span><span class="nf">ADDQ</span><span class="w">    </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">CX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">DX</span><span class="w">  </span><span class="c1">; sum += input[i]</span>
+<span class="err">00049</span><span class="w">   </span><span class="nf">INCQ</span><span class="w">    </span><span class="no">CX</span><span class="w">              </span><span class="c1">; i++</span>
+<span class="err">00052</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w">          </span><span class="c1">; i &lt; inputLen</span>
+<span class="err">00055</span><span class="w">   </span><span class="nf">JLE</span><span class="w">     </span><span class="mi">61</span><span class="w"></span>
+<span class="err">00057</span><span class="w">   </span><span class="nf">JHI</span><span class="w">     </span><span class="mi">45</span><span class="w"></span>
+<span class="err">00059</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">66</span><span class="w"></span>
+<span class="err">00061</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w">          </span><span class="c1">; Moves the sum into the return register AX.</span>
+</code></pre></div>
+
+<p>Otherwise, prepare the vector loop as follows.</p>
+<div class="highlight"><pre><span></span><code><span class="err">00015</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w">      </span><span class="c1">; DX = inputLen</span>
+<span class="err">00018</span><span class="w">   </span><span class="nf">ANDL</span><span class="w">    </span><span class="no">$3</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w">      </span><span class="c1">; BX = inputLen % 4</span>
+<span class="err">00021</span><span class="w">   </span><span class="nf">XCHGL</span><span class="w">   </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="err">00022</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">SI</span><span class="w">      </span><span class="c1">; SI = DX = inputLen</span>
+<span class="err">00025</span><span class="w">   </span><span class="nf">SUBQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w">      </span><span class="c1">; loopEnd = DX - BX = inputLen - inputLen%4</span>
+<span class="err">00028</span><span class="w">   </span><span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">AX</span><span class="p">),</span><span class="w"> </span><span class="no">Y0</span><span class="w">    </span><span class="c1">; y0 = archsimd.LoadInt64x4Slice(input) = [1, 2, 3, 4]</span>
+<span class="err">00032</span><span class="w">   </span><span class="nf">MOVL</span><span class="w">    </span><span class="no">$4</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w">      </span><span class="c1">; i = 4</span>
+<span class="err">00037</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">87</span><span class="w"></span>
+</code></pre></div>
+
+<p>To be continued...</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/assembler.html">assembler </a>
+    <a href="https://marselester.com/tag/golang.html">golang </a>
+    <a href="https://marselester.com/tag/simd.html">simd </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/go-archsimd-preview.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/intro-to-simd-in-avo.html"><h3 class="article-title">Intro to SIMD in avo</h3></a>
 <h6 class="subheader" title="2025-12-21T00:00:00+07:00">Sun 21 December 2025
 </h6>
@@ -61,570 +269,7 @@ Let's do something practical this time, e.g., related to performance
 since we go into all this trouble of writing Go assembly.
 You can find the code examples in
 <a href="https://github.com/marselester/misc/tree/main/simd/go/intro">github.com/marselester/misc</a>.</p>
-<p>Processing more data in a single CPU instruction makes our programs faster.
-That's what SIMD (Single Instruction Multiple Data) technique is for.
-The caveat is that we need to think in terms of vectors, not scalars.
-For example, let's say we want to find a sum of eight 64-bit integers.
-Our options look as follows:</p>
-<ol>
-<li>sum of scalars: <code>1 + 2 + 3 + 4 + 5 + 6 + 7 + 8</code></li>
-<li>sum of vectors: <code>[1, 2, 3, 4] + [5, 6, 7, 8]</code> or <code>[1, 2] + [3, 4] + [5, 6] + [7, 8]</code></li>
-</ol>
-<p>The first option is straightforward.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">Sum</span><span class="p">(</span><span class="nx">input</span><span class="w"> </span><span class="p">[]</span><span class="kt">int64</span><span class="p">)</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">sum</span><span class="w"> </span><span class="kt">int64</span><span class="w"></span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">input</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">v</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">sum</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>The second one — not so much 😬.
-At least my CPU (Intel i5-10600) supports <a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Advanced_Vector_Extensions_2">AVX2</a>,
-meaning it can execute 256-bit SIMD instructions.
-That's exactly enough to add our vectors <code>[1, 2, 3, 4]</code> and <code>[5, 6, 7, 8]</code> with just a single CPU instruction.</p>
-<p>The plan is to add the 4-element vectors, then keep folding the resulting vectors adding their halfes,
-see the calculations below.</p>
-<div class="highlight"><pre><span></span><code><span class="go">[1,  2,  3,  4]       [6,   8]       [16, 20]</span>
-<span class="go">             +              +              +</span>
-<span class="go">[5,  6,  7,  8]   ➡   [10, 12]   ➡   [0,  16]</span>
-<span class="go">             =              =              =</span>
-<span class="go">[6,  8, 10, 12]       [16, 20]       [16, 36]</span>
-<span class="go">                                          🏁</span>
-</code></pre></div>
-
-<p>With this in mind, let's implement it in Go assembler!</p>
-<h2>Adding vectors</h2>
-<p>We can start small and just focus on adding 8 numbers.
-The first step is to create a dummy function <code>SumVec</code> and a corresponding test.
-It always returns zero no matter the input it gets.
-Note, we used <code>asm.XORQ(sum, sum)</code> to set the register associated with <code>sum</code> variable to zero.
-We'll see <code>Q</code> postfix quite often later on, it stands for quadword (8 bytes) on amd64.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">//go:build ignore</span><span class="w"></span>
-
-<span class="kn">package</span><span class="w"> </span><span class="nx">main</span><span class="w"></span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nx">asm</span><span class="w"> </span><span class="s">&quot;github.com/mmcloughlin/avo/build&quot;</span><span class="w"></span>
-
-<span class="c1">//go:generate go run asm.go -out sum.s -stubs sum.go</span><span class="w"></span>
-
-<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">TEXT</span><span class="p">(</span><span class="s">&quot;SumVec&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">NOSPLIT</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;func(input []int64) int64&quot;</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">sum</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">XORQ</span><span class="p">(</span><span class="nx">sum</span><span class="p">,</span><span class="w"> </span><span class="nx">sum</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Store</span><span class="p">(</span><span class="nx">sum</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ReturnIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">RET</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">Generate</span><span class="p">()</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<details>
-
-<summary>🔻 sum_test.go</summary>
-
-
-<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">sum</span><span class="w"></span>
-
-<span class="kn">import</span><span class="w"> </span><span class="s">&quot;testing&quot;</span><span class="w"></span>
-
-<span class="kd">func</span><span class="w"> </span><span class="nx">TestSumVec</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">input</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="kt">int64</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">}</span><span class="w"></span>
-
-<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="nx">want</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">36</span><span class="w"></span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">got</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">SumVec</span><span class="p">(</span><span class="nx">input</span><span class="p">);</span><span class="w"> </span><span class="nx">got</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nx">want</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Fatalf</span><span class="p">(</span><span class="s">&quot;expected %d got %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">want</span><span class="p">,</span><span class="w"> </span><span class="nx">got</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-
-
-</details>
-
-<hr>
-<p>Not surprisingly, the test fails as it expects the sum to be <code>36</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ go generate ./sum/asm.go &amp;&amp; go test ./sum</span>
-<span class="go">--- FAIL: TestSumVec (0.00s)</span>
-<span class="go">    sum_test.go:10: expected 36 got 0</span>
-</code></pre></div>
-
-<p>The second step is to learn the <code>input []int64</code> slice length and
-where its backing array is located in memory,
-so we could load its elements into a vector register.
-When the function is called, a three-field <code>slice</code> structure is passed on the stack.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">type</span><span class="w"> </span><span class="nx">slice</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">array</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="w"></span>
-<span class="w">    </span><span class="nx">len</span><span class="w">   </span><span class="kt">int</span><span class="w"></span>
-<span class="w">    </span><span class="nx">cap</span><span class="w">   </span><span class="kt">int</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>Its fields can be accessed in assembler as follows:</p>
-<ul>
-<li><code>input_base+0(FP)</code> pointer to the underlying array (the base memory address)</li>
-<li><code>input_len+8(FP)</code> length of the slice</li>
-<li><code>input_cap+16(FP)</code> capacity of the slice</li>
-</ul>
-<p><a href="https://github.com/mmcloughlin/avo/blob/master/examples/args/README.md">avo API</a> is very similar,
-here is how we can load the array pointer and the length
-into general-purpose registers <code>AX</code> and <code>CX</code> assigned by <code>avo</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="nx">inputData</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"> </span><span class="c1">// Base pointer of the slice is in AX.</span><span class="w"></span>
-<span class="nx">inputLen</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w">  </span><span class="c1">// Number of elements in the slice is in CX.</span><span class="w"></span>
-<span class="c1">// MOVQ input_base+0(FP), AX</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">).</span><span class="nx">Base</span><span class="p">(),</span><span class="w"> </span><span class="nx">inputData</span><span class="p">)</span><span class="w"></span>
-<span class="c1">// MOVQ input_len+8(FP), CX</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">).</span><span class="nx">Len</span><span class="p">(),</span><span class="w"> </span><span class="nx">inputLen</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>The third step is to load the left half of the array into a vector register.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">vecLeft</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">YMM</span><span class="p">()</span><span class="w"> </span><span class="c1">// 256-bit vector register Y0.</span><span class="w"></span>
-<span class="c1">// VMOVDQU (AX), Y0</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVDQU</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">Mem</span><span class="p">{</span><span class="nx">Base</span><span class="p">:</span><span class="w"> </span><span class="nx">inputData</span><span class="p">},</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>Examining a generated Go assembly, we'll see <code>VMOVDQU (AX), Y0</code> instruction:</p>
-<ul>
-<li><code>VMOVDQU</code> stands for <strong>V</strong>ector <strong>MOV</strong>e <strong>D</strong>ouble <strong>Q</strong>uadword <strong>U</strong>naligned.
-  It copies the <code>[1, 2, 3, 4]</code> elements from a possibly unaligned
-  memory address stored in <code>AX</code> to vector register <code>Y0</code>.
-  Unaligned means not starting at a memory address that is a multiple of the vector's size in bytes.
-  We don't use <code>VMOVDQA</code> (the aligned version) since we don't know
-  if the array's address is aligned to 32 bytes for YMM register (256 / 8 = 32).</li>
-</ul>
-<p>Despite its "double quadword" (128-bit vector) naming, the instruction is capable of moving 256 bits.</p>
-<ul>
-<li><code>(AX)</code> operand means use address from register <code>AX</code>.
-  Its <code>avo</code> equivalent is <code>operand.Mem{Base: inputData}</code>.</li>
-<li><code>Y0</code> operand is a 256-bit vector register allocated by <code>vecLeft := asm.YMM()</code></li>
-</ul>
-<p>🦉 Since we mentioned vectors of different sizes, let's name them for reference:</p>
-<ul>
-<li>512-bit ZMM registers: <code>Z0</code> ... <code>Z31</code> for AVX-512 (not our case)</li>
-<li>256-bit YMM registers: <code>Y0</code> ... <code>Y15</code> for AVX and <code>Y31</code> for AVX-512</li>
-<li>128-bit XMM registers: <code>X0</code> ... <code>X15</code> for AVX and <code>X31</code> for AVX-512</li>
-</ul>
-<p>Moving on to the fourth step — loading the right half of the array into another vector register.
-The important part is to determine the memory address from which to copy four 64-bit integers.
-As we can see from the diagram below, we need to start at the array index <code>4</code>.
-We can deduce the address of element <code>5</code> like this
-<code>inputData + index * int64InBytes = 0xc000054760 + 4 * 8</code> assuming the array is stored at <code>0xc000054760</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="go">        0xc000054760</span>
-<span class="go">        ⬇️</span>
-<span class="go">array: [1, 2, 3, 4, 5, 6, 7, 8]</span>
-<span class="go">index:  0  1  2  3  4  5  6  7</span>
-<span class="go">                    ⬆️</span>
-<span class="go">                    0xc000054760 + 4 * 8</span>
-</code></pre></div>
-
-<p>The assembly code looks similar to what we saw in the previous step:</p>
-<ul>
-<li><code>MOVQ</code> copies 64 bits of a literal value <code>0x00000004</code> (our index <code>4</code> represented as 32-bit unsigned integer)
-   to <code>CX</code> register.</li>
-<li><code>VMOVDQU</code> copies 256 bits starting from memory address defined by operand <code>(AX)(CX*8)</code> to vector register <code>Y1</code>.
-  The operand <code>(AX)(CX*8)</code> reads as <code>AX + CX * 8</code>, i.e., take memory address stored in <code>AX</code> register
-  (<code>0xc000054760</code> in our example), then add it to a product of value stored in <code>CX</code> register (<code>$0x00000004</code>)
-  and a scaling factor <code>8</code> since the array contains 64-bit integers.</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="nf">MOVQ</span><span class="w">    </span><span class="no">$0x00000004</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
-<span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">CX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">Y1</span><span class="w"></span>
-</code></pre></div>
-
-<p>The assembler DSL is a little bit verbose, but it provides type safety.
-For instance, it makes sure we pass a valid immediate value when setting up the index to <code>4</code>
-(<code>asm.MOVQ()</code> docs indicate <code>imm32</code> and <code>imm64</code>) as the first operand in <code>asm.MOVQ(operand.U32(4), index)</code>.
-Note, <code>operand.U64(4)</code> would also work.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">index</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"> </span><span class="c1">// The array index is stored in register CX.</span><span class="w"></span>
-<span class="c1">// MOVQ $0x00000004, CX</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">MOVQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U32</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">vecRight</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">YMM</span><span class="p">()</span><span class="w"> </span><span class="c1">// 256-bit vector register Y1.</span><span class="w"></span>
-<span class="c1">// VMOVDQU (AX)(CX*8), Y1</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVDQU</span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="nx">operand</span><span class="p">.</span><span class="nx">Mem</span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Base</span><span class="p">:</span><span class="w">  </span><span class="nx">inputData</span><span class="p">,</span><span class="w"> </span><span class="c1">// Array starts at 0xc000054760 address.</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Index</span><span class="p">:</span><span class="w"> </span><span class="nx">index</span><span class="p">,</span><span class="w">     </span><span class="c1">// Array index is 4.</span><span class="w"></span>
-<span class="w">        </span><span class="nx">Scale</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w">         </span><span class="c1">// The multiplier of the index is 8 bytes (int64).</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nx">vecRight</span><span class="p">,</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>Now we've got both vectors filled, we can finally add them up!
-It's done with <code>VPADDQ Y0, Y1, Y0</code> instruction which reads
-as <strong>V</strong>ector <strong>P</strong>acked <strong>ADD</strong> <strong>Q</strong>uadword, i.e., 64-bit elements of vectors <code>Y0</code> and <code>Y1</code> are added
-and the result is stored in <code>Y0</code>.
-"Packed" signifies that the instruction operates on all the elements packed within the register,
-i.e., it is not a scalar operation.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// VPADDQ Y0, Y1, Y0</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRight</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>Now <code>Y0</code> contains <code>[6, 8, 10, 12]</code>.</p>
-<h2>Adding half-vectors</h2>
-<p>We summarize the <code>Y0 = [6, 8, 10, 12]</code> vector by adding its halfes <code>[6, 8]</code> and <code>[10, 12]</code>.
-That's called a horizontal reduction summation.</p>
-<div class="highlight"><pre><span></span><code><span class="go">[6,   8]</span>
-<span class="go">      +</span>
-<span class="go">[10, 12]</span>
-<span class="go">      =</span>
-<span class="go">[16, 20]</span>
-</code></pre></div>
-
-<p>To do that, we can copy its left half (bits 128-255) to a 128-bit XMM vector register <code>X1</code>
-using <code>VEXTRACTI128</code> (<strong>V</strong>ector <strong>E</strong>xtract <strong>I</strong>nteger <strong>128</strong>-bit) instruction.</p>
-<div class="highlight"><pre><span></span><code><span class="go">Y0 = [6, 8, 10, 12]</span>
-<span class="go">      ⬇️ ⬇️</span>
-<span class="go">X1 = [6, 8]</span>
-</code></pre></div>
-
-<p>The first operand <code>$0x01</code> in <code>VEXTRACTI128 $0x01, Y0, X1</code> is a control byte
-that refers to extracting the upper 128-bit lane.
-The second operand is the source YMM register (<code>vecLeft</code> in our <code>avo</code> program),
-and the third one is an XMM register (we use <code>vecRight.AsX()</code>
-which is the lower portion of <code>vecRight</code> register).</p>
-<div class="highlight"><pre><span></span><code><span class="nx">vecRightLow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vecRight</span><span class="p">.</span><span class="nx">AsX</span><span class="p">()</span><span class="w"></span>
-<span class="c1">// VEXTRACTI128 $0x01, Y0, X1</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VEXTRACTI128</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>Since <code>X0</code> represents the right half of <code>Y0</code>, we can add <code>X0</code> and <code>X1</code>
-which by now contains the left half of <code>Y0</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="go">Y0 = [6, 8, 10, 12]</span>
-<span class="go">      ⬇️ ⬇️ [10, 12] = X0</span>
-<span class="go">X1 = [6, 8]</span>
-</code></pre></div>
-
-<p>Go code looks familiar.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">vecLeftLow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">.</span><span class="nx">AsX</span><span class="p">()</span><span class="w"></span>
-<span class="c1">// VPADDQ X0, X1, X0</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>At this point <code>X0</code> contains <code>[16, 20]</code>.
-Our goal is to line up <code>16</code> with <code>20</code> to get our scalar result <code>36</code>.
-We can shift <code>16</code> right by 8 bytes since we're dealing with 64-bit integers.</p>
-<div class="highlight"><pre><span></span><code><span class="go">Before: [16, 20]</span>
-<span class="go">         ➡️</span>
-<span class="go">After:  [    16] 20</span>
-</code></pre></div>
-
-<p>The <code>VPSRLDQ $0x08, X0, X1</code> instruction does that, i.e., it shifts <code>X0</code> bits right,
-fills the empty space with zeros, and stores the result in <code>X1</code>.
-The addition instruction is the same <code>VPADDQ X0, X1, X0</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="go">[16, 20]    X0</span>
-<span class="go">      +</span>
-<span class="go">[0,  16]    X1</span>
-<span class="go">      =</span>
-<span class="go">[16, 36]    X0</span>
-<span class="go">     🏁</span>
-</code></pre></div>
-
-<p>Here is an <code>avo</code> code.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// VPSRLDQ $0x08, X0, X1</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VPSRLDQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
-<span class="c1">// VPADDQ X0, X1, X0</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>That's it, we've got out final result <code>36</code> in the <code>X0 = [16, 36]</code> vector.
-We just need to somehow return it from the <code>SumVec</code> function 🤔.</p>
-<p>The cool thing about <code>VMOVQ</code> instruction is that it can copy the lower quadword
-(our <code>36</code> value) from a vector to a scalar register like this <code>VMOVQ X0, AX</code>.
-Note, <code>VMOVQ Y0, AX</code> wouldn't work since a YMM operand isn't supported.</p>
-<p>These are the final lines of Go code that generate Go assembly.
-<a href="https://github.com/marselester/misc/tree/main/simd/go/intro/sumv2">The complete example</a> is on GitHub.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">sum</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="c1">// VMOVQ X0, AX</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">sum</span><span class="p">)</span><span class="w"></span>
-
-<span class="c1">// MOVQ AX, ret+24(FP)</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Store</span><span class="p">(</span><span class="nx">sum</span><span class="p">,</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ReturnIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w"></span>
-<span class="c1">// RET</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">RET</span><span class="p">()</span><span class="w"></span>
-</code></pre></div>
-
-<p>This time the tests pass 🎉.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ go generate ./sum/asm.go &amp;&amp; go test ./sum</span>
-<span class="go">ok      myprog/sum  0.289s</span>
-</code></pre></div>
-
-<h2>Working with larger arrays</h2>
-<p>It would be even better if <code>SumVec</code> worked with larger than 8 items arrays (what two YMM registers could fit).
-We can use the sum of scalars approach when an array length is less than 8,
-and leverage the SIMD technique in a loop for bigger arrays.
-Oftentimes, we would have to use a scalar sum anyways to
-add up a tail of an array if its length isn't a multiple of 4,
-e.g., <code>[1, 2, 3, 4] + [5, 6, 7, 8] + 9 + 10</code> where <code>9, 10</code> is a tail.</p>
-<p>The function starts similarly: <code>inputData</code> points to an array, <code>inputLen</code> holds its length,
-and <code>sum</code> with <code>index</code> variables set to zero.</p>
-<details>
-
-<summary>🔻 asm.go part #1</summary>
-
-
-<div class="highlight"><pre><span></span><code><span class="nx">inputData</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="nx">inputLen</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">).</span><span class="nx">Base</span><span class="p">(),</span><span class="w"> </span><span class="nx">inputData</span><span class="p">)</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Load</span><span class="p">(</span><span class="nx">asm</span><span class="p">.</span><span class="nx">Param</span><span class="p">(</span><span class="s">&quot;input&quot;</span><span class="p">).</span><span class="nx">Len</span><span class="p">(),</span><span class="w"> </span><span class="nx">inputLen</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">sum</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="nx">index</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">XORQ</span><span class="p">(</span><span class="nx">sum</span><span class="p">,</span><span class="w"> </span><span class="nx">sum</span><span class="p">)</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">XORQ</span><span class="p">(</span><span class="nx">index</span><span class="p">,</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">asm</span><span class="p">.</span><span class="nx">CMPQ</span><span class="p">(</span><span class="nx">inputLen</span><span class="p">,</span><span class="w"> </span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">JL</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">LabelRef</span><span class="p">(</span><span class="s">&quot;scalar_loop&quot;</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-
-
-</details>
-
-<hr>
-<p>The new thing is <code>CMPQ</code> and <code>JL</code> instructions, they implement a fallback to a scalar sum:</p>
-<ul>
-<li><code>CMPQ CX, $0x08</code> means compare quadword <code>inputLen</code> to <code>8</code></li>
-<li><code>JL scalar_loop</code> means jump to a code block labeled <code>scalar_loop</code> if <code>inputLen</code> is less than <code>8</code></li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="c1">// CMPQ CX, $0x08</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">CMPQ</span><span class="p">(</span><span class="nx">inputLen</span><span class="p">,</span><span class="w"> </span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span><span class="w"></span>
-<span class="c1">// JL scalar_loop</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">JL</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">LabelRef</span><span class="p">(</span><span class="s">&quot;scalar_loop&quot;</span><span class="p">))</span><span class="w"></span>
-</code></pre></div>
-
-<p>Otherwise, keep adding the YMM vectors in the loop as shown in this pseudocode.</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/*</span>
-<span class="cm">Y0 + Y1 = [1,   2,  3,  4] + [5,   6,  7,  8]</span>
-<span class="cm">Y0 + Y1 = [6,   8, 10, 12] + [9,  10, 11, 12]</span>
-<span class="cm">Y0 + Y1 = [15, 18, 21, 24] + [13, 14, 15, 16]</span>
-<span class="cm">  ...</span>
-<span class="cm">Y0 + Y1</span>
-<span class="cm">*/</span><span class="w"></span>
-<span class="nx">index</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
-<span class="nx">Y0</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">inputData</span><span class="p">[</span><span class="nx">index</span><span class="p">:</span><span class="nx">index</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span><span class="w"></span>
-<span class="k">for</span><span class="w"> </span><span class="nx">index</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="nx">index</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">;</span><span class="w"> </span><span class="nx">index</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Y1</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">inputData</span><span class="p">[</span><span class="nx">index</span><span class="p">:</span><span class="nx">index</span><span class="o">+</span><span class="mi">4</span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="nx">Y0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">Y0</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">Y1</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<details>
-
-<summary>🔻 asm.go part #2</summary>
-
-
-<div class="highlight"><pre><span></span><code><span class="nx">vecLeft</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">YMM</span><span class="p">()</span><span class="w"></span>
-<span class="nx">vecRight</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">YMM</span><span class="p">()</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVDQU</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">Mem</span><span class="p">{</span><span class="nx">Base</span><span class="p">:</span><span class="w"> </span><span class="nx">inputData</span><span class="p">},</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Comment</span><span class="p">(</span><span class="s">&quot;loopEnd = inputLen - (inputLen % 4)&quot;</span><span class="p">)</span><span class="w"></span>
-<span class="nx">loopEnd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">MOVQ</span><span class="p">(</span><span class="nx">inputLen</span><span class="p">,</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">)</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">ANDQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">I8</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">),</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Label</span><span class="p">(</span><span class="s">&quot;vector_loop&quot;</span><span class="p">)</span><span class="w"></span>
-<span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ADDQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U32</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">CMPQ</span><span class="p">(</span><span class="nx">loopEnd</span><span class="p">,</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">JLE</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">LabelRef</span><span class="p">(</span><span class="s">&quot;vector_loop_end&quot;</span><span class="p">))</span><span class="w"> </span><span class="c1">// Exit the vector loop.</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVDQU</span><span class="p">(</span><span class="w"></span>
-<span class="w">        </span><span class="nx">operand</span><span class="p">.</span><span class="nx">Mem</span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Base</span><span class="p">:</span><span class="w">  </span><span class="nx">inputData</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Index</span><span class="p">:</span><span class="w"> </span><span class="nx">index</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Scale</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nx">vecRight</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRight</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">JMP</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">LabelRef</span><span class="p">(</span><span class="s">&quot;vector_loop&quot;</span><span class="p">))</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Label</span><span class="p">(</span><span class="s">&quot;vector_loop_end&quot;</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Comment</span><span class="p">(</span><span class="s">&quot;Horizontal reduction.&quot;</span><span class="p">)</span><span class="w"></span>
-<span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">vecRightLow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vecRight</span><span class="p">.</span><span class="nx">AsX</span><span class="p">()</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VEXTRACTI128</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">vecLeftLow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">.</span><span class="nx">AsX</span><span class="p">()</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VPSRLDQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">sum</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VZEROUPPER</span><span class="p">()</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Comment</span><span class="p">(</span><span class="s">&quot;Set index = loopEnd to sum the tail of the array.&quot;</span><span class="p">)</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">MOVQ</span><span class="p">(</span><span class="nx">loopEnd</span><span class="p">,</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-
-
-</details>
-
-<hr>
-<p>The loop end is calculated as <code>loopEnd = inputLen - (inputLen % 4)</code>, e.g.,
-if an array length is <code>9</code>, the <code>loopEnd</code> will be <code>8 = 9 - (9 % 4)</code>,
-so <code>Y1</code> register is always fully filled with 4 integers on each iteration.
-Since 4 is a power of 2, we can efficiently calculate (in 1 CPU cycle)
-the <code>loopEnd</code> using bitwise <code>9 AND -4</code> which rounds <code>9</code> down to <code>8</code>
-which is the nearest multiple of <code>4</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">loopEnd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">asm</span><span class="p">.</span><span class="nx">GP64</span><span class="p">()</span><span class="w"> </span><span class="c1">// The loop end is stored in SI register.</span><span class="w"></span>
-<span class="c1">// MOVQ CX, SI</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">MOVQ</span><span class="p">(</span><span class="nx">inputLen</span><span class="p">,</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">)</span><span class="w"></span>
-<span class="c1">// ANDQ $-4, SI</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">ANDQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">I8</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">),</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>How does it work?
-All bits on the left side starting from the third bit are a multiple of 4.
-Two bits on the right side are the remainder.
-In the example below we have number 15 (<code>1111</code> in binary) that has a remainder 3 (<code>11</code> in binary).
-Therefore, we just need to get rid of last two bits in <code>inputLen</code> to calculate the <code>loopEnd</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="gp">#            </span><span class="m">4</span> <span class="m">3</span> <span class="m">2</span> <span class="m">1</span>
-<span class="go">               ⬅️➡️</span>
-<span class="go">bits:        1 1 1 1</span>
-<span class="go">powers:      8 4 2 1</span>
-<span class="go">   loopEnd = 12 | remainder = 3</span>
-</code></pre></div>
-
-<p>Computers use <a href="https://en.wikipedia.org/wiki/Two%27s_complement">two's complement</a>
-method to represent integers, so <code>-4</code> is represented as <code>1111 1100</code> in binary
-(i.e., invert the bits of <code>4</code> then add <code>1</code>).
-That can be used to mask the remainder bits using <code>ANDQ</code> instruction.</p>
-<div class="highlight"><pre><span></span><code><span class="go">     4 = 0000 0100</span>
-<span class="go">    ^4 = 1111 1011</span>
-<span class="go">^4 + 1 = 1111 1100 = -4</span>
-<span class="go">     9 = 0000 1001</span>
-<span class="go">9 &amp; -4 = 0000 1000 = 8</span>
-</code></pre></div>
-
-<p>With that out of the way, let's look at the loop itself:</p>
-<ul>
-<li><code>vector_loop:</code> defines the <code>vector_loop</code> label which is a named memory location
-  that denotes the beginning of our loop.
-  We jump there unconditionally with <code>JMP vector_loop</code> at the end of the loop's body.</li>
-<li><code>ADDQ $0x00000004, BX</code> increments the array <code>index</code> by <code>4</code></li>
-<li><code>CMPQ SI, BX</code> compares the <code>loopEnd</code> to the <code>index</code></li>
-<li><code>JLE vector_loop_end</code> exits the loop by jumping to
-  the label <code>vector_loop_end</code> if the <code>loopEnd &lt;= index</code></li>
-<li><code>VMOVDQU (AX)(BX*8), Y1</code> like before loads a 256-bit chunk
-  from <code>inputData[index:index+4]</code> into the <code>Y1</code> register</li>
-<li><code>VPADDQ Y0, Y1, Y0</code> adds the vectors</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="nl">vector_loop:</span><span class="w"></span>
-<span class="w">    </span><span class="nf">ADDQ</span><span class="w">    </span><span class="no">$0x00000004</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">SI</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
-<span class="w">    </span><span class="nf">JLE</span><span class="w">     </span><span class="no">vector_loop_end</span><span class="w"></span>
-<span class="w">    </span><span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">BX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">Y1</span><span class="w"></span>
-<span class="w">    </span><span class="nf">VPADDQ</span><span class="w">  </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">Y1</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="w"></span>
-<span class="w">    </span><span class="nf">JMP</span><span class="w">     </span><span class="no">vector_loop</span><span class="w"></span>
-
-<span class="nl">vector_loop_end:</span><span class="w"></span>
-</code></pre></div>
-
-<p>The assembly above was generated from this Go code.
-Note, I've used curly braces to make the code look nicer.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">asm</span><span class="p">.</span><span class="nx">Label</span><span class="p">(</span><span class="s">&quot;vector_loop&quot;</span><span class="p">)</span><span class="w"></span>
-<span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ADDQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U32</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">CMPQ</span><span class="p">(</span><span class="nx">loopEnd</span><span class="p">,</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">JLE</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">LabelRef</span><span class="p">(</span><span class="s">&quot;vector_loop_end&quot;</span><span class="p">))</span><span class="w"> </span><span class="c1">// Exit the loop.</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVDQU</span><span class="p">(</span><span class="w"></span>
-<span class="w">        </span><span class="nx">operand</span><span class="p">.</span><span class="nx">Mem</span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Base</span><span class="p">:</span><span class="w">  </span><span class="nx">inputData</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Index</span><span class="p">:</span><span class="w"> </span><span class="nx">index</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Scale</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nx">vecRight</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRight</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">JMP</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">LabelRef</span><span class="p">(</span><span class="s">&quot;vector_loop&quot;</span><span class="p">))</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Label</span><span class="p">(</span><span class="s">&quot;vector_loop_end&quot;</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>The vector loop is followed by the horizontal reduction logic we've already seen before.
-There is a new instruction though — <code>VZEROUPPER</code>.
-It clears bits 128-255 in YMM registers.
-From what I understand, we should place it right after we're done using the SIMD instructions
-to prevent a potential <a href="https://www.felixcloutier.com/x86/vzeroupper">performance penalty</a>.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">vecRightLow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vecRight</span><span class="p">.</span><span class="nx">AsX</span><span class="p">()</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VEXTRACTI128</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">vecLeftLow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vecLeft</span><span class="p">.</span><span class="nx">AsX</span><span class="p">()</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VPSRLDQ</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">U8</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">)</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VPADDQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecRightLow</span><span class="p">,</span><span class="w"> </span><span class="nx">vecLeftLow</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VMOVQ</span><span class="p">(</span><span class="nx">vecLeftLow</span><span class="p">,</span><span class="w"> </span><span class="nx">sum</span><span class="p">)</span><span class="w"></span>
-
-<span class="nx">asm</span><span class="p">.</span><span class="nx">VZEROUPPER</span><span class="p">()</span><span class="w"></span>
-</code></pre></div>
-
-<p>After the reduction, we need to summarize the tail of the array,
-so we set our array <code>index = loopEnd</code> to start the scalar loop
-from the end of the vector loop.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// MOVQ SI, BX</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">MOVQ</span><span class="p">(</span><span class="nx">loopEnd</span><span class="p">,</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>And here is the scalar loop itself.</p>
-<div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span><span class="nx">index</span><span class="p">;</span><span class="w"> </span><span class="nx">index</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">inputLen</span><span class="p">;</span><span class="w"> </span><span class="nx">index</span><span class="o">++</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">inputData</span><span class="p">[</span><span class="nx">index</span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>You'll notice that this loop resembles the vector loop,
-except that we've got <code>ADDQ</code> instead of <code>VPADDQ</code> instruction,
-and the <code>index</code> gets incremented by one instead of four.</p>
-<div class="highlight"><pre><span></span><code><span class="nx">asm</span><span class="p">.</span><span class="nx">Label</span><span class="p">(</span><span class="s">&quot;scalar_loop&quot;</span><span class="p">)</span><span class="w"></span>
-<span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">CMPQ</span><span class="p">(</span><span class="nx">inputLen</span><span class="p">,</span><span class="w"> </span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">JLE</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">LabelRef</span><span class="p">(</span><span class="s">&quot;scalar_loop_end&quot;</span><span class="p">))</span><span class="w"></span>
-
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">ADDQ</span><span class="p">(</span><span class="w"></span>
-<span class="w">        </span><span class="nx">operand</span><span class="p">.</span><span class="nx">Mem</span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Base</span><span class="p">:</span><span class="w">  </span><span class="nx">inputData</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Index</span><span class="p">:</span><span class="w"> </span><span class="nx">index</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nx">Scale</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nx">sum</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">INCQ</span><span class="p">(</span><span class="nx">index</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="nx">asm</span><span class="p">.</span><span class="nx">JMP</span><span class="p">(</span><span class="nx">operand</span><span class="p">.</span><span class="nx">LabelRef</span><span class="p">(</span><span class="s">&quot;scalar_loop&quot;</span><span class="p">))</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-<span class="nx">asm</span><span class="p">.</span><span class="nx">Label</span><span class="p">(</span><span class="s">&quot;scalar_loop_end&quot;</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>Finally, let's see how SIMD <code>SumVec</code> stacks up against a scalar <code>Sum</code> implementation.
-It's x2 faster on my machine.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ benchstat old.txt new.txt</span>
-<span class="go">name    old time/op    new time/op    delta</span>
-<span class="go">Sum-12    38.9µs ± 0%    17.8µs ± 2%  -54.23%  (p=0.000 n=8+10)</span>
-</code></pre></div>
-
-<p>You can find the full code and benchmarks
-<a href="https://github.com/marselester/misc/tree/main/simd/go/intro/sumv3">here</a>.
-Cheers!</p>
-<p>References:</p>
-<ul>
-<li><a href="https://github.com/mmcloughlin/avo">avo docs and examples</a> by Michael McLoughlin</li>
-<li><a href="https://sourcegraph.com/blog/slow-to-simd">From slow to SIMD: A Go optimization story</a> by Camden Cheek</li>
-<li><a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions">Advanced Vector Extensions</a></li>
-<li><a href="https://en.wikipedia.org/wiki/Two%27s_complement">Two's complement</a></li>
-<li><a href="https://www.felixcloutier.com/x86/">x86 and amd64 instruction reference</a> by Félix Cloutier</li>
-</ul><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+<p>Processing more data in a single …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/assembler.html">assembler </a>
@@ -634,11 +279,9 @@ Cheers!</p>
 
 
 
-<p><a href="https://marselester.com/intro-to-simd-in-avo.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/intro-to-simd-in-avo.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/intro-to-simd-in-avo.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 

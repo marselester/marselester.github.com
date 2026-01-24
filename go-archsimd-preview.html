@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - simd</title>
+    <title>Go archsimd preview</title>
 
     <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/go-archsimd-preview.html" rel="bookmark"
+        title="Permalink to Go archsimd preview">Go archsimd preview</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="https://marselester.com/go-archsimd-preview.html"><h3 class="article-title">Go archsimd preview</h3></a>
 <h6 class="subheader" title="2026-01-23T00:00:00+07:00">Fri 23 January 2026
 </h6>
 
 
-<p>In <a href="https://marselester.com/intro-to-simd-in-avo.html">the previous post</a>
+    <p>In <a href="https://marselester.com/intro-to-simd-in-avo.html">the previous post</a>
 we've implemented SIMD sum in Go assembly <code>[1, 2, 3, 4] + [5, 6, 7, 8]</code>.
 This is going to be much easier to do in Go 1.26 because of
 <a href="https://pkg.go.dev/simd/archsimd">simd/archsimd</a> package,
@@ -239,7 +241,8 @@ If the length is less than <code>8</code>, we jump directly to the scalar loop u
 <span class="err">00037</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">87</span><span class="w"></span>
 </code></pre></div>
 
-<p>To be continued...</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+<p>To be continued...</p>
+<p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/assembler.html">assembler </a>
@@ -249,42 +252,22 @@ If the length is less than <code>8</code>, we jump directly to the scalar loop u
 
 
 
-<p><a href="https://marselester.com/go-archsimd-preview.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "go-archsimd-preview.html";
+        var disqus_url = "https://marselester.com/go-archsimd-preview.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/intro-to-simd-in-avo.html"><h3 class="article-title">Intro to SIMD in avo</h3></a>
-<h6 class="subheader" title="2025-12-21T00:00:00+07:00">Sun 21 December 2025
-</h6>
-
-
-<p>In the previous post we wrote a <a href="https://marselester.com/hello-world-in-avo.html">Hello World in avo</a>.
-Let's do something practical this time, e.g., related to performance
-since we go into all this trouble of writing Go assembly.
-You can find the code examples in
-<a href="https://github.com/marselester/misc/tree/main/simd/go/intro">github.com/marselester/misc</a>.</p>
-<p>Processing more data in a single …</p><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/assembler.html">assembler </a>
-    <a href="https://marselester.com/tag/golang.html">golang </a>
-    <a href="https://marselester.com/tag/simd.html">simd </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/intro-to-simd-in-avo.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/intro-to-simd-in-avo.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

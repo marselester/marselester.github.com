@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"><channel><title>marselester's blog - Marsel</title><link>https://marselester.com/</link><description></description><lastBuildDate>Sun, 21 Dec 2025 00:00:00 +0700</lastBuildDate><item><title>Intro to SIMD in avo</title><link>https://marselester.com/intro-to-simd-in-avo.html</link><description>&lt;p&gt;In the previous post we wrote a &lt;a href="https://marselester.com/hello-world-in-avo.html"&gt;Hello World in avo&lt;/a&gt;.
+<rss version="2.0"><channel><title>marselester's blog - Marsel</title><link>https://marselester.com/</link><description></description><lastBuildDate>Fri, 23 Jan 2026 00:00:00 +0700</lastBuildDate><item><title>Go archsimd preview</title><link>https://marselester.com/go-archsimd-preview.html</link><description>&lt;p&gt;In &lt;a href="https://marselester.com/intro-to-simd-in-avo.html"&gt;the previous post&lt;/a&gt;
+we've implemented SIMD sum in Go assembly &lt;code&gt;[1, 2, 3, 4] + [5, 6, 7, 8]&lt;/code&gt;.
+This is going to be much easier to do in Go 1.26 because of
+&lt;a href="https://pkg.go.dev/simd/archsimd"&gt;simd/archsimd&lt;/a&gt; package,
+see &lt;a href="https://github.com/golang/go/issues/73787"&gt;#73787&lt;/a&gt; proposal.
+So far the package provides access to amd64-specific SIMD operations …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel</dc:creator><pubDate>Fri, 23 Jan 2026 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2026-01-23:/go-archsimd-preview.html</guid><category>assembler</category><category>golang</category><category>simd</category></item><item><title>Intro to SIMD in avo</title><link>https://marselester.com/intro-to-simd-in-avo.html</link><description>&lt;p&gt;In the previous post we wrote a &lt;a href="https://marselester.com/hello-world-in-avo.html"&gt;Hello World in avo&lt;/a&gt;.
 Let's do something practical this time, e.g., related to performance
 since we go into all this trouble of writing Go assembly.
 You can find the code examples in
