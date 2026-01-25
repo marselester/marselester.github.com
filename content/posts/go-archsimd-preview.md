@@ -32,8 +32,7 @@ func SumVec(input []int64) (sum int64) {
 		}
 
 		// Horizontal reduction.
-		x0 := y0.GetHi()
-		x1 := y0.GetLo()
+		x0, x1 := y0.GetLo(), y0.GetHi()
 		x0 = x0.Add(x1)
 		sum = x0.GetElem(0) + x0.GetElem(1)
 	}
@@ -53,20 +52,21 @@ everything in `if inputLen >= 8 { ... }` branch:
 - `y0 := archsimd.LoadInt64x4Slice(input)` loads the first four `int64`s from the `input []int64` slice,
   e.g., `1, 2, 3, 4`.
   Our 256-bit SIMD vector `y0` is represented by [Int64x4](https://pkg.go.dev/simd/archsimd#Int64x4) type.
-- `loopEnd := inputLen - inputLen%4` calculates the slice index beyoud which we mustn't iterate, e.g.,
+- `loopEnd := inputLen - inputLen%4` calculates the slice index beyond which we mustn't iterate, e.g.,
   if a slice length is `9`, the `loopEnd` will be `8 = 9 - (9 % 4)`,
   so `y1` vector register is always fully filled with 4 integers on each iteration.
 - `y1 := archsimd.LoadInt64x4Slice(input[i : i+4])` loads a next batch of 4 integers
   into `y1` 256-bit SIMD register, e.g., `y1 = [5, 6, 7, 8]`.
 - `y0 = y0.Add(y1)` adds corresponding elements of two vectors, e.g.,
   `y0 = y0 + y1 = [1, 2, 3, 4] + [5, 6, 7, 8] = [6, 8, 10, 12]`.
-- `x0 := y0.GetHi()` returns the upper half of `y0` register, e.g., `[10, 12]`,
-  represented by 128-bit SIMD register `x0`, see [Int64x2](https://pkg.go.dev/simd/archsimd#Int64x2).
-- `x1 := y0.GetLo()` returns the lower half of register `y0 = [6, 8, 10, 12]`, e.g., `[6,  8]`.
+- `x0 := y0.GetLo()` returns the lower half of register `y0 = [6, 8, 10, 12]`, e.g., `[6, 8]`.
   It sounds a bit confusing that the lower half (right side) isn't `[10, 12]`.
-  The thing is that those 4 numbers are stored in the register in "reverse order", e.g., `[12, 10, 8, 6]`.
+  The thing is that those 4 numbers are stored in the register in "reverse order", e.g., `[12, 10, 8, 6]`,
+  but if we print it `fmt.Println(y0)`, Go would display `[6, 8, 10, 12]`.
+- `x1 := y0.GetHi()` returns the upper half of `y0` register, e.g., `[10, 12]`.
+  It's represented by 128-bit SIMD vector `x1`, see [Int64x2](https://pkg.go.dev/simd/archsimd#Int64x2).
 - `x0 = x0.Add(x1)` adds corresponding elements of two XMM registers, e.g.,
-  `x0 = x0 + x1 = [10, 12] + [6, 8] = [16, 20]`
+  `x0 = x0 + x1 = [6, 8] + [10, 12] = [16, 20]`
 - `sum = x0.GetElem(0) + x0.GetElem(1)` wraps up the horizontal reduction summation
   by adding two scalars `16 + 20`. They were retrieved using `VPEXTRQ` instructions.
 
@@ -170,19 +170,8 @@ That explains why `CMPQ BX, $8` compares the slice length `BX` to `8`, see `if i
 If the length is less than `8`, we jump directly to the scalar loop using `JLT 39` instruction, see `00039` address.
 
 ```asm
-00009   CMPQ    BX, $8			; if inputLen >= 8
-00013   JLT     39
- ...
-00039	XORL	CX, CX			; i = 0
-00041	XORL	DX, DX			; sum = 0
-00043	JMP		52
-00045	ADDQ	(AX)(CX*8), DX	; sum += input[i]
-00049	INCQ	CX				; i++
-00052	CMPQ	BX, CX			; i < inputLen
-00055	JLE		61
-00057	JHI		45
-00059	JMP		66
-00061	MOVQ	DX, AX			; Moves the sum into the return register AX.
+00009   CMPQ    BX, $8		; if inputLen >= 8
+00013   JLT     39			; Jump to the scalar loop, i.e., "00039 XORL" line
 ```
 
 Otherwise, prepare the vector loop as follows.
@@ -195,7 +184,58 @@ Otherwise, prepare the vector loop as follows.
 00025	SUBQ	BX, DX		; loopEnd = DX - BX = inputLen - inputLen%4
 00028	VMOVDQU	(AX), Y0	; y0 = archsimd.LoadInt64x4Slice(input) = [1, 2, 3, 4]
 00032	MOVL	$4, BX		; i = 4
-00037	JMP		87
+00037	JMP		87			; Jump to the vector loop, i.e., "00087 CMPQ" line
 ```
 
-To be continued...
+The vector loop.
+
+```asm
+00071	LEAQ	(AX)(BX*8), R8	; R8 = AX + BX*8 = inputData + i*8
+00075	VMOVDQU	(R8), Y1		; y1 := archsimd.LoadInt64x4Slice(input[i : i+4])
+00080	NOP
+00080	VPADDQ	Y1, Y0, Y0		; y0 = y0.Add(y1)
+00084	MOVQ	DI, BX			; i += 4
+00087	CMPQ	BX, DX			; i < loopEnd
+00090	JGE		108				; Jump to the horizontal reduction, i.e., "00108 VEXTRACTI128" line
+00092	LEAQ	4(BX), DI		; DI = 4 + BX = 4 + i
+00096	CMPQ	CX, DI			; indexCap < DI
+00099	JCS		153				; Go to line 153 (index out of range)
+00101	CMPQ	BX, DI			; i < DI
+00104	JLS		71				; Jump to the next iteration.
+00106	JMP		148				; Otherwise, go to line 148 ("index out of range" error)
+ ...
+00148	CALL	runtime.panicBounds(SB)
+ ...
+00153	CALL	runtime.panicBounds(SB)
+```
+
+Horizontal reduction.
+
+```asm
+00108	VEXTRACTI128	$1, Y0, X1	; x1 := y0.GetHi()
+00114	VEXTRACTI128	$0, Y0, X0	; x0 := y0.GetLo()
+00120	VPADDQ	X0, X1, X0			; x0 = x0.Add(x1)
+00124	VPEXTRQ	$0, X0, DI			; DI = x0.GetElem(0)
+00130	VPEXTRQ	$1, X0, R8			; R8 = x0.GetElem(1)
+00136	LEAQ	(R8)(DI*1), DX		; sum = R8 + DI*1 = 20 + 16*1 = 36
+00140	MOVQ	BX, CX				; i = loopEnd
+00143	MOVQ	SI, BX				; Restore inputLen from SI
+00146	JMP		52					; Jump to the scalar loop, i.e., "00052 CMPQ" line
+```
+
+The scalar loop.
+
+```asm
+00039	XORL	CX, CX			; i = 0
+00041	XORL	DX, DX			; sum = 0
+00043	JMP		52				; Jump to line 52 to check the loop condition
+00045	ADDQ	(AX)(CX*8), DX	; sum += input[i]
+00049	INCQ	CX				; i++
+00052	CMPQ	BX, CX			; i < inputLen
+00055	JLE		61				; Exit the loop
+00057	JHI		45				; Go to the next iteration
+00059	JMP		66				; Go to line 66 (index out of range)
+00061	MOVQ	DX, AX			; Moves the sum into the return register AX
+ ...
+00066	CALL	runtime.panicBounds(SB)
+```
