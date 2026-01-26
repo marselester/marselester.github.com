@@ -71,10 +71,11 @@ keeping it close to an already familiar assembly code
 <span class="w">    </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"></span>
 
 <span class="w">    </span><span class="c1">// If we can&#39;t use two YMM vectors, fallback to a scalar sum.</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Otherwise keep adding YMM vectors in the vector loop.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Otherwise, keep adding YMM vectors in the vector loop.</span><span class="w"></span>
 <span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">8</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nx">y0</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4Slice</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"></span>
 <span class="w">        </span><span class="nx">loopEnd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">inputLen</span><span class="o">%</span><span class="mi">4</span><span class="w"></span>
+
 <span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nx">y1</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4Slice</span><span class="p">(</span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nx">i</span><span class="o">+</span><span class="mi">4</span><span class="p">])</span><span class="w"></span>
 <span class="w">            </span><span class="nx">y0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">y1</span><span class="p">)</span><span class="w"></span>
@@ -86,7 +87,7 @@ keeping it close to an already familiar assembly code
 <span class="w">        </span><span class="nx">sum</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">x0</span><span class="p">.</span><span class="nx">GetElem</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">x0</span><span class="p">.</span><span class="nx">GetElem</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-<span class="w">    </span><span class="c1">// Summarize what we couldn&#39;t with SIMD.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Scalar loop summarizes what we couldn&#39;t with SIMD.</span><span class="w"></span>
 <span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">inputLen</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nx">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
@@ -217,7 +218,13 @@ If the length is less than <code>8</code>, we jump directly to the scalar loop u
 <span class="err">00013</span><span class="w">   </span><span class="nf">JLT</span><span class="w">     </span><span class="mi">39</span><span class="w">          </span><span class="c1">; Jump to the scalar loop, i.e., &quot;00039 XORL&quot; line</span>
 </code></pre></div>
 
-<p>Otherwise, prepare the vector loop as follows.</p>
+<p>Otherwise, prepare the vector loop as follows:</p>
+<ul>
+<li>calculate the <code>loopEnd</code></li>
+<li>load the first 4 elements from the <code>input</code> slice</li>
+<li>set the slice index <code>i = 4</code> and jump to the vector loop,
+  i.e., an instruction responsible for <code>i &lt; loopEnd</code> comparison</li>
+</ul>
 <div class="highlight"><pre><span></span><code><span class="err">00015</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w">      </span><span class="c1">; DX = inputLen</span>
 <span class="err">00018</span><span class="w">   </span><span class="nf">ANDL</span><span class="w">    </span><span class="no">$3</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w">      </span><span class="c1">; BX = inputLen % 4</span>
 <span class="err">00021</span><span class="w">   </span><span class="nf">XCHGL</span><span class="w">   </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
@@ -228,7 +235,26 @@ If the length is less than <code>8</code>, we jump directly to the scalar loop u
 <span class="err">00037</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">87</span><span class="w">          </span><span class="c1">; Jump to the vector loop, i.e., &quot;00087 CMPQ&quot; line</span>
 </code></pre></div>
 
-<p>The vector loop.</p>
+<p>Here is the vector loop.
+In a hand-written assembly we used <code>VMOVDQU (AX)(BX*8), Y1</code> instruction whereas here we see two:</p>
+<ul>
+<li><code>LEAQ (AX)(BX*8), R8</code> loads effective address of the next chunk of four <code>int64</code>s into register <code>R8</code>.
+  It performs a memory address calculation as follows <code>AX + BX * 8</code> where <code>AX</code> holds a memory address
+  of the underlying array, <code>BX</code> is an array index, and <code>8</code> represents <code>int64</code> type size in bytes.</li>
+<li><code>VMOVDQU (R8), Y1</code> copies 256 bits from a memory address stored in <code>R8</code> to <code>Y1</code> YMM register.</li>
+</ul>
+<p>The vectors addition uses the same <code>VPADDQ Y1, Y0, Y0</code>,
+but there are way more instructions than we had in <code>sumv3</code>.
+From what I understand, most of them are related to the slice bounds checks that
+the compiler inserted for our own safety:</p>
+<ul>
+<li><code>LEAQ 4(BX), DI</code> calculates a look-ahead index <code>i+4</code> and stores it in register <code>DI</code>.
+  As we can see, <code>LEAQ</code> can be used in lieu of <code>ADDQ</code> (we used <code>ADDQ $0x00000004, BX</code> in <code>sumv3</code>),
+  not only for memory address calculations.</li>
+<li>that look-ahead index <code>i+4</code> is checked against the slice boundaries.
+  If it's ok, the index is updated <code>MOVQ DI, BX</code> or else we'll get "index out of range" panic,
+  see <code>runtime.panicBounds(SB)</code>.</li>
+</ul>
 <div class="highlight"><pre><span></span><code><span class="err">00071</span><span class="w">   </span><span class="nf">LEAQ</span><span class="w">    </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">BX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">R8</span><span class="w">  </span><span class="c1">; R8 = AX + BX*8 = inputData + i*8</span>
 <span class="err">00075</span><span class="w">   </span><span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">R8</span><span class="p">),</span><span class="w"> </span><span class="no">Y1</span><span class="w">        </span><span class="c1">; y1 := archsimd.LoadInt64x4Slice(input[i : i+4])</span>
 <span class="err">00080</span><span class="w">   </span><span class="nf">NOP</span><span class="w"></span>
@@ -237,7 +263,7 @@ If the length is less than <code>8</code>, we jump directly to the scalar loop u
 <span class="err">00087</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w">          </span><span class="c1">; i &lt; loopEnd</span>
 <span class="err">00090</span><span class="w">   </span><span class="nf">JGE</span><span class="w">     </span><span class="mi">108</span><span class="w">             </span><span class="c1">; Jump to the horizontal reduction, i.e., &quot;00108 VEXTRACTI128&quot; line</span>
 <span class="err">00092</span><span class="w">   </span><span class="nf">LEAQ</span><span class="w">    </span><span class="mi">4</span><span class="p">(</span><span class="no">BX</span><span class="p">),</span><span class="w"> </span><span class="no">DI</span><span class="w">       </span><span class="c1">; DI = 4 + BX = 4 + i</span>
-<span class="err">00096</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w">          </span><span class="c1">; indexCap &lt; DI</span>
+<span class="err">00096</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w">          </span><span class="c1">; inputCap &lt; DI</span>
 <span class="err">00099</span><span class="w">   </span><span class="nf">JCS</span><span class="w">     </span><span class="mi">153</span><span class="w">             </span><span class="c1">; Go to line 153 (index out of range)</span>
 <span class="err">00101</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w">          </span><span class="c1">; i &lt; DI</span>
 <span class="err">00104</span><span class="w">   </span><span class="nf">JLS</span><span class="w">     </span><span class="mi">71</span><span class="w">              </span><span class="c1">; Jump to the next iteration.</span>
@@ -248,7 +274,32 @@ If the length is less than <code>8</code>, we jump directly to the scalar loop u
 <span class="err">00153</span><span class="w">   </span><span class="nf">CALL</span><span class="w">    </span><span class="no">runtime.panicBounds</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
 </code></pre></div>
 
-<p>Horizontal reduction.</p>
+<p>The horizontal reduction has a different code as well:</p>
+<ul>
+<li>we used register <code>X0</code> to refer to <code>Y0</code>'s lower part in <code>sumv3</code> assembly,
+  but here we used <code>VEXTRACTI128 $0, Y0, X0</code> because
+  I couldn't find a better way in <code>archsimd</code> docs</li>
+<li><code>VPSRLDQ $0x08, X0, X1</code> was used to shift <code>X0</code>'s bits to the right by 8 bytes
+  to line up <code>16</code> with <code>20</code> in XMM registers,
+  so we could add them up <code>VPADDQ X0, X1, X0</code> and get the final result <code>36</code>.
+  I couldn't figure out how to shift the bytes using <code>archsimd</code> package,
+  so I ended up with <code>VPEXTRQ</code> (see <code>GetElem</code>) to get both scalars from <code>X0</code> register,
+  and then added them, see <code>LEAQ (R8)(DI*1), DX</code> below.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">    sumv4                sumv3</span>
+<span class="go">X0 = [8,   6]        X0 = [8,   6]</span>
+<span class="go">           +</span>
+<span class="go">X1 = [12, 10]        X1 = [12, 10]</span>
+<span class="go">           =                    =</span>
+<span class="go">X0 = [20, 16]        X0 = [20, 16]</span>
+<span class="go">                                +</span>
+<span class="go">DI = 16              X1 = [0,  20]</span>
+<span class="go">      +                         =</span>
+<span class="go">R8 = 20              X0 = [20, 36]</span>
+<span class="go">      =</span>
+<span class="go">DX = 36              DX = 36</span>
+</code></pre></div>
+
 <div class="highlight"><pre><span></span><code><span class="err">00108</span><span class="w">   </span><span class="nf">VEXTRACTI128</span><span class="w">    </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">X1</span><span class="w">  </span><span class="c1">; x1 := y0.GetHi()</span>
 <span class="err">00114</span><span class="w">   </span><span class="nf">VEXTRACTI128</span><span class="w">    </span><span class="no">$0</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="w">  </span><span class="c1">; x0 := y0.GetLo()</span>
 <span class="err">00120</span><span class="w">   </span><span class="nf">VPADDQ</span><span class="w">  </span><span class="no">X0</span><span class="p">,</span><span class="w"> </span><span class="no">X1</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="w">          </span><span class="c1">; x0 = x0.Add(x1)</span>
@@ -260,7 +311,8 @@ If the length is less than <code>8</code>, we jump directly to the scalar loop u
 <span class="err">00146</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">52</span><span class="w">                  </span><span class="c1">; Jump to the scalar loop, i.e., &quot;00052 CMPQ&quot; line</span>
 </code></pre></div>
 
-<p>The scalar loop.</p>
+<p>The final section of the <code>SumVec</code> function is the scalar loop.
+As expected, it also contains the boundaries checks.</p>
 <div class="highlight"><pre><span></span><code><span class="err">00039</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w">          </span><span class="c1">; i = 0</span>
 <span class="err">00041</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w">          </span><span class="c1">; sum = 0</span>
 <span class="err">00043</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">52</span><span class="w">              </span><span class="c1">; Jump to line 52 to check the loop condition</span>
@@ -273,7 +325,288 @@ If the length is less than <code>8</code>, we jump directly to the scalar loop u
 <span class="err">00061</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w">          </span><span class="c1">; Moves the sum into the return register AX</span>
 <span class="w"> </span><span class="na">...</span><span class="w"></span>
 <span class="err">00066</span><span class="w">   </span><span class="nf">CALL</span><span class="w">    </span><span class="no">runtime.panicBounds</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
-</code></pre></div><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
+</code></pre></div>
+
+<h2>Bounds-checking elimination</h2>
+<p>It would be great to convince the Go compiler that our code safely accesses
+the <code>input</code> slice and index <code>i</code> can't be out of range.
+This will improve the performance since the CPU won't need to predict
+the branches in the loop introduced by the slice boundaries checks.</p>
+<p>The bounds check was eliminated from the scalar loop as follows.
+Effectively it was moved outside the loop, i.e., at <code>tail := input[i:]</code> line.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">tail</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">:]</span><span class="w"></span>
+<span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">tail</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">v</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>I've tried to apply a similar approach to the vector loop, but the checks stayed in place,
+so I resorted to <code>unsafe</code> package to get rid of them:</p>
+<ul>
+<li><code>unsafe.Pointer</code> allows us to read arbitrary memory.
+  In this case <code>unsafe.Pointer(&amp;input[0])</code> points to first element of the underlying array.</li>
+<li><code>unsafe.Add(inputData, i*8)</code> calculates the memory address of the <code>i</code>-th array element
+  (beginning of the next chunk of numbers), i.e., <code>inputData + i*8</code>
+  where <code>8</code> is the size of <code>int64</code> in bytes.
+  Basically the <code>Add</code> function returns a new <code>unsafe.Pointer</code> that is <code>i*8</code> bytes higher in memory
+  than <code>inputData</code> pointer.</li>
+<li><code>(*[4]int64)</code> converts our <code>unsafe.Pointer</code> to <code>*[4]int64</code> type, i.e.,
+  a pointer to the next chunk of numbers <code>[4]int64</code></li>
+<li><code>archsimd</code> package provides <code>LoadInt64x4(y *[4]int64) Int64x4</code> function that
+  loads our chunk from the array</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nx">y0</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4Slice</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"></span>
+<span class="nx">loopEnd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">inputLen</span><span class="o">%</span><span class="mi">4</span><span class="w"></span>
+<span class="nx">inputData</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">input</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="w"></span>
+
+<span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">chunk</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="kt">int64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">inputData</span><span class="p">,</span><span class="w"> </span><span class="nx">i</span><span class="o">*</span><span class="mi">8</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="nx">y1</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4</span><span class="p">(</span><span class="nx">chunk</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">y0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">y1</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>If you're wondering why not take a pointer <code>&amp;input[i]</code> directly in the loop,
+you'll find that the bounds check is back due to a slice access.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">y0</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4Slice</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"></span>
+<span class="nx">loopEnd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">inputLen</span><span class="o">%</span><span class="mi">4</span><span class="w"></span>
+
+<span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Bounds check is back 😭!</span><span class="w"></span>
+<span class="w">    </span><span class="nx">chunk</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="kt">int64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">]))</span><span class="w"></span>
+<span class="w">    </span><span class="nx">y1</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4</span><span class="p">(</span><span class="nx">chunk</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="nx">y0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">y1</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+<p>Here is the updated <code>sumv5.SumVec</code>.</p>
+<details>
+
+<summary>🔻 sumv5.SumVec</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="c1">//go:noinline</span><span class="w"></span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">SumVec</span><span class="p">(</span><span class="nx">input</span><span class="w"> </span><span class="p">[]</span><span class="kt">int64</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">sum</span><span class="w"> </span><span class="kt">int64</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">    </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// If we can&#39;t use two YMM vectors, fallback to a scalar sum.</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Otherwise, keep adding YMM vectors in the vector loop.</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">8</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">y0</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4Slice</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="nx">loopEnd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">inputLen</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">inputLen</span><span class="o">%</span><span class="mi">4</span><span class="w"></span>
+<span class="w">        </span><span class="nx">inputData</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">input</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="w"></span>
+
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">loopEnd</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nx">chunk</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="kt">int64</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">inputData</span><span class="p">,</span><span class="w"> </span><span class="nx">i</span><span class="o">*</span><span class="mi">8</span><span class="p">))</span><span class="w"></span>
+<span class="w">            </span><span class="nx">y1</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">archsimd</span><span class="p">.</span><span class="nx">LoadInt64x4</span><span class="p">(</span><span class="nx">chunk</span><span class="p">)</span><span class="w"></span>
+<span class="w">            </span><span class="nx">y0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">y1</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">        </span><span class="c1">// Horizontal reduction.</span><span class="w"></span>
+<span class="w">        </span><span class="nx">x0</span><span class="p">,</span><span class="w"> </span><span class="nx">x1</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">GetLo</span><span class="p">(),</span><span class="w"> </span><span class="nx">y0</span><span class="p">.</span><span class="nx">GetHi</span><span class="p">()</span><span class="w"></span>
+<span class="w">        </span><span class="nx">x0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">x0</span><span class="p">.</span><span class="nx">Add</span><span class="p">(</span><span class="nx">x1</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="nx">sum</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">x0</span><span class="p">.</span><span class="nx">GetElem</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">x0</span><span class="p">.</span><span class="nx">GetElem</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// Scalar loop summarizes what we couldn&#39;t with SIMD.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">tail</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">:]</span><span class="w"></span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">tail</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">v</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">sum</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr>
+<p>Looking at the <code>sumv5</code> assembly code, there is only one <code>runtime.panicBounds(SB)</code> call
+that is reachable from a single jump <code>JCS 97</code> line.
+The instructions above <code>JCS 97</code> set up the scalar loop.
+This means the bounds checks were eliminated! 🎉</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ GOEXPERIMENT=simd go1.26rc2 build -gcflags -S ./sumv5/</span>
+</code></pre></div>
+
+<details>
+
+<summary>🔻 TEXT intro/sumv5.SumVec</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="err">00000</span><span class="w">   </span><span class="nf">TEXT</span><span class="w">    </span><span class="no">intro</span><span class="err">/</span><span class="no">sumv5.SumVec</span><span class="p">(</span><span class="no">SB</span><span class="p">),</span><span class="w"> </span><span class="no">NOSPLIT</span><span class="err">|</span><span class="no">ABIInternal</span><span class="p">,</span><span class="w"> </span><span class="no">$8-24</span><span class="w"></span>
+<span class="err">00000</span><span class="w">   </span><span class="nf">PUSHQ</span><span class="w">   </span><span class="no">BP</span><span class="w"></span>
+<span class="err">00001</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">SP</span><span class="p">,</span><span class="w"> </span><span class="no">BP</span><span class="w"></span>
+<span class="err">00004</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">intro</span><span class="err">/</span><span class="no">sumv5.input</span><span class="err">+</span><span class="mi">16</span><span class="p">(</span><span class="no">FP</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">FUNCDATA</span><span class="w">    </span><span class="no">$0</span><span class="p">,</span><span class="w"> </span><span class="no">gclocals</span><span class="err">·</span><span class="no">wvjpxkknJ4nY1JtrArJJaw</span><span class="err">==</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">FUNCDATA</span><span class="w">    </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">gclocals</span><span class="err">·</span><span class="no">J26BEvPExEQhJvjp9E8Whg</span><span class="err">==</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">FUNCDATA</span><span class="w">    </span><span class="no">$5</span><span class="p">,</span><span class="w"> </span><span class="no">intro</span><span class="err">/</span><span class="no">sumv5.SumVec.arginfo1</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">FUNCDATA</span><span class="w">    </span><span class="no">$6</span><span class="p">,</span><span class="w"> </span><span class="no">intro</span><span class="err">/</span><span class="no">sumv5.SumVec.argliveinfo</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">PCDATA</span><span class="w">  </span><span class="no">$3</span><span class="p">,</span><span class="w"> </span><span class="no">$1</span><span class="w"></span>
+<span class="err">00009</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">$8</span><span class="w"></span>
+<span class="err">00013</span><span class="w">   </span><span class="nf">JLT</span><span class="w">     </span><span class="mi">39</span><span class="w"></span>
+<span class="err">00015</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00018</span><span class="w">   </span><span class="nf">ANDL</span><span class="w">    </span><span class="no">$3</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00021</span><span class="w">   </span><span class="nf">XCHGL</span><span class="w">   </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="err">00022</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">SI</span><span class="w"></span>
+<span class="err">00025</span><span class="w">   </span><span class="nf">SUBQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00028</span><span class="w">   </span><span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">AX</span><span class="p">),</span><span class="w"> </span><span class="no">Y0</span><span class="w"></span>
+<span class="err">00032</span><span class="w">   </span><span class="nf">MOVL</span><span class="w">    </span><span class="no">$4</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00037</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">118</span><span class="w"></span>
+<span class="err">00039</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00041</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">SI</span><span class="p">,</span><span class="w"> </span><span class="no">SI</span><span class="w"></span>
+<span class="err">00043</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00046</span><span class="w">   </span><span class="nf">JCS</span><span class="w">     </span><span class="mi">97</span><span class="w"></span>
+<span class="err">00048</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DX</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00051</span><span class="w">   </span><span class="nf">SUBQ</span><span class="w">    </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00054</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DI</span><span class="p">,</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="err">00057</span><span class="w">   </span><span class="nf">SHLQ</span><span class="w">    </span><span class="no">$3</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00061</span><span class="w">   </span><span class="nf">SARQ</span><span class="w">    </span><span class="no">$63</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00065</span><span class="w">   </span><span class="nf">ANDQ</span><span class="w">    </span><span class="no">DI</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00068</span><span class="w">   </span><span class="nf">SUBQ</span><span class="w">    </span><span class="no">CX</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00071</span><span class="w">   </span><span class="nf">LEAQ</span><span class="w">    </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">DX</span><span class="p">*</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="no">CX</span><span class="w"></span>
+<span class="err">00075</span><span class="w">   </span><span class="nf">XORL</span><span class="w">    </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="err">00077</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">86</span><span class="w"></span>
+<span class="err">00079</span><span class="w">   </span><span class="nf">ADDQ</span><span class="w">    </span><span class="p">(</span><span class="no">CX</span><span class="p">)(</span><span class="no">AX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">SI</span><span class="w"></span>
+<span class="err">00083</span><span class="w">   </span><span class="nf">INCQ</span><span class="w">    </span><span class="no">AX</span><span class="w"></span>
+<span class="err">00086</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">AX</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00089</span><span class="w">   </span><span class="nf">JLT</span><span class="w">     </span><span class="mi">79</span><span class="w"></span>
+<span class="err">00091</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">SI</span><span class="p">,</span><span class="w"> </span><span class="no">AX</span><span class="w"></span>
+<span class="err">00094</span><span class="w">   </span><span class="nf">POPQ</span><span class="w">    </span><span class="no">BP</span><span class="w"></span>
+<span class="err">00095</span><span class="w">   </span><span class="nf">NOP</span><span class="w"></span>
+<span class="err">00096</span><span class="w">   </span><span class="nf">RET</span><span class="w"></span>
+<span class="err">00097</span><span class="w">   </span><span class="nf">PCDATA</span><span class="w">  </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">$1</span><span class="w"></span>
+<span class="err">00097</span><span class="w">   </span><span class="nf">PCDATA</span><span class="w">  </span><span class="no">$4</span><span class="p">,</span><span class="w"> </span><span class="no">$3666</span><span class="w"></span>
+<span class="err">00097</span><span class="w">   </span><span class="nf">CALL</span><span class="w">    </span><span class="no">runtime.panicBounds</span><span class="p">(</span><span class="no">SB</span><span class="p">)</span><span class="w"></span>
+<span class="err">00102</span><span class="w">   </span><span class="nf">LEAQ</span><span class="w">    </span><span class="p">(</span><span class="no">AX</span><span class="p">)(</span><span class="no">BX</span><span class="p">*</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00106</span><span class="w">   </span><span class="nf">VMOVDQU</span><span class="w"> </span><span class="p">(</span><span class="no">DI</span><span class="p">),</span><span class="w"> </span><span class="no">Y1</span><span class="w"></span>
+<span class="err">00110</span><span class="w">   </span><span class="nf">VPADDQ</span><span class="w">  </span><span class="no">Y1</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="w"></span>
+<span class="err">00114</span><span class="w">   </span><span class="nf">ADDQ</span><span class="w">    </span><span class="no">$4</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00118</span><span class="w">   </span><span class="nf">CMPQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00121</span><span class="w">   </span><span class="nf">JLT</span><span class="w">     </span><span class="mi">102</span><span class="w"></span>
+<span class="err">00123</span><span class="w">   </span><span class="nf">VEXTRACTI128</span><span class="w">    </span><span class="no">$0</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">X1</span><span class="w"></span>
+<span class="err">00129</span><span class="w">   </span><span class="nf">VEXTRACTI128</span><span class="w">    </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">Y0</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="w"></span>
+<span class="err">00135</span><span class="w">   </span><span class="nf">VPADDQ</span><span class="w">  </span><span class="no">X0</span><span class="p">,</span><span class="w"> </span><span class="no">X1</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="w"></span>
+<span class="err">00139</span><span class="w">   </span><span class="nf">VPEXTRQ</span><span class="w"> </span><span class="no">$0</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00145</span><span class="w">   </span><span class="nf">VPEXTRQ</span><span class="w"> </span><span class="no">$1</span><span class="p">,</span><span class="w"> </span><span class="no">X0</span><span class="p">,</span><span class="w"> </span><span class="no">R8</span><span class="w"></span>
+<span class="err">00151</span><span class="w">   </span><span class="nf">ADDQ</span><span class="w">    </span><span class="no">R8</span><span class="p">,</span><span class="w"> </span><span class="no">DI</span><span class="w"></span>
+<span class="err">00154</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">BX</span><span class="p">,</span><span class="w"> </span><span class="no">DX</span><span class="w"></span>
+<span class="err">00157</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">SI</span><span class="p">,</span><span class="w"> </span><span class="no">BX</span><span class="w"></span>
+<span class="err">00160</span><span class="w">   </span><span class="nf">MOVQ</span><span class="w">    </span><span class="no">DI</span><span class="p">,</span><span class="w"> </span><span class="no">SI</span><span class="w"></span>
+<span class="err">00163</span><span class="w">   </span><span class="nf">JMP</span><span class="w">     </span><span class="mi">43</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr>
+<p>The SIMD sum with bounds checks is ~47.57% faster than the scalar sum.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ GOEXPERIMENT=simd go1.26rc2 test -bench=^ -count=10 ./sumv4 | tee bench.txt</span>
+<span class="go">﹩ grep Benchmark bench.txt | sed &#39;s/Benchmark[A-z]*/BenchmarkSum/g&#39; | split -l 10 -a 1 - bench_</span>
+<span class="go">﹩ benchstat bench_a bench_b</span>
+<span class="go">name    old time/op  new time/op  delta</span>
+<span class="go">Sum-12  38.4µs ± 1%  20.1µs ± 3%  -47.57%  (p=0.000 n=10+9)</span>
+</code></pre></div>
+
+<details>
+
+<summary>🔻 sumv4 benchmarks</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="n">goos</span><span class="o">:</span><span class="w"> </span><span class="n">darwin</span><span class="w"></span>
+<span class="n">goarch</span><span class="o">:</span><span class="w"> </span><span class="n">amd64</span><span class="w"></span>
+<span class="n">pkg</span><span class="o">:</span><span class="w"> </span><span class="n">intro</span><span class="o">/</span><span class="n">sumv4</span><span class="w"></span>
+<span class="n">cpu</span><span class="o">:</span><span class="w"> </span><span class="n">Intel</span><span class="o">(</span><span class="n">R</span><span class="o">)</span><span class="w"> </span><span class="n">Core</span><span class="o">(</span><span class="n">TM</span><span class="o">)</span><span class="w"> </span><span class="n">i5</span><span class="o">-</span><span class="mi">10600</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="err">@</span><span class="w"> </span><span class="mf">3.30</span><span class="n">GHz</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">30892</span><span class="w">         </span><span class="mi">38535</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">30442</span><span class="w">         </span><span class="mi">38727</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31269</span><span class="w">         </span><span class="mi">38349</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31398</span><span class="w">         </span><span class="mi">38198</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31405</span><span class="w">         </span><span class="mi">38337</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">30933</span><span class="w">         </span><span class="mi">38360</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31378</span><span class="w">         </span><span class="mi">38753</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31352</span><span class="w">         </span><span class="mi">38087</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31072</span><span class="w">         </span><span class="mi">38390</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31502</span><span class="w">         </span><span class="mi">38200</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">61132</span><span class="w">         </span><span class="mi">19711</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">61512</span><span class="w">         </span><span class="mi">19587</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">64653</span><span class="w">         </span><span class="mi">20022</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">58118</span><span class="w">         </span><span class="mi">20151</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">57780</span><span class="w">         </span><span class="mi">21672</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">53917</span><span class="w">         </span><span class="mi">20405</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">59610</span><span class="w">         </span><span class="mi">20685</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">55443</span><span class="w">         </span><span class="mi">20430</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">54528</span><span class="w">         </span><span class="mi">20238</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">55696</span><span class="w">         </span><span class="mi">19937</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">PASS</span><span class="w"></span>
+<span class="n">ok</span><span class="w">      </span><span class="n">intro</span><span class="o">/</span><span class="n">sumv4</span><span class="w"> </span><span class="mf">24.203</span><span class="n">s</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr>
+<p>Removing those branches makes it ~54.69% faster than the scalar sum
+which is similar to <code>sumv3</code>'s 54.23% (manually written assembly).
+It looks like the bounds checks elimination accounted for ~7.1% speed-up.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ GOEXPERIMENT=simd go1.26rc2 test -bench=^ -count=10 ./sumv5 | tee bench.txt</span>
+<span class="go">﹩ grep Benchmark bench.txt | sed &#39;s/Benchmark[A-z]*/BenchmarkSum/g&#39; | split -l 10 -a 1 - bench_</span>
+<span class="go">﹩ benchstat bench_a bench_b</span>
+<span class="go">name    old time/op  new time/op  delta</span>
+<span class="go">Sum-12  38.2µs ± 1%  17.3µs ± 4%  -54.69%  (p=0.000 n=9+10)</span>
+</code></pre></div>
+
+<details>
+
+<summary>🔻 sumv5 benchmarks</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="n">goos</span><span class="o">:</span><span class="w"> </span><span class="n">darwin</span><span class="w"></span>
+<span class="n">goarch</span><span class="o">:</span><span class="w"> </span><span class="n">amd64</span><span class="w"></span>
+<span class="n">pkg</span><span class="o">:</span><span class="w"> </span><span class="n">intro</span><span class="o">/</span><span class="n">sumv5</span><span class="w"></span>
+<span class="n">cpu</span><span class="o">:</span><span class="w"> </span><span class="n">Intel</span><span class="o">(</span><span class="n">R</span><span class="o">)</span><span class="w"> </span><span class="n">Core</span><span class="o">(</span><span class="n">TM</span><span class="o">)</span><span class="w"> </span><span class="n">i5</span><span class="o">-</span><span class="mi">10600</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="err">@</span><span class="w"> </span><span class="mf">3.30</span><span class="n">GHz</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31548</span><span class="w">         </span><span class="mi">38370</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31383</span><span class="w">         </span><span class="mi">38033</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31339</span><span class="w">         </span><span class="mi">38117</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31322</span><span class="w">         </span><span class="mi">37882</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">30944</span><span class="w">         </span><span class="mi">38196</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31176</span><span class="w">         </span><span class="mi">38420</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31063</span><span class="w">         </span><span class="mi">38860</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31437</span><span class="w">         </span><span class="mi">38087</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31302</span><span class="w">         </span><span class="mi">38235</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSum</span><span class="o">-</span><span class="mi">12</span><span class="w">            </span><span class="mi">31333</span><span class="w">         </span><span class="mi">38323</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">66858</span><span class="w">         </span><span class="mi">17200</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">76434</span><span class="w">         </span><span class="mi">17156</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">71926</span><span class="w">         </span><span class="mi">17628</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">71235</span><span class="w">         </span><span class="mi">17908</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">70063</span><span class="w">         </span><span class="mi">17424</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">71061</span><span class="w">         </span><span class="mi">16646</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">74750</span><span class="w">         </span><span class="mi">16936</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">68294</span><span class="w">         </span><span class="mi">17638</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">70453</span><span class="w">         </span><span class="mi">17550</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">BenchmarkSumVec</span><span class="o">-</span><span class="mi">12</span><span class="w">         </span><span class="mi">68662</span><span class="w">         </span><span class="mi">16926</span><span class="w"> </span><span class="n">ns</span><span class="o">/</span><span class="n">op</span><span class="w"></span>
+<span class="n">PASS</span><span class="w"></span>
+<span class="n">ok</span><span class="w">      </span><span class="n">intro</span><span class="o">/</span><span class="n">sumv5</span><span class="w"> </span><span class="mf">24.647</span><span class="n">s</span><span class="w"></span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr>
+<p>I hope you liked this post, I certainly learned a lot writing it 🙂.
+Note, the provided examples are for sure not the pinacle of performance,
+one could achieve better results with loop unrolling.</p>
+<p>References:</p>
+<ul>
+<li><a href="https://pkg.go.dev/simd/archsimd">https://pkg.go.dev/simd/archsimd</a></li>
+<li><a href="https://github.com/golang/go/issues/73787">https://github.com/golang/go/issues/73787</a> by @cherrymui</li>
+<li><a href="https://go.dev/play/p/ZaruM_PzP1X">DotAVX256a</a> by @cherrymui</li>
+<li><a href="https://go.dev/play/p/NY5rJYPoJcl">dotGoSIMD</a> by @cherrymui</li>
+</ul><p class="subheader">Category: <a href="https://marselester.com/category/go.html">Go</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/assembler.html">assembler </a>
