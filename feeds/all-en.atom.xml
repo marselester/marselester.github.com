@@ -1,5 +1,454 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/all-en.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2026-01-23T00:00:00+07:00</updated><entry><title>Go archsimd preview</title><link href="https://marselester.com/go-archsimd-preview.html" rel="alternate"></link><published>2026-01-23T00:00:00+07:00</published><updated>2026-01-23T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2026-01-23:/go-archsimd-preview.html</id><summary type="html">&lt;p&gt;In &lt;a href="https://marselester.com/intro-to-simd-in-avo.html"&gt;the previous post&lt;/a&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/all-en.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2026-05-14T00:00:00+07:00</updated><entry><title>The C ABI: Using Assembly with Zig</title><link href="https://marselester.com/zig-c-abi.html" rel="alternate"></link><published>2026-05-14T00:00:00+07:00</published><updated>2026-05-14T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2026-05-14:/zig-c-abi.html</id><summary type="html">&lt;p&gt;I am currently reading &lt;a href="https://www.goodreads.com/book/show/156500234-modern-x86-assembly-language-programming"&gt;Modern x86 Assembly Language Programming&lt;/a&gt; by Daniel Kusswurm.
+The book provides examples in C++, NASM, and MASM,
+but since I'm more interested in Zig, I’ve decided to follow along using it as my primary language.&lt;/p&gt;
+&lt;p&gt;As we'll see in this post, the C ABI (Application …&lt;/p&gt;</summary><content type="html">&lt;p&gt;I am currently reading &lt;a href="https://www.goodreads.com/book/show/156500234-modern-x86-assembly-language-programming"&gt;Modern x86 Assembly Language Programming&lt;/a&gt; by Daniel Kusswurm.
+The book provides examples in C++, NASM, and MASM,
+but since I'm more interested in Zig, I’ve decided to follow along using it as my primary language.&lt;/p&gt;
+&lt;p&gt;As we'll see in this post, the C ABI (Application Binary Interface)
+is the cornerstone of language interoperability.
+You can find the code on &lt;a href="https://github.com/marselester/misc/tree/main/zig-c-abi"&gt;GitHub&lt;/a&gt;.&lt;/p&gt;
+&lt;h2&gt;C++ example&lt;/h2&gt;
+&lt;p&gt;The first example in the book shows us how to write an assembly function &lt;code&gt;AddSubI32_a&lt;/code&gt;
+and call it on C++ side.
+Here is a NASM implementation &lt;code&gt;nasm/ch02_01.asm&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nf"&gt;section&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;.text&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="nf"&gt;global&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;AddSubI32_a&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="c1"&gt;; Calculates (a + b) - (c + d) + 7.&lt;/span&gt;
+&lt;span class="nl"&gt;AddSubI32_a:&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;esi&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; edi = edi + esi = a + b&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ecx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; edx = edx + ecx = c + d&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;sub&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; edi = edi - edx&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="c1"&gt;; edi = edi + 7&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;eax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; eax = edi&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;ret&lt;/span&gt;&lt;span class="w"&gt;             &lt;/span&gt;&lt;span class="c1"&gt;; return to caller&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;global&lt;/code&gt; assembly directive makes the &lt;code&gt;AddSubI32_a&lt;/code&gt; symbol visible to the C++ linker.
+This is how the function is declared and called in the C++ program &lt;code&gt;cpp/main.cpp&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="cp"&gt;#include&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="cpf"&gt;&amp;lt;iostream&amp;gt;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+
+&lt;span class="c1"&gt;// Calculates (a + b) - (c + d) + 7.&lt;/span&gt;
+&lt;span class="k"&gt;extern&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;C&amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;AddSubI32_a&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;AddSubI32_a&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;std&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="n"&gt;cout&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;C++ says &amp;quot;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;std&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt;&lt;span class="n"&gt;endl&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let's assemble the NASM file to create the object file &lt;code&gt;ch02_01.o&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;nasm -f macho64&lt;/code&gt; produces Mach-O x86-64 file.
+  If you're on Linux, you would need &lt;code&gt;elf64&lt;/code&gt; format, see &lt;code&gt;nasm -hf&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;nm ch02_01.o&lt;/code&gt; shows a symbol table of the object file &lt;code&gt;ch02_01.o&lt;/code&gt;.
+  The capital &lt;code&gt;T&lt;/code&gt; (text section symbol) in &lt;code&gt;T AddSubI32_a&lt;/code&gt; tells us that the function is global
+  (local symbols are lower case &lt;code&gt;t&lt;/code&gt;).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ nasm -f macho64 ./nasm/ch02_01.asm -o ch02_01.o&lt;/span&gt;
+&lt;span class="go"&gt;﹩ nm ch02_01.o&lt;/span&gt;
+&lt;span class="go"&gt;0000000000000000 T AddSubI32_a&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;extern "C"&lt;/code&gt; keyword instructs the C++ compiler to adhere to the C ABI
+when dealing with this function, e.g.,
+use C-style naming (no &lt;a href="https://en.wikipedia.org/wiki/Name_mangling"&gt;name mangling&lt;/a&gt;)
+so the same &lt;code&gt;AddSubI32_a&lt;/code&gt; symbol is used consistently in C++ and assembly.
+Let's compile the C++ file into an object file &lt;code&gt;main.o&lt;/code&gt; without linking it yet:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;the capital &lt;code&gt;U&lt;/code&gt; in &lt;code&gt;U _AddSubI32_a&lt;/code&gt; stands for &lt;strong&gt;U&lt;/strong&gt;ndefined global symbol, i.e.,
+  the &lt;code&gt;main.o&lt;/code&gt; knows that the function exists but doesn't know where its machine code is&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;T _main&lt;/code&gt; says that the &lt;code&gt;_main&lt;/code&gt; symbol is global and present in the text section of this object file&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ g++ -c ./cpp/main.cpp -o main.o&lt;/span&gt;
+&lt;span class="go"&gt;﹩ nm main.o&lt;/span&gt;
+&lt;span class="go"&gt;000000000000019c s GCC_except_table3&lt;/span&gt;
+&lt;span class="go"&gt;                 U _AddSubI32_a&lt;/span&gt;
+&lt;span class="go"&gt;...&lt;/span&gt;
+&lt;span class="go"&gt;0000000000000000 T _main&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The linker should produce the executable file &lt;code&gt;main&lt;/code&gt; since it can resolve
+the undefined symbol from &lt;code&gt;main.o&lt;/code&gt; to the one defined in &lt;code&gt;ch02_01.o&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ g++ main.o ch02_01.o -o main&lt;/span&gt;
+&lt;span class="go"&gt;Undefined symbols for architecture x86_64:&lt;/span&gt;
+&lt;span class="go"&gt;  &amp;quot;_AddSubI32_a&amp;quot;, referenced from:&lt;/span&gt;
+&lt;span class="go"&gt;      _main in main.o&lt;/span&gt;
+&lt;span class="go"&gt;ld: symbol(s) not found for architecture x86_64&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Unfortunately, it failed to link because the symbols are different: &lt;code&gt;U _AddSubI32_a&lt;/code&gt; vs &lt;code&gt;T AddSubI32_a&lt;/code&gt;.
+The &lt;code&gt;main.o&lt;/code&gt; file expects the symbol to have an underscore on macOS, i.e., &lt;code&gt;_AddSubI32_a&lt;/code&gt;.
+Once the function is renamed from &lt;code&gt;AddSubI32_a&lt;/code&gt; to &lt;code&gt;_AddSubI32_a&lt;/code&gt; in &lt;code&gt;nasm/ch02_01.asm&lt;/code&gt;
+we finally get our program working:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ nasm -f macho64 ./nasm/ch02_01.asm -o ch02_01.o&lt;/span&gt;
+&lt;span class="go"&gt;﹩ nm ch02_01.o&lt;/span&gt;
+&lt;span class="go"&gt;0000000000000000 T _AddSubI32_a&lt;/span&gt;
+&lt;span class="go"&gt;﹩ g++ main.o ch02_01.o -o main&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;C++ says 3&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note, you don't need to add an underscore if you're on Linux.&lt;/p&gt;
+&lt;h2&gt;Zig example&lt;/h2&gt;
+&lt;p&gt;Zig can compile C and C++ code for different architectures and operating systems
+because it comes with Clang/LLVM embedded inside it.
+Here is how we can link &lt;code&gt;main.o&lt;/code&gt; and &lt;code&gt;ch02_01.o&lt;/code&gt; to get the executable file &lt;code&gt;main&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ zig c++ main.o ch02_01.o -o main&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;These examples compile C, C++ code and link with &lt;code&gt;ch02_01.o&lt;/code&gt; object file that we built with NASM.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ zig cc ./c/main.c ch02_01.o -o main&lt;/span&gt;
+&lt;span class="go"&gt;﹩ zig c++ ./cpp/main.cpp ch02_01.o -o main&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Of course we can write a Zig equivalent of C/C++ program, see &lt;code&gt;zig/main.zig&lt;/code&gt;.
+Just like C/C++, Zig supports &lt;code&gt;extern&lt;/code&gt; and &lt;code&gt;callconv(.c)&lt;/code&gt; keywords
+to use the C ABI when calling &lt;code&gt;AddSubI32_a()&lt;/code&gt;.
+The &lt;code&gt;extern&lt;/code&gt; defaults to the C calling convention, so we can actually omit &lt;code&gt;callconv(.c)&lt;/code&gt; keyword.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;std&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nb"&gt;@import&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;std&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="c1"&gt;// Calculates (a + b) - (c + d) + 7.&lt;/span&gt;
+&lt;span class="kr"&gt;extern&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;fn&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;AddSubI32_a&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;callconv&lt;/span&gt;&lt;span class="p"&gt;(.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kr"&gt;pub&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;fn&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;AddSubI32_a&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;std&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;debug&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Zig says {d}&lt;/span&gt;&lt;span class="se"&gt;\n&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;.{&lt;/span&gt;&lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="p"&gt;});&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;As we can see, it's compiled and linked with &lt;code&gt;ch02_01.o&lt;/code&gt; no problem.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ zig build-exe ./zig/main.zig ch02_01.o --name main&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;Zig says 3&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Since Zig includes Clang/LLVM, we can use it to build everything (including our assembly code).&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ zig build-exe ./zig/main.zig ./llvm/ch02_01_att.s --name main&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The caveat is that we have to use LLVM Assembler which mimics GAS (GNU Assembler),
+check out &lt;code&gt;llvm/ch02_01_att.s&lt;/code&gt; example.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="na"&gt;.text&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="na"&gt;.global&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;_AddSubI32_a&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Calculates (a + b) - (c + d) + 7.&lt;/span&gt;
+&lt;span class="nl"&gt;_AddSubI32_a:&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;addl&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%esi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%edi&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;# edi = edi + esi&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;addl&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%ecx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%edx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;# edx = edx + ecx&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;subl&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%edx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%edi&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;# edi = edi - edx&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;addl&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;$7&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%edi&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="c1"&gt;# edi = edi + 7&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;movl&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nv"&gt;%eax&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;# eax = edi&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;ret&lt;/span&gt;&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="c1"&gt;# return to caller&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;GAS prefers &lt;code&gt;.s&lt;/code&gt; file extension instead of &lt;code&gt;.asm&lt;/code&gt;, and you've probably noticed that
+the assembly code looks quite different from NASM:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;directives start with a dot (&lt;code&gt;.global&lt;/code&gt; vs &lt;code&gt;global&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;comments start with &lt;code&gt;#&lt;/code&gt; instead of &lt;code&gt;;&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;GAS uses AT&amp;amp;T-style syntax, so operand order is reversed,
+  registers have &lt;code&gt;%&lt;/code&gt; prefix, instructions have size suffixes (&lt;code&gt;l&lt;/code&gt; in &lt;code&gt;addl&lt;/code&gt; means long),
+  and scalars have &lt;code&gt;$&lt;/code&gt; prefixes, e.g., &lt;code&gt;addl $7, %edi&lt;/code&gt; (AT&amp;amp;T) vs &lt;code&gt;add edi, 7&lt;/code&gt; (Intel)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The &lt;code&gt;.intel_syntax noprefix&lt;/code&gt; directive helps us keep the code changes minimal.
+It tells the LLVM Assembler to use Intel-style syntax like in NASM, for example &lt;code&gt;llvm/ch02_01_intel.s&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="na"&gt;.intel_syntax&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;noprefix&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="na"&gt;.text&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="na"&gt;.global&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;_AddSubI32_a&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="c1"&gt;# Calculates (a + b) - (c + d) + 7.&lt;/span&gt;
+&lt;span class="nl"&gt;_AddSubI32_a:&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;esi&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;# edi = edi + esi = a + b&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ecx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;# edx = edx + ecx = c + d&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;sub&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;# edi = edi - edx&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="c1"&gt;# edi = edi + 7&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;eax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;# eax = edi&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;ret&lt;/span&gt;&lt;span class="w"&gt;             &lt;/span&gt;&lt;span class="c1"&gt;# return to caller&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let's build our Zig program with that Intel-style assembly code,
+but this time we'll leverage &lt;code&gt;build.zig&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;std&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nb"&gt;@import&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;std&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kr"&gt;pub&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;fn&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;build&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;std&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Build&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;target&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;standardTargetOptions&lt;/span&gt;&lt;span class="p"&gt;(.{});&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;optimize&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;standardOptimizeOption&lt;/span&gt;&lt;span class="p"&gt;(.{});&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;exe&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;addExecutable&lt;/span&gt;&lt;span class="p"&gt;(.{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;main&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;root_module&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;createModule&lt;/span&gt;&lt;span class="p"&gt;(.{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;root_source_file&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;zig/main.zig&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;target&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;target&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;optimize&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;optimize&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;}),&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="p"&gt;});&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;exe&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;root_module&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;addAssemblyFile&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;llvm/ch02_01_intel.s&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;installArtifact&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;exe&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code&gt;zig build&lt;/code&gt; will make the &lt;code&gt;main&lt;/code&gt; program just like &lt;code&gt;zig build-exe&lt;/code&gt; did.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ zig build&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./zig-out/bin/main&lt;/span&gt;
+&lt;span class="go"&gt;Zig says 3&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2&gt;C ABI&lt;/h2&gt;
+&lt;p&gt;We instructed C++ and Zig to adhere to the C ABI when calling &lt;code&gt;AddSubI32_a()&lt;/code&gt; function.
+But what does it mean for the assembly side that implements it?&lt;/p&gt;
+&lt;p&gt;The C ABI defines a set of calling conventions and data layouts specific
+to a given CPU architecture and operating system.
+This implies that the assembly code for &lt;code&gt;AddSubI32_a(a: i32, b: i32, c: i32, d: i32) i32&lt;/code&gt;
+will look different on Linux x86-64 vs Windows x86-64.&lt;/p&gt;
+&lt;p&gt;Here is NASM and MASM code to quickly demonstrate &lt;strong&gt;System V AMD64 ABI&lt;/strong&gt; (Linux/macOS)
+and &lt;strong&gt;Microsoft x64 ABI&lt;/strong&gt; (Windows) basics:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;on Linux/macOS we pass the &lt;code&gt;a&lt;/code&gt;, &lt;code&gt;b&lt;/code&gt;, &lt;code&gt;c&lt;/code&gt;, &lt;code&gt;d&lt;/code&gt; 32-bit arguments in &lt;code&gt;edi&lt;/code&gt;, &lt;code&gt;esi&lt;/code&gt;, &lt;code&gt;edx&lt;/code&gt;, &lt;code&gt;ecx&lt;/code&gt; registers,
+  and return the 32-bit integer value from &lt;code&gt;eax&lt;/code&gt; register&lt;/li&gt;
+&lt;li&gt;on Windows we use &lt;code&gt;ecx&lt;/code&gt;, &lt;code&gt;edx&lt;/code&gt;, &lt;code&gt;r8d&lt;/code&gt;, &lt;code&gt;r9d&lt;/code&gt; instead&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;; NASM&lt;/span&gt;
+&lt;span class="nl"&gt;AddSubI32_a:&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;esi&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; edi = edi + esi = a + b&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ecx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; edx = edx + ecx = c + d&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;sub&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; edi = edi - edx&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="c1"&gt;; edi = edi + 7&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;eax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edi&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; eax = edi&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;ret&lt;/span&gt;&lt;span class="w"&gt;             &lt;/span&gt;&lt;span class="c1"&gt;; return to caller&lt;/span&gt;
+
+&lt;span class="c1"&gt;; MASM&lt;/span&gt;
+&lt;span class="nf"&gt;AddSubI32_a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;proc&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ecx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;edx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; ecx = ecx + edx = a + b&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;r8d&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;r9d&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; r8d = r8d + r9d = c + d&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;sub&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ecx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;r8d&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; ecx = ecx - r8d&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;add&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ecx&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="w"&gt;      &lt;/span&gt;&lt;span class="c1"&gt;; ecx = ecx + 7&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;mov&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;eax&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;ecx&lt;/span&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;; eax = ecx&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="nf"&gt;ret&lt;/span&gt;&lt;span class="w"&gt;             &lt;/span&gt;&lt;span class="c1"&gt;; return to caller&lt;/span&gt;
+&lt;span class="nf"&gt;AddSubI32_a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="no"&gt;endp&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Since I am writing this post on macOS (Intel i5-10600), I'll stick to System V AMD64 ABI.
+&lt;a href="https://en.wikipedia.org/wiki/X86_calling_conventions"&gt;Wikipedia&lt;/a&gt; outlines it as follows:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;integer arguments are passed in &lt;code&gt;rdi&lt;/code&gt;, &lt;code&gt;rsi&lt;/code&gt;, &lt;code&gt;rdx&lt;/code&gt;, &lt;code&gt;rcx&lt;/code&gt;, &lt;code&gt;r8&lt;/code&gt;, and &lt;code&gt;r9&lt;/code&gt;.
+  The 8, 16, and 32-bit integers are passed in the low-order bits (the high-order bits are undefined).&lt;/li&gt;
+&lt;li&gt;floating point arguments go in &lt;code&gt;xmm0&lt;/code&gt;-&lt;code&gt;xmm7&lt;/code&gt; (bits &lt;code&gt;[31..0]&lt;/code&gt; for float, &lt;code&gt;[63..0]&lt;/code&gt; for double,
+  all other bits are undefined)&lt;/li&gt;
+&lt;li&gt;the return value go in &lt;code&gt;rax&lt;/code&gt;/&lt;code&gt;rdx&lt;/code&gt; for integer, and &lt;code&gt;xmm0&lt;/code&gt;/&lt;code&gt;xmm1&lt;/code&gt; for floating point.
+  If a return value is larger than 16 bytes, the caller allocates a return struct on its stack.
+  That struct address is passed in &lt;code&gt;rdi&lt;/code&gt; register, so the first argument has to go in &lt;code&gt;rsi&lt;/code&gt;.
+  Upon returning the &lt;code&gt;rax&lt;/code&gt; must contain the memory address it got from &lt;code&gt;rdi&lt;/code&gt; register.
+  For example, &lt;code&gt;rdi=&amp;amp;r&lt;/code&gt;, &lt;code&gt;rsi=a&lt;/code&gt;, &lt;code&gt;rdx=b&lt;/code&gt; when a function is called as follows &lt;code&gt;r = f(a, b)&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;additional arguments are pushed onto the stack in reverse order&lt;/li&gt;
+&lt;li&gt;for variadic calls such as &lt;code&gt;printf&lt;/code&gt;, the &lt;code&gt;al&lt;/code&gt; register must be set
+  to the number of used &lt;code&gt;xmm&lt;/code&gt; registers, set it zero if none are used&lt;/li&gt;
+&lt;li&gt;caller-saved (volatile, can be used freely): &lt;code&gt;rax&lt;/code&gt;, &lt;code&gt;rcx&lt;/code&gt;, &lt;code&gt;rdx&lt;/code&gt;, &lt;code&gt;rdi&lt;/code&gt;, &lt;code&gt;rsi&lt;/code&gt;, &lt;code&gt;r8&lt;/code&gt;-&lt;code&gt;r11&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;callee-saved (non-volatile, the function must restore them): &lt;code&gt;rbx&lt;/code&gt;, &lt;code&gt;rsp&lt;/code&gt;, &lt;code&gt;rbp&lt;/code&gt;, &lt;code&gt;r12&lt;/code&gt;-&lt;code&gt;r15&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;bits &lt;code&gt;[255..128]&lt;/code&gt; of registers &lt;code&gt;ymm0&lt;/code&gt;-&lt;code&gt;ymm15&lt;/code&gt; are volatile,&lt;/li&gt;
+&lt;li&gt;registers &lt;code&gt;zmm16&lt;/code&gt;-&lt;code&gt;zmm31&lt;/code&gt; are volatile&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;RFLAGS.DF&lt;/code&gt; (direction flag for string instructions)
+  and &lt;code&gt;MXCSR.RC&lt;/code&gt; (rounding mode control flag) are non-volatile.
+  If &lt;code&gt;RFLAGS.DF&lt;/code&gt; is set, it must be zeroed before a function call or return.
+  If &lt;code&gt;MXCSR.RC&lt;/code&gt; is modified, the original rounding mode must be restored.&lt;/li&gt;
+&lt;li&gt;the stack must be aligned to a 16-byte boundary before calling a function,
+  i.e., &lt;code&gt;rsp&lt;/code&gt; must be a multiple of 16&lt;/li&gt;
+&lt;li&gt;leaf functions can use 128-byte area (the red zone) below &lt;code&gt;rsp&lt;/code&gt; for temporary data
+  without moving the stack pointer (this works only in user-space)&lt;/li&gt;
+&lt;li&gt;struct members must be aligned to addresses that are multiples of their size,
+  and a struct's total size must be a multiple of its largest member's alignment&lt;/li&gt;
+&lt;/ul&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;register&lt;/th&gt;
+&lt;th&gt;volatile?&lt;/th&gt;
+&lt;th&gt;usage&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;rax&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;1st int return value&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rbx&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;no&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;long-lived local variables&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rcx&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;4th int argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rdx&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;3rd int argument, 2nd int return value&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rsi&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;2nd int argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rdi&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;1st int argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rbp&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;no&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;stack frame pointer or scratch&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rsp&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;no&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;stack pointer&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;r8&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;5th int argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;r9&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;6th int argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;r10&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;scratch (temporary)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;r11&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;scratch&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;r12-15&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;no&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;long-lived local variables&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm0&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;1st float argument, return value&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm1&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;2nd float argument, return value&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm2&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;3rd float argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm3&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;4th float argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm4&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;5th float argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm5&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;6th float argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm6&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;7th float argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm7&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;8th float argument&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;xmm8-15&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;scratch&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zmm16-31&lt;/td&gt;
+&lt;td&gt;yes&lt;/td&gt;
+&lt;td&gt;scratch&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;If we follow the aforementioned rules when writing an assembly code (or any code really),
+we can use our function with any language as long as it supports this calling convention.
+For instance, &lt;code&gt;AddSubI32_a&lt;/code&gt; can be implemented in Zig and called from C++ using the C ABI.
+We just need to use the &lt;code&gt;export&lt;/code&gt; keyword instead of &lt;code&gt;extern&lt;/code&gt;, see &lt;code&gt;zig/ch02_01.zig&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kr"&gt;export&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;fn&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;AddSubI32_a&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;callconv&lt;/span&gt;&lt;span class="p"&gt;(.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;i32&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="mi"&gt;7&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let's build it and use in the C++ program.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ zig build-obj zig/ch02_01.zig -O ReleaseFast -femit-bin=ch02_01.o&lt;/span&gt;
+&lt;span class="go"&gt;﹩ nm ch02_01.o&lt;/span&gt;
+&lt;span class="go"&gt;0000000000000000 T _AddSubI32_a&lt;/span&gt;
+&lt;span class="go"&gt;0000000000000000 t _ch02_01.AddSubI32_a&lt;/span&gt;
+&lt;span class="go"&gt;﹩ g++ ./cpp/main.cpp ch02_01.o -o main&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;C++ says 3&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The static library can also be created with the following &lt;code&gt;build.zig&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;std&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nb"&gt;@import&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;std&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="kr"&gt;pub&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;fn&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;build&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;std&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Build&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;target&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;standardTargetOptions&lt;/span&gt;&lt;span class="p"&gt;(.{});&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;optimize&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;standardOptimizeOption&lt;/span&gt;&lt;span class="p"&gt;(.{});&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kr"&gt;const&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;lib&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;addLibrary&lt;/span&gt;&lt;span class="p"&gt;(.{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;linkage&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;static&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;ch02_01&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;root_module&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;createModule&lt;/span&gt;&lt;span class="p"&gt;(.{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;root_source_file&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;path&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;zig/ch02_01.zig&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;target&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;target&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;optimize&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;optimize&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;}),&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="p"&gt;});&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;installArtifact&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;lib&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;It produces &lt;code&gt;zig-out/lib/libch02_01.a&lt;/code&gt; archive that contains an object file &lt;code&gt;libch02_01_zcu.o&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ zig build -Doptimize=ReleaseFast&lt;/span&gt;
+&lt;span class="go"&gt;﹩ nm zig-out/lib/libch02_01.a&lt;/span&gt;
+&lt;span class="go"&gt;libch02_01_zcu.o:&lt;/span&gt;
+&lt;span class="go"&gt;0000000000000000 T _AddSubI32_a&lt;/span&gt;
+&lt;span class="go"&gt;0000000000000000 t _ch02_01.AddSubI32_a&lt;/span&gt;
+&lt;span class="go"&gt;﹩ g++ ./cpp/main.cpp ./zig-out/lib/libch02_01.a -o main&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;C++ says 3&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;hr&gt;
+&lt;p&gt;To sum up, we have successfully compiled the Zig and assembly code into a static library
+and linked it across C, C++, and Zig.
+It all worked seamlessly thanks to the C ABI!&lt;/p&gt;
+&lt;p&gt;References:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Modern x86 Assembly Language Programming by Daniel Kusswurm&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://en.wikipedia.org/wiki/Name_mangling"&gt;wiki/Name_mangling&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://en.wikipedia.org/wiki/X86_calling_conventions"&gt;wiki/X86_calling_conventions&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><category term="assembler"></category><category term="zig"></category></entry><entry><title>Go archsimd preview</title><link href="https://marselester.com/go-archsimd-preview.html" rel="alternate"></link><published>2026-01-23T00:00:00+07:00</published><updated>2026-01-23T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2026-01-23:/go-archsimd-preview.html</id><summary type="html">&lt;p&gt;In &lt;a href="https://marselester.com/intro-to-simd-in-avo.html"&gt;the previous post&lt;/a&gt;
 we've implemented SIMD sum in Go assembly &lt;code&gt;[1, 2, 3, 4] + [5, 6, 7, 8]&lt;/code&gt;.
 This is going to be much easier to do in Go 1.26 because of
 &lt;a href="https://pkg.go.dev/simd/archsimd"&gt;simd/archsimd&lt;/a&gt; package,

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"><channel><title>marselester's blog - Marsel</title><link>https://marselester.com/</link><description></description><lastBuildDate>Fri, 23 Jan 2026 00:00:00 +0700</lastBuildDate><item><title>Go archsimd preview</title><link>https://marselester.com/go-archsimd-preview.html</link><description>&lt;p&gt;In &lt;a href="https://marselester.com/intro-to-simd-in-avo.html"&gt;the previous post&lt;/a&gt;
+<rss version="2.0"><channel><title>marselester's blog - Marsel</title><link>https://marselester.com/</link><description></description><lastBuildDate>Thu, 14 May 2026 00:00:00 +0700</lastBuildDate><item><title>The C ABI: Using Assembly with Zig</title><link>https://marselester.com/zig-c-abi.html</link><description>&lt;p&gt;I am currently reading &lt;a href="https://www.goodreads.com/book/show/156500234-modern-x86-assembly-language-programming"&gt;Modern x86 Assembly Language Programming&lt;/a&gt; by Daniel Kusswurm.
+The book provides examples in C++, NASM, and MASM,
+but since I'm more interested in Zig, I’ve decided to follow along using it as my primary language.&lt;/p&gt;
+&lt;p&gt;As we'll see in this post, the C ABI (Application …&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel</dc:creator><pubDate>Thu, 14 May 2026 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2026-05-14:/zig-c-abi.html</guid><category>assembler</category><category>zig</category></item><item><title>Go archsimd preview</title><link>https://marselester.com/go-archsimd-preview.html</link><description>&lt;p&gt;In &lt;a href="https://marselester.com/intro-to-simd-in-avo.html"&gt;the previous post&lt;/a&gt;
 we've implemented SIMD sum in Go assembly &lt;code&gt;[1, 2, 3, 4] + [5, 6, 7, 8]&lt;/code&gt;.
 This is going to be much easier to do in Go 1.26 because of
 &lt;a href="https://pkg.go.dev/simd/archsimd"&gt;simd/archsimd&lt;/a&gt; package,
