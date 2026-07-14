@@ -330,8 +330,8 @@ As expected, it also contains the boundaries checks.</p>
 <h2>Bounds-checking elimination</h2>
 <p>It would be great to convince the Go compiler that our code safely accesses
 the <code>input</code> slice and index <code>i</code> can't be out of range.
-This will improve the performance since the CPU won't need to predict
-the branches in the loop introduced by the slice boundaries checks.</p>
+This will improve the performance since the CPU won't need to execute extra
+compare-and-branch instructions in the hot loop introduced by the boundaries checks.</p>
 <p>The bounds check was eliminated from the scalar loop as follows.
 Effectively it was moved outside the loop, i.e., at <code>tail := input[i:]</code> line.</p>
 <div class="highlight"><pre><span></span><code><span class="nx">tail</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">:]</span><span class="w"></span>
@@ -551,7 +551,7 @@ This means the bounds checks were eliminated! 🎉</p>
 <hr>
 <p>Removing those branches makes it ~54.69% faster than the scalar sum
 which is similar to <code>sumv3</code>'s 54.23% (manually written assembly).
-It looks like the bounds checks elimination accounted for ~7.1% speed-up.</p>
+It looks like the bounds checks elimination accounted for ~14% speed-up (from 20.1µs to 17.3µs).</p>
 <div class="highlight"><pre><span></span><code><span class="go">﹩ GOEXPERIMENT=simd go1.26rc2 test -bench=^ -count=10 ./sumv5 | tee bench.txt</span>
 <span class="go">﹩ grep Benchmark bench.txt | sed &#39;s/Benchmark[A-z]*/BenchmarkSum/g&#39; | split -l 10 -a 1 - bench_</span>
 <span class="go">﹩ benchstat bench_a bench_b</span>

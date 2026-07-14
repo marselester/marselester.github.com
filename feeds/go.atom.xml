@@ -278,8 +278,8 @@ As expected, it also contains the boundaries checks.&lt;/p&gt;
 &lt;h2&gt;Bounds-checking elimination&lt;/h2&gt;
 &lt;p&gt;It would be great to convince the Go compiler that our code safely accesses
 the &lt;code&gt;input&lt;/code&gt; slice and index &lt;code&gt;i&lt;/code&gt; can't be out of range.
-This will improve the performance since the CPU won't need to predict
-the branches in the loop introduced by the slice boundaries checks.&lt;/p&gt;
+This will improve the performance since the CPU won't need to execute extra
+compare-and-branch instructions in the hot loop introduced by the boundaries checks.&lt;/p&gt;
 &lt;p&gt;The bounds check was eliminated from the scalar loop as follows.
 Effectively it was moved outside the loop, i.e., at &lt;code&gt;tail := input[i:]&lt;/code&gt; line.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="nx"&gt;tail&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;:=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;input&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;i&lt;/span&gt;&lt;span class="p"&gt;:]&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
@@ -499,7 +499,7 @@ This means the bounds checks were eliminated! 🎉&lt;/p&gt;
 &lt;hr&gt;
 &lt;p&gt;Removing those branches makes it ~54.69% faster than the scalar sum
 which is similar to &lt;code&gt;sumv3&lt;/code&gt;'s 54.23% (manually written assembly).
-It looks like the bounds checks elimination accounted for ~7.1% speed-up.&lt;/p&gt;
+It looks like the bounds checks elimination accounted for ~14% speed-up (from 20.1µs to 17.3µs).&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ GOEXPERIMENT=simd go1.26rc2 test -bench=^ -count=10 ./sumv5 | tee bench.txt&lt;/span&gt;
 &lt;span class="go"&gt;﹩ grep Benchmark bench.txt | sed &amp;#39;s/Benchmark[A-z]*/BenchmarkSum/g&amp;#39; | split -l 10 -a 1 - bench_&lt;/span&gt;
 &lt;span class="go"&gt;﹩ benchstat bench_a bench_b&lt;/span&gt;

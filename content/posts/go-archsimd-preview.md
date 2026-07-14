@@ -294,8 +294,8 @@ As expected, it also contains the boundaries checks.
 
 It would be great to convince the Go compiler that our code safely accesses
 the `input` slice and index `i` can't be out of range.
-This will improve the performance since the CPU won't need to predict
-the branches in the loop introduced by the slice boundaries checks.
+This will improve the performance since the CPU won't need to execute extra
+compare-and-branch instructions in the hot loop introduced by the boundaries checks.
 
 The bounds check was eliminated from the scalar loop as follows.
 Effectively it was moved outside the loop, i.e., at `tail := input[i:]` line.
@@ -523,7 +523,7 @@ ok  	intro/sumv4	24.203s
 
 Removing those branches makes it ~54.69% faster than the scalar sum
 which is similar to `sumv3`'s 54.23% (manually written assembly).
-It looks like the bounds checks elimination accounted for ~7.1% speed-up.
+It looks like the bounds checks elimination accounted for ~14% speed-up (from 20.1µs to 17.3µs).
 
 ```console
 ﹩ GOEXPERIMENT=simd go1.26rc2 test -bench=^ -count=10 ./sumv5 | tee bench.txt
