@@ -124,7 +124,7 @@ The function name `Add` is followed by `(SB)`:
   (that's merely an analogy, not an actual code)
 
 After the symbol, we have `NOSPLIT` flag which is an argument to the `TEXT` directive.
-It tells the linker not to insert the preamble that checks if the goroutine stack must be split.
+It tells the compiler not to insert the preamble that checks if the goroutine stack must be split.
 Normally, Go inserts code to check if the stack needs to grow, but `NOSPLIT` disables this.
 This reduces the `Add` function call overhead, but limits the size of the stack.
 The stack frame for a given function, plus anything it calls, must fit in the spare space

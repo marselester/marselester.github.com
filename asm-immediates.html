@@ -4,7 +4,7 @@
     <!-- Set the viewport width to device width for mobile -->
     <meta name="viewport" content="width=device-width" />
 
-    <title>marselester's blog - Zig</title>
+    <title>Writing immediates to memory</title>
 
     <link rel="stylesheet" href="https://marselester.com/theme/css/normalize.css" />
     <link rel="stylesheet" href="https://marselester.com/theme/css/foundation.min.css" />
@@ -47,16 +47,18 @@
 
     <!-- Main Blog Content -->
     <div class="large-9 columns">
-        
-        
+<article>
+    <header>
+        <h3 class="article-title"><a href="https://marselester.com/asm-immediates.html" rel="bookmark"
+        title="Permalink to Writing immediates to memory">Writing immediates to memory</a></h3>
+<a href="http://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="marselester">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+    </header>
 
-            <article>
-                <a href="https://marselester.com/asm-immediates.html"><h3 class="article-title">Writing immediates to memory</h3></a>
 <h6 class="subheader" title="2026-09-02T00:00:00+07:00">Wed 02 September 2026
 </h6>
 
 
-<p>An immediate in assembly is a scalar value such as <code>123</code>.
+    <p>An immediate in assembly is a scalar value such as <code>123</code>.
 While the concept is familiar from high-level languages, immediates require more attention in x86-64 assembly.
 There are no floating-point immediates, so everything below is about integers.</p>
 <h2>Memory access</h2>
@@ -420,7 +422,8 @@ Anything larger has to go through a register.</p>
 <ul>
 <li>Modern x86 Assembly Language Programming by Daniel Kusswurm</li>
 <li><a href="https://en.wikipedia.org/wiki/Two%27s_complement">Two's complement</a></li>
-</ul><p class="subheader">Category: <a href="https://marselester.com/category/zig.html">Zig</a>
+</ul>
+<p class="subheader">Category: <a href="https://marselester.com/category/zig.html">Zig</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/assembler.html">assembler </a>
@@ -429,68 +432,22 @@ Anything larger has to go through a register.</p>
 
 
 
-<p><a href="https://marselester.com/asm-immediates.html#disqus_thread">comments</a></p>            </article>
 
+	<h4>Comments</h4>
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        var disqus_shortname = 'marselester'
+        var disqus_identifier = "asm-immediates.html";
+        var disqus_url = "https://marselester.com/asm-immediates.html";
 
-                <hr  class="gradient"/>
-
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/zig-simd.html"><h3 class="article-title">Zig SIMD in assembly</h3></a>
-<h6 class="subheader" title="2026-07-14T00:00:00+07:00">Tue 14 July 2026
-</h6>
-
-
-<p>In <a href="https://marselester.com/zig-c-abi.html">the C ABI</a> post we saw how
-convenient it's to write Intel-style assembly code in Zig.
-This time let's see what it takes to use SIMD in assembly.</p>
-<h2>Assembly side</h2>
-<p><a href="https://github.com/Apress/modern-x86-assembly-language-programming-3e/blob/main/Chapter08/Ch08_01/Ch08_01_fasm.s">The first SIMD example</a>
-in Modern x86 Assembly book demonstrates 16-bit integers addition
-using both wraparound and saturated arithmetic …</p><p class="subheader">Category: <a href="https://marselester.com/category/zig.html">Zig</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/assembler.html">assembler </a>
-    <a href="https://marselester.com/tag/zig.html">zig </a>
-    <a href="https://marselester.com/tag/simd.html">simd </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/zig-simd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/zig-simd.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-        
-
-
-            <article>
-                <a href="https://marselester.com/zig-c-abi.html"><h3 class="article-title">The C ABI: Using Assembly with Zig</h3></a>
-<h6 class="subheader" title="2026-05-14T00:00:00+07:00">Thu 14 May 2026
-</h6>
-
-
-<p>I am currently reading <a href="https://www.goodreads.com/book/show/156500234-modern-x86-assembly-language-programming">Modern x86 Assembly Language Programming</a> by Daniel Kusswurm.
-The book provides examples in C++, NASM, and MASM,
-but since I'm more interested in Zig, I’ve decided to follow along using it as my primary language.</p>
-<p>As we'll see in this post, the C ABI (Application …</p><p class="subheader">Category: <a href="https://marselester.com/category/zig.html">Zig</a>
-
-    Tagged: 
-    <a href="https://marselester.com/tag/assembler.html">assembler </a>
-    <a href="https://marselester.com/tag/zig.html">zig </a>
-</p>
-
-
-
-<p><a href="https://marselester.com/zig-c-abi.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/zig-c-abi.html">Read More</a>
-                <hr  class="gradient"/>
-            </article>
-
-            <!-- /#posts-list -->
-
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</article>
     </div>
     <!-- End Main Content -->
 

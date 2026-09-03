@@ -1,5 +1,373 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/all.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2026-07-14T00:00:00+07:00</updated><entry><title>Zig SIMD in assembly</title><link href="https://marselester.com/zig-simd.html" rel="alternate"></link><published>2026-07-14T00:00:00+07:00</published><updated>2026-07-14T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2026-07-14:/zig-simd.html</id><summary type="html">&lt;p&gt;In &lt;a href="https://marselester.com/zig-c-abi.html"&gt;the C ABI&lt;/a&gt; post we saw how
+<feed xmlns="http://www.w3.org/2005/Atom"><title>marselester's blog</title><link href="https://marselester.com/" rel="alternate"></link><link href="https://marselester.com/feeds/all.atom.xml" rel="self"></link><id>https://marselester.com/</id><updated>2026-09-02T00:00:00+07:00</updated><entry><title>Writing immediates to memory</title><link href="https://marselester.com/asm-immediates.html" rel="alternate"></link><published>2026-09-02T00:00:00+07:00</published><updated>2026-09-02T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2026-09-02:/asm-immediates.html</id><summary type="html">&lt;p&gt;An immediate in assembly is a scalar value such as &lt;code&gt;123&lt;/code&gt;.
+While the concept is familiar from high-level languages, immediates require more attention in x86-64 assembly.
+There are no floating-point immediates, so everything below is about integers.&lt;/p&gt;
+&lt;h2&gt;Memory access&lt;/h2&gt;
+&lt;p&gt;Writing &lt;code&gt;123&lt;/code&gt; immediate value to a memory address like so &lt;code&gt;mov …&lt;/code&gt;&lt;/p&gt;</summary><content type="html">&lt;p&gt;An immediate in assembly is a scalar value such as &lt;code&gt;123&lt;/code&gt;.
+While the concept is familiar from high-level languages, immediates require more attention in x86-64 assembly.
+There are no floating-point immediates, so everything below is about integers.&lt;/p&gt;
+&lt;h2&gt;Memory access&lt;/h2&gt;
+&lt;p&gt;Writing &lt;code&gt;123&lt;/code&gt; immediate value to a memory address like so &lt;code&gt;mov [rdi], 123&lt;/code&gt; can catch us off guard.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.s &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;.intel_syntax noprefix&lt;/span&gt;
+&lt;span class="go"&gt;.text&lt;/span&gt;
+&lt;span class="go"&gt;.global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov [rdi], 123&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-obj demo.s&lt;/span&gt;
+&lt;span class="go"&gt;error(compilation): clang failed with stderr: demo.s:5:9: error: ambiguous operand size for instruction &amp;#39;mov&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;    mov [rdi], 123&lt;/span&gt;
+&lt;span class="go"&gt;        ^~~~&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The LLVM assembler behind &lt;code&gt;zig build-obj&lt;/code&gt; tells us that our &lt;code&gt;mov&lt;/code&gt; instruction has an ambiguous operand size
+(if the example seems confusing, try my earlier post on &lt;a href="https://marselester.com/zig-c-abi.html"&gt;using Assembly with Zig&lt;/a&gt;).
+Indeed, the assembler is not sure how many bytes to use to represent &lt;code&gt;123&lt;/code&gt; in memory.
+It can use a byte, a word, a double word, and so on.
+Interestingly, NASM v3.02 defaults to using a byte size and truncates larger values with a warning.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.asm &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;section .text&lt;/span&gt;
+&lt;span class="go"&gt;global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov [rdi], 123&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ nasm -f macho64 demo.asm&lt;/span&gt;
+&lt;span class="go"&gt;﹩ objdump -d --x86-asm-syntax=intel demo.o&lt;/span&gt;
+&lt;span class="go"&gt;       0: c6 07 7b                      mov byte ptr [rdi], 0x7b&lt;/span&gt;
+&lt;span class="go"&gt;       3: c3                            ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let's see how our &lt;code&gt;mov [rdi], 123&lt;/code&gt; is different from disassembled &lt;code&gt;mov byte ptr [rdi], 0x7b&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;byte ptr&lt;/code&gt; in front of &lt;code&gt;[rdi]&lt;/code&gt; means to treat the memory address in register &lt;code&gt;rdi&lt;/code&gt;
+  as a pointer to a byte size integer, e.g., &lt;code&gt;i8&lt;/code&gt; or &lt;code&gt;u8&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;0x7b&lt;/code&gt; is &lt;code&gt;123&lt;/code&gt; in hex&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The LLVM assembler has no problems building the object file &lt;code&gt;demo.o&lt;/code&gt; once we add &lt;code&gt;byte ptr&lt;/code&gt;.
+The &lt;code&gt;objdump&lt;/code&gt; confirms that &lt;code&gt;zig build-obj&lt;/code&gt; emits the same machine code for the &lt;code&gt;_demo()&lt;/code&gt; function as NASM.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.s &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;.intel_syntax noprefix&lt;/span&gt;
+&lt;span class="go"&gt;.text&lt;/span&gt;
+&lt;span class="go"&gt;.global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov byte ptr [rdi], 123&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-obj demo.s&lt;/span&gt;
+&lt;span class="go"&gt;﹩ objdump -d --x86-asm-syntax=intel demo.o&lt;/span&gt;
+&lt;span class="go"&gt;       0: c6 07 7b                      mov byte ptr [rdi], 0x7b&lt;/span&gt;
+&lt;span class="go"&gt;       3: c3                            ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We've got the function in &lt;code&gt;demo.o&lt;/code&gt; file, let's make sure it actually works.
+Here is a Zig program that declares a byte size variable &lt;code&gt;var v: i8 = 0&lt;/code&gt;
+and passes its pointer when calling &lt;code&gt;demo(&amp;amp;v)&lt;/code&gt;.
+The assembly function &lt;code&gt;_demo()&lt;/code&gt; writes &lt;code&gt;123&lt;/code&gt; to that dereferenced pointer and returns.
+Finally, we print the variable &lt;code&gt;v&lt;/code&gt; and its raw memory with &lt;code&gt;std.mem.asBytes(&amp;amp;v)&lt;/code&gt;.
+If you're unsure how it all works, see &lt;a href="https://marselester.com/zig-c-abi.html"&gt;The C ABI: Using Assembly with Zig&lt;/a&gt; post.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; main.zig &amp;lt;&amp;lt;ZIG&lt;/span&gt;
+&lt;span class="go"&gt;const std = @import(&amp;quot;std&amp;quot;);&lt;/span&gt;
+
+&lt;span class="go"&gt;extern fn demo(v: *i8) void;&lt;/span&gt;
+
+&lt;span class="go"&gt;pub fn main() void {&lt;/span&gt;
+&lt;span class="go"&gt;    var v: i8 = 0;&lt;/span&gt;
+&lt;span class="go"&gt;    demo(&amp;amp;v);&lt;/span&gt;
+&lt;span class="go"&gt;    std.debug.print(&amp;quot;{d} is stored as 0x{x} at {*}\n&amp;quot;, .{&lt;/span&gt;
+&lt;span class="go"&gt;        v,&lt;/span&gt;
+&lt;span class="go"&gt;        std.mem.asBytes(&amp;amp;v),&lt;/span&gt;
+&lt;span class="go"&gt;        &amp;amp;v,&lt;/span&gt;
+&lt;span class="go"&gt;    });&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;span class="go"&gt;ZIG&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-exe main.zig demo.s&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;123 is stored as 0x7b at i8@7ff7b00a2000&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;As expected, the program's output shows that &lt;code&gt;123&lt;/code&gt; was stored as &lt;code&gt;0x7b&lt;/code&gt;.
+It also printed the memory address &lt;code&gt;0x7ff7b00a2000&lt;/code&gt; where the value was placed.
+What if we wanted to use 4 bytes of memory instead of just one byte?
+We would need to replace &lt;code&gt;byte&lt;/code&gt; with &lt;code&gt;dword&lt;/code&gt; in the &lt;code&gt;mov&lt;/code&gt; instruction like this &lt;code&gt;mov dword ptr [rdi], 123&lt;/code&gt;,
+and update &lt;code&gt;main.zig&lt;/code&gt; to use &lt;code&gt;i32&lt;/code&gt; instead of &lt;code&gt;i8&lt;/code&gt;.&lt;/p&gt;
+&lt;details style="margin-bottom: 1rem"&gt;
+
+&lt;summary&gt;🔻 &lt;code&gt;mov dword ptr [rdi], 123&lt;/code&gt;&lt;/summary&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.s &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;.intel_syntax noprefix&lt;/span&gt;
+&lt;span class="go"&gt;.text&lt;/span&gt;
+&lt;span class="go"&gt;.global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov dword ptr [rdi], 123&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ cat &amp;gt; main.zig &amp;lt;&amp;lt;ZIG&lt;/span&gt;
+&lt;span class="go"&gt;const std = @import(&amp;quot;std&amp;quot;);&lt;/span&gt;
+
+&lt;span class="go"&gt;extern fn demo(v: *i32) void;&lt;/span&gt;
+
+&lt;span class="go"&gt;pub fn main() void {&lt;/span&gt;
+&lt;span class="go"&gt;    var v: i32 = 0;&lt;/span&gt;
+&lt;span class="go"&gt;    demo(&amp;amp;v);&lt;/span&gt;
+&lt;span class="go"&gt;    std.debug.print(&amp;quot;{d} is stored as 0x{x} at {*}\n&amp;quot;, .{&lt;/span&gt;
+&lt;span class="go"&gt;        v,&lt;/span&gt;
+&lt;span class="go"&gt;        std.mem.asBytes(&amp;amp;v),&lt;/span&gt;
+&lt;span class="go"&gt;        &amp;amp;v,&lt;/span&gt;
+&lt;span class="go"&gt;    });&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;span class="go"&gt;ZIG&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-exe main.zig demo.s&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;123 is stored as 0x7b000000 at i32@7ff7b4fe9000&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+
+&lt;/details&gt;
+
+&lt;p&gt;The updated program reported that it stored &lt;code&gt;0x7b&lt;/code&gt; as &lt;code&gt;0x7b000000&lt;/code&gt; (not &lt;code&gt;0x0000007b&lt;/code&gt;) at &lt;code&gt;0x7ff7b4fe9000&lt;/code&gt; address.
+This is because &lt;code&gt;123&lt;/code&gt; immediate's bytes &lt;code&gt;00 00 00 7b&lt;/code&gt; are arranged in little-endian order &lt;code&gt;7b 00 00 00&lt;/code&gt;:
+the least significant byte &lt;code&gt;7b&lt;/code&gt; is placed at the smallest memory address &lt;code&gt;7ff7b4fe9000&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;   Address     Byte&lt;/span&gt;
+&lt;span class="go"&gt;7ff7b4fe9003    00  ← most significant byte&lt;/span&gt;
+&lt;span class="go"&gt;7ff7b4fe9002    00&lt;/span&gt;
+&lt;span class="go"&gt;7ff7b4fe9001    00&lt;/span&gt;
+&lt;span class="go"&gt;7ff7b4fe9000    7b  ← least significant byte&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2&gt;Two's complement&lt;/h2&gt;
+&lt;p&gt;What if we store a negative immediate value &lt;code&gt;mov byte ptr [rdi], -123&lt;/code&gt;?&lt;/p&gt;
+&lt;details style="margin-bottom: 1rem"&gt;
+
+&lt;summary&gt;🔻 &lt;code&gt;mov byte ptr [rdi], -123&lt;/code&gt;&lt;/summary&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.s &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;.intel_syntax noprefix&lt;/span&gt;
+&lt;span class="go"&gt;.text&lt;/span&gt;
+&lt;span class="go"&gt;.global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov byte ptr [rdi], -123&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ cat &amp;gt; main.zig &amp;lt;&amp;lt;ZIG&lt;/span&gt;
+&lt;span class="go"&gt;const std = @import(&amp;quot;std&amp;quot;);&lt;/span&gt;
+
+&lt;span class="go"&gt;extern fn demo(v: *i8) void;&lt;/span&gt;
+
+&lt;span class="go"&gt;pub fn main() void {&lt;/span&gt;
+&lt;span class="go"&gt;    var v: i8 = 0;&lt;/span&gt;
+&lt;span class="go"&gt;    demo(&amp;amp;v);&lt;/span&gt;
+&lt;span class="go"&gt;    std.debug.print(&amp;quot;{d} is stored as 0x{x} at {*}\n&amp;quot;, .{&lt;/span&gt;
+&lt;span class="go"&gt;        v,&lt;/span&gt;
+&lt;span class="go"&gt;        std.mem.asBytes(&amp;amp;v),&lt;/span&gt;
+&lt;span class="go"&gt;        &amp;amp;v,&lt;/span&gt;
+&lt;span class="go"&gt;    });&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;span class="go"&gt;ZIG&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-exe main.zig demo.s&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;-123 is stored as 0x85 at i8@7ff7b8653000&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+
+&lt;/details&gt;
+
+&lt;p&gt;The &lt;code&gt;-123&lt;/code&gt; value got stored as &lt;code&gt;0x85&lt;/code&gt; in memory.
+This is due to &lt;a href="https://en.wikipedia.org/wiki/Two%27s_complement"&gt;two's complement&lt;/a&gt;
+method of representing a signed integer (invert all bits and add one):&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;0111 1011 = 0x7b&lt;/code&gt; -- &lt;code&gt;123&lt;/code&gt; in binary format&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;1000 0100 = 0x84&lt;/code&gt; -- invert all bits of &lt;code&gt;123&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;1000 0101 = 0x85&lt;/code&gt; -- add one&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The Python one liner below confirms it.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ python3 -c &amp;#39;print(&amp;quot;0x7b = {0:0&amp;gt;8b}\n0x85 = {1:0&amp;gt;8b}&amp;quot;.format(0x7b, 0x85))&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;0x7b = 01111011&lt;/span&gt;
+&lt;span class="go"&gt;0x85 = 10000101&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If we store &lt;code&gt;-123&lt;/code&gt; as four bytes &lt;code&gt;mov dword ptr [rdi], -123&lt;/code&gt;, we'll get &lt;code&gt;0x85ffffff&lt;/code&gt; memory representation.&lt;/p&gt;
+&lt;details style="margin-bottom: 1rem"&gt;
+
+&lt;summary&gt;🔻 &lt;code&gt;mov dword ptr [rdi], -123&lt;/code&gt;&lt;/summary&gt;
+
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.s &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;.intel_syntax noprefix&lt;/span&gt;
+&lt;span class="go"&gt;.text&lt;/span&gt;
+&lt;span class="go"&gt;.global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov dword ptr [rdi], -123&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ cat &amp;gt; main.zig &amp;lt;&amp;lt;ZIG&lt;/span&gt;
+&lt;span class="go"&gt;const std = @import(&amp;quot;std&amp;quot;);&lt;/span&gt;
+
+&lt;span class="go"&gt;extern fn demo(v: *i32) void;&lt;/span&gt;
+
+&lt;span class="go"&gt;pub fn main() void {&lt;/span&gt;
+&lt;span class="go"&gt;    var v: i32 = 0;&lt;/span&gt;
+&lt;span class="go"&gt;    demo(&amp;amp;v);&lt;/span&gt;
+&lt;span class="go"&gt;    std.debug.print(&amp;quot;{d} is stored as 0x{x} at {*}\n&amp;quot;, .{&lt;/span&gt;
+&lt;span class="go"&gt;        v,&lt;/span&gt;
+&lt;span class="go"&gt;        std.mem.asBytes(&amp;amp;v),&lt;/span&gt;
+&lt;span class="go"&gt;        &amp;amp;v,&lt;/span&gt;
+&lt;span class="go"&gt;    });&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;span class="go"&gt;ZIG&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-exe main.zig demo.s&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;-123 is stored as 0x85ffffff at i32@7ff7b2e8a00c&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+
+&lt;/details&gt;
+
+&lt;p&gt;Converting &lt;code&gt;0x85ffffff&lt;/code&gt; to a big-endian order gives us &lt;code&gt;0xffffff85&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;0000 0000 0000 0000 0000 0000 0111 1011 = 0x7b&lt;/code&gt; -- &lt;code&gt;123&lt;/code&gt; in binary format&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;1111 1111 1111 1111 1111 1111 1000 0100 = 0xffffff84&lt;/code&gt; -- invert all bits of &lt;code&gt;123&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;1111 1111 1111 1111 1111 1111 1000 0101 = 0xffffff85&lt;/code&gt; -- add one&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ python3 -c &amp;#39;print(&amp;quot;0xffffff85 = {0:0&amp;gt;32b}&amp;quot;.format(0xffffff85))&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;0xffffff85 = 11111111111111111111111110000101&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2&gt;Sign extension&lt;/h2&gt;
+&lt;p&gt;How about storing a positive number &lt;code&gt;2,147,483,648&lt;/code&gt; (2^31) as eight bytes &lt;code&gt;mov qword ptr [rdi], 2147483648&lt;/code&gt;?&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.s &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;.intel_syntax noprefix&lt;/span&gt;
+&lt;span class="go"&gt;.text&lt;/span&gt;
+&lt;span class="go"&gt;.global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov qword ptr [rdi], 2147483648&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ cat &amp;gt; main.zig &amp;lt;&amp;lt;ZIG&lt;/span&gt;
+&lt;span class="go"&gt;const std = @import(&amp;quot;std&amp;quot;);&lt;/span&gt;
+
+&lt;span class="go"&gt;extern fn demo(v: *i64) void;&lt;/span&gt;
+
+&lt;span class="go"&gt;pub fn main() void {&lt;/span&gt;
+&lt;span class="go"&gt;    var v: i64 = 0;&lt;/span&gt;
+&lt;span class="go"&gt;    demo(&amp;amp;v);&lt;/span&gt;
+&lt;span class="go"&gt;    std.debug.print(&amp;quot;{d} is stored as 0x{x} at {*}\n&amp;quot;, .{&lt;/span&gt;
+&lt;span class="go"&gt;        v,&lt;/span&gt;
+&lt;span class="go"&gt;        std.mem.asBytes(&amp;amp;v),&lt;/span&gt;
+&lt;span class="go"&gt;        &amp;amp;v,&lt;/span&gt;
+&lt;span class="go"&gt;    });&lt;/span&gt;
+&lt;span class="go"&gt;}&lt;/span&gt;
+&lt;span class="go"&gt;ZIG&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-exe main.zig demo.s&lt;/span&gt;
+&lt;span class="go"&gt;error(compilation): clang failed with stderr: demo.s:5:5: error: invalid operand for instruction&lt;/span&gt;
+&lt;span class="go"&gt;    mov qword ptr [rdi], 2147483648&lt;/span&gt;
+&lt;span class="go"&gt;    ^&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Zig tooling straight up refuses to build with &lt;code&gt;invalid operand for instruction&lt;/code&gt; error,
+and NASM only warns &lt;code&gt;signed dword exceeds bounds&lt;/code&gt;.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.asm &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;section .text&lt;/span&gt;
+&lt;span class="go"&gt;global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov qword [rdi], 2147483648&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ nasm -f macho64 demo.asm&lt;/span&gt;
+&lt;span class="go"&gt;demo.asm:4: warning: signed dword exceeds bounds [-w+number-overflow]&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-exe main.zig demo.o&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;-2147483648 is stored as 0x00000080ffffffff at i64@7ff7bf1ff008&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The program's output is surprising &lt;code&gt;-2147483648 is stored as 0x00000080ffffffff&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;-2147483648&lt;/code&gt; stored value is negative&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;0x00000080ffffffff&lt;/code&gt; memory representation has four &lt;code&gt;0xff&lt;/code&gt; bytes
+  whereas we expect four zeros &lt;code&gt;0x0000008000000000&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Let's transform &lt;code&gt;0x00000080ffffffff&lt;/code&gt; to a big-endian order &lt;code&gt;0xffffffff80000000&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;0000 0000 0000 0000 0000 0000 0000 0000 1000 0000 0000 0000 0000 0000 0000 0000 = 00 00 00 00 80 00 00 00&lt;/code&gt; -- &lt;code&gt;2147483648&lt;/code&gt; in binary format&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;1111 1111 1111 1111 1111 1111 1111 1111 0111 1111 1111 1111 1111 1111 1111 1111 = ff ff ff ff 7f ff ff ff&lt;/code&gt; -- invert all bits of &lt;code&gt;2147483648&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;1111 1111 1111 1111 1111 1111 1111 1111 1000 0000 0000 0000 0000 0000 0000 0000 = ff ff ff ff 80 00 00 00&lt;/code&gt; -- add one&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ python3 -c &amp;#39;print(&amp;quot;0xffffffff80000000 = {0:0&amp;gt;64b}&amp;quot;.format(0xffffffff80000000))&amp;#39;&lt;/span&gt;
+&lt;span class="go"&gt;0xffffffff80000000 = 1111111111111111111111111111111110000000000000000000000000000000&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Let's look at the machine code NASM produced.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ objdump -d --x86-asm-syntax=intel demo.o&lt;/span&gt;
+&lt;span class="go"&gt;       0: 48 c7 07 00 00 00 80          mov qword ptr [rdi], -0x80000000&lt;/span&gt;
+&lt;span class="go"&gt;       7: c3                            ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The machine code shows that despite our 8-byte memory destination,
+the immediate &lt;code&gt;00 00 00 80&lt;/code&gt; (in little-endian form) is only 4 bytes.
+The &lt;code&gt;mov&lt;/code&gt; instruction in x86-64 can't write a 64-bit immediate to memory,
+so the CPU sign-extends those 4 bytes to fill the 8.
+Our &lt;code&gt;2147483648&lt;/code&gt; is &lt;code&gt;0x80000000&lt;/code&gt; and its bit 31 is set, so the CPU fills the upper 32 bits with ones
+and writes &lt;code&gt;0xffffffff80000000&lt;/code&gt; which is &lt;code&gt;-2147483648&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The solution is to write to a register first, and then to memory.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ cat &amp;gt; demo.asm &amp;lt;&amp;lt;ASM&lt;/span&gt;
+&lt;span class="go"&gt;section .text&lt;/span&gt;
+&lt;span class="go"&gt;global _demo&lt;/span&gt;
+&lt;span class="go"&gt;_demo:&lt;/span&gt;
+&lt;span class="go"&gt;    mov rax, 2147483648&lt;/span&gt;
+&lt;span class="go"&gt;    mov [rdi], rax&lt;/span&gt;
+&lt;span class="go"&gt;    ret&lt;/span&gt;
+&lt;span class="go"&gt;ASM&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ nasm -f macho64 demo.asm&lt;/span&gt;
+
+&lt;span class="go"&gt;﹩ zig build-exe main.zig demo.o&lt;/span&gt;
+&lt;span class="go"&gt;﹩ ./main&lt;/span&gt;
+&lt;span class="go"&gt;2147483648 is stored as 0x0000008000000000 at i64@7ff7b8227008&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note that no size specifier is needed now because the register &lt;code&gt;rax&lt;/code&gt; already tells the assembler
+that the store is eight bytes wide.&lt;/p&gt;
+&lt;p&gt;Only the register form of &lt;code&gt;mov&lt;/code&gt; accepts a 64-bit immediate, though NASM doesn't even need it here.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="go"&gt;﹩ objdump -d --x86-asm-syntax=intel demo.o&lt;/span&gt;
+&lt;span class="go"&gt;       0: b8 00 00 00 80                mov eax, 0x80000000&lt;/span&gt;
+&lt;span class="go"&gt;       5: 48 89 07                      mov qword ptr [rdi], rax&lt;/span&gt;
+&lt;span class="go"&gt;       8: c3                            ret&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;NASM replaced our &lt;code&gt;mov rax, 2147483648&lt;/code&gt; with &lt;code&gt;mov eax, 0x80000000&lt;/code&gt;
+which puts &lt;code&gt;0x0000008000000000&lt;/code&gt; into &lt;code&gt;rax&lt;/code&gt; because writing to a 32-bit register &lt;code&gt;eax&lt;/code&gt;
+zero-extends (not sign-extends!) into the full 64-bit register &lt;code&gt;rax&lt;/code&gt;.
+Note that this is specific to 32-bit writes: &lt;code&gt;ax&lt;/code&gt; and &lt;code&gt;al&lt;/code&gt; leave the upper bits of &lt;code&gt;rax&lt;/code&gt; untouched.&lt;/p&gt;
+&lt;p&gt;The same 4-byte immediate limit also applies to &lt;code&gt;add&lt;/code&gt;, &lt;code&gt;cmp&lt;/code&gt;, and the other instructions.
+Anything larger has to go through a register.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;References:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Modern x86 Assembly Language Programming by Daniel Kusswurm&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://en.wikipedia.org/wiki/Two%27s_complement"&gt;Two's complement&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><category term="assembler"></category><category term="zig"></category></entry><entry><title>Zig SIMD in assembly</title><link href="https://marselester.com/zig-simd.html" rel="alternate"></link><published>2026-07-14T00:00:00+07:00</published><updated>2026-07-14T00:00:00+07:00</updated><author><name>Marsel</name></author><id>tag:marselester.com,2026-07-14:/zig-simd.html</id><summary type="html">&lt;p&gt;In &lt;a href="https://marselester.com/zig-c-abi.html"&gt;the C ABI&lt;/a&gt; post we saw how
 convenient it's to write Intel-style assembly code in Zig.
 This time let's see what it takes to use SIMD in assembly.&lt;/p&gt;
 &lt;h2&gt;Assembly side&lt;/h2&gt;
@@ -1900,7 +2268,7 @@ If we had a global variable &lt;code&gt;mySum&lt;/code&gt; in the &lt;code&gt;ad
   (that's merely an analogy, not an actual code)&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;After the symbol, we have &lt;code&gt;NOSPLIT&lt;/code&gt; flag which is an argument to the &lt;code&gt;TEXT&lt;/code&gt; directive.
-It tells the linker not to insert the preamble that checks if the goroutine stack must be split.
+It tells the compiler not to insert the preamble that checks if the goroutine stack must be split.
 Normally, Go inserts code to check if the stack needs to grow, but &lt;code&gt;NOSPLIT&lt;/code&gt; disables this.
 This reduces the &lt;code&gt;Add&lt;/code&gt; function call overhead, but limits the size of the stack.
 The stack frame for a given function, plus anything it calls, must fit in the spare space

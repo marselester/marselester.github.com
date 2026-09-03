@@ -1243,7 +1243,7 @@ If we had a global variable &lt;code&gt;mySum&lt;/code&gt; in the &lt;code&gt;ad
   (that's merely an analogy, not an actual code)&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;After the symbol, we have &lt;code&gt;NOSPLIT&lt;/code&gt; flag which is an argument to the &lt;code&gt;TEXT&lt;/code&gt; directive.
-It tells the linker not to insert the preamble that checks if the goroutine stack must be split.
+It tells the compiler not to insert the preamble that checks if the goroutine stack must be split.
 Normally, Go inserts code to check if the stack needs to grow, but &lt;code&gt;NOSPLIT&lt;/code&gt; disables this.
 This reduces the &lt;code&gt;Add&lt;/code&gt; function call overhead, but limits the size of the stack.
 The stack frame for a given function, plus anything it calls, must fit in the spare space

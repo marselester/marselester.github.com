@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"><channel><title>marselester's blog - Marsel</title><link>https://marselester.com/</link><description></description><lastBuildDate>Tue, 14 Jul 2026 00:00:00 +0700</lastBuildDate><item><title>Zig SIMD in assembly</title><link>https://marselester.com/zig-simd.html</link><description>&lt;p&gt;In &lt;a href="https://marselester.com/zig-c-abi.html"&gt;the C ABI&lt;/a&gt; post we saw how
+<rss version="2.0"><channel><title>marselester's blog - Marsel</title><link>https://marselester.com/</link><description></description><lastBuildDate>Wed, 02 Sep 2026 00:00:00 +0700</lastBuildDate><item><title>Writing immediates to memory</title><link>https://marselester.com/asm-immediates.html</link><description>&lt;p&gt;An immediate in assembly is a scalar value such as &lt;code&gt;123&lt;/code&gt;.
+While the concept is familiar from high-level languages, immediates require more attention in x86-64 assembly.
+There are no floating-point immediates, so everything below is about integers.&lt;/p&gt;
+&lt;h2&gt;Memory access&lt;/h2&gt;
+&lt;p&gt;Writing &lt;code&gt;123&lt;/code&gt; immediate value to a memory address like so &lt;code&gt;mov …&lt;/code&gt;&lt;/p&gt;</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Marsel</dc:creator><pubDate>Wed, 02 Sep 2026 00:00:00 +0700</pubDate><guid isPermaLink="false">tag:marselester.com,2026-09-02:/asm-immediates.html</guid><category>assembler</category><category>zig</category></item><item><title>Zig SIMD in assembly</title><link>https://marselester.com/zig-simd.html</link><description>&lt;p&gt;In &lt;a href="https://marselester.com/zig-c-abi.html"&gt;the C ABI&lt;/a&gt; post we saw how
 convenient it's to write Intel-style assembly code in Zig.
 This time let's see what it takes to use SIMD in assembly.&lt;/p&gt;
 &lt;h2&gt;Assembly side&lt;/h2&gt;

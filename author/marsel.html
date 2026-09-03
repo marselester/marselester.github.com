@@ -51,6 +51,394 @@
         
 
             <article>
+                <a href="https://marselester.com/asm-immediates.html"><h3 class="article-title">Writing immediates to memory</h3></a>
+<h6 class="subheader" title="2026-09-02T00:00:00+07:00">Wed 02 September 2026
+</h6>
+
+
+<p>An immediate in assembly is a scalar value such as <code>123</code>.
+While the concept is familiar from high-level languages, immediates require more attention in x86-64 assembly.
+There are no floating-point immediates, so everything below is about integers.</p>
+<h2>Memory access</h2>
+<p>Writing <code>123</code> immediate value to a memory address like so <code>mov [rdi], 123</code> can catch us off guard.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.s &lt;&lt;ASM</span>
+<span class="go">.intel_syntax noprefix</span>
+<span class="go">.text</span>
+<span class="go">.global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov [rdi], 123</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ zig build-obj demo.s</span>
+<span class="go">error(compilation): clang failed with stderr: demo.s:5:9: error: ambiguous operand size for instruction &#39;mov&#39;</span>
+<span class="go">    mov [rdi], 123</span>
+<span class="go">        ^~~~</span>
+</code></pre></div>
+
+<p>The LLVM assembler behind <code>zig build-obj</code> tells us that our <code>mov</code> instruction has an ambiguous operand size
+(if the example seems confusing, try my earlier post on <a href="https://marselester.com/zig-c-abi.html">using Assembly with Zig</a>).
+Indeed, the assembler is not sure how many bytes to use to represent <code>123</code> in memory.
+It can use a byte, a word, a double word, and so on.
+Interestingly, NASM v3.02 defaults to using a byte size and truncates larger values with a warning.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.asm &lt;&lt;ASM</span>
+<span class="go">section .text</span>
+<span class="go">global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov [rdi], 123</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ nasm -f macho64 demo.asm</span>
+<span class="go">﹩ objdump -d --x86-asm-syntax=intel demo.o</span>
+<span class="go">       0: c6 07 7b                      mov byte ptr [rdi], 0x7b</span>
+<span class="go">       3: c3                            ret</span>
+</code></pre></div>
+
+<p>Let's see how our <code>mov [rdi], 123</code> is different from disassembled <code>mov byte ptr [rdi], 0x7b</code>:</p>
+<ul>
+<li><code>byte ptr</code> in front of <code>[rdi]</code> means to treat the memory address in register <code>rdi</code>
+  as a pointer to a byte size integer, e.g., <code>i8</code> or <code>u8</code></li>
+<li><code>0x7b</code> is <code>123</code> in hex</li>
+</ul>
+<p>The LLVM assembler has no problems building the object file <code>demo.o</code> once we add <code>byte ptr</code>.
+The <code>objdump</code> confirms that <code>zig build-obj</code> emits the same machine code for the <code>_demo()</code> function as NASM.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.s &lt;&lt;ASM</span>
+<span class="go">.intel_syntax noprefix</span>
+<span class="go">.text</span>
+<span class="go">.global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov byte ptr [rdi], 123</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ zig build-obj demo.s</span>
+<span class="go">﹩ objdump -d --x86-asm-syntax=intel demo.o</span>
+<span class="go">       0: c6 07 7b                      mov byte ptr [rdi], 0x7b</span>
+<span class="go">       3: c3                            ret</span>
+</code></pre></div>
+
+<p>We've got the function in <code>demo.o</code> file, let's make sure it actually works.
+Here is a Zig program that declares a byte size variable <code>var v: i8 = 0</code>
+and passes its pointer when calling <code>demo(&amp;v)</code>.
+The assembly function <code>_demo()</code> writes <code>123</code> to that dereferenced pointer and returns.
+Finally, we print the variable <code>v</code> and its raw memory with <code>std.mem.asBytes(&amp;v)</code>.
+If you're unsure how it all works, see <a href="https://marselester.com/zig-c-abi.html">The C ABI: Using Assembly with Zig</a> post.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; main.zig &lt;&lt;ZIG</span>
+<span class="go">const std = @import(&quot;std&quot;);</span>
+
+<span class="go">extern fn demo(v: *i8) void;</span>
+
+<span class="go">pub fn main() void {</span>
+<span class="go">    var v: i8 = 0;</span>
+<span class="go">    demo(&amp;v);</span>
+<span class="go">    std.debug.print(&quot;{d} is stored as 0x{x} at {*}\n&quot;, .{</span>
+<span class="go">        v,</span>
+<span class="go">        std.mem.asBytes(&amp;v),</span>
+<span class="go">        &amp;v,</span>
+<span class="go">    });</span>
+<span class="go">}</span>
+<span class="go">ZIG</span>
+
+<span class="go">﹩ zig build-exe main.zig demo.s</span>
+<span class="go">﹩ ./main</span>
+<span class="go">123 is stored as 0x7b at i8@7ff7b00a2000</span>
+</code></pre></div>
+
+<p>As expected, the program's output shows that <code>123</code> was stored as <code>0x7b</code>.
+It also printed the memory address <code>0x7ff7b00a2000</code> where the value was placed.
+What if we wanted to use 4 bytes of memory instead of just one byte?
+We would need to replace <code>byte</code> with <code>dword</code> in the <code>mov</code> instruction like this <code>mov dword ptr [rdi], 123</code>,
+and update <code>main.zig</code> to use <code>i32</code> instead of <code>i8</code>.</p>
+<details style="margin-bottom: 1rem">
+
+<summary>🔻 <code>mov dword ptr [rdi], 123</code></summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.s &lt;&lt;ASM</span>
+<span class="go">.intel_syntax noprefix</span>
+<span class="go">.text</span>
+<span class="go">.global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov dword ptr [rdi], 123</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ cat &gt; main.zig &lt;&lt;ZIG</span>
+<span class="go">const std = @import(&quot;std&quot;);</span>
+
+<span class="go">extern fn demo(v: *i32) void;</span>
+
+<span class="go">pub fn main() void {</span>
+<span class="go">    var v: i32 = 0;</span>
+<span class="go">    demo(&amp;v);</span>
+<span class="go">    std.debug.print(&quot;{d} is stored as 0x{x} at {*}\n&quot;, .{</span>
+<span class="go">        v,</span>
+<span class="go">        std.mem.asBytes(&amp;v),</span>
+<span class="go">        &amp;v,</span>
+<span class="go">    });</span>
+<span class="go">}</span>
+<span class="go">ZIG</span>
+
+<span class="go">﹩ zig build-exe main.zig demo.s</span>
+<span class="go">﹩ ./main</span>
+<span class="go">123 is stored as 0x7b000000 at i32@7ff7b4fe9000</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p>The updated program reported that it stored <code>0x7b</code> as <code>0x7b000000</code> (not <code>0x0000007b</code>) at <code>0x7ff7b4fe9000</code> address.
+This is because <code>123</code> immediate's bytes <code>00 00 00 7b</code> are arranged in little-endian order <code>7b 00 00 00</code>:
+the least significant byte <code>7b</code> is placed at the smallest memory address <code>7ff7b4fe9000</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">   Address     Byte</span>
+<span class="go">7ff7b4fe9003    00  ← most significant byte</span>
+<span class="go">7ff7b4fe9002    00</span>
+<span class="go">7ff7b4fe9001    00</span>
+<span class="go">7ff7b4fe9000    7b  ← least significant byte</span>
+</code></pre></div>
+
+<h2>Two's complement</h2>
+<p>What if we store a negative immediate value <code>mov byte ptr [rdi], -123</code>?</p>
+<details style="margin-bottom: 1rem">
+
+<summary>🔻 <code>mov byte ptr [rdi], -123</code></summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.s &lt;&lt;ASM</span>
+<span class="go">.intel_syntax noprefix</span>
+<span class="go">.text</span>
+<span class="go">.global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov byte ptr [rdi], -123</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ cat &gt; main.zig &lt;&lt;ZIG</span>
+<span class="go">const std = @import(&quot;std&quot;);</span>
+
+<span class="go">extern fn demo(v: *i8) void;</span>
+
+<span class="go">pub fn main() void {</span>
+<span class="go">    var v: i8 = 0;</span>
+<span class="go">    demo(&amp;v);</span>
+<span class="go">    std.debug.print(&quot;{d} is stored as 0x{x} at {*}\n&quot;, .{</span>
+<span class="go">        v,</span>
+<span class="go">        std.mem.asBytes(&amp;v),</span>
+<span class="go">        &amp;v,</span>
+<span class="go">    });</span>
+<span class="go">}</span>
+<span class="go">ZIG</span>
+
+<span class="go">﹩ zig build-exe main.zig demo.s</span>
+<span class="go">﹩ ./main</span>
+<span class="go">-123 is stored as 0x85 at i8@7ff7b8653000</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p>The <code>-123</code> value got stored as <code>0x85</code> in memory.
+This is due to <a href="https://en.wikipedia.org/wiki/Two%27s_complement">two's complement</a>
+method of representing a signed integer (invert all bits and add one):</p>
+<ul>
+<li><code>0111 1011 = 0x7b</code> -- <code>123</code> in binary format</li>
+<li><code>1000 0100 = 0x84</code> -- invert all bits of <code>123</code></li>
+<li><code>1000 0101 = 0x85</code> -- add one</li>
+</ul>
+<p>The Python one liner below confirms it.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ python3 -c &#39;print(&quot;0x7b = {0:0&gt;8b}\n0x85 = {1:0&gt;8b}&quot;.format(0x7b, 0x85))&#39;</span>
+<span class="go">0x7b = 01111011</span>
+<span class="go">0x85 = 10000101</span>
+</code></pre></div>
+
+<p>If we store <code>-123</code> as four bytes <code>mov dword ptr [rdi], -123</code>, we'll get <code>0x85ffffff</code> memory representation.</p>
+<details style="margin-bottom: 1rem">
+
+<summary>🔻 <code>mov dword ptr [rdi], -123</code></summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.s &lt;&lt;ASM</span>
+<span class="go">.intel_syntax noprefix</span>
+<span class="go">.text</span>
+<span class="go">.global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov dword ptr [rdi], -123</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ cat &gt; main.zig &lt;&lt;ZIG</span>
+<span class="go">const std = @import(&quot;std&quot;);</span>
+
+<span class="go">extern fn demo(v: *i32) void;</span>
+
+<span class="go">pub fn main() void {</span>
+<span class="go">    var v: i32 = 0;</span>
+<span class="go">    demo(&amp;v);</span>
+<span class="go">    std.debug.print(&quot;{d} is stored as 0x{x} at {*}\n&quot;, .{</span>
+<span class="go">        v,</span>
+<span class="go">        std.mem.asBytes(&amp;v),</span>
+<span class="go">        &amp;v,</span>
+<span class="go">    });</span>
+<span class="go">}</span>
+<span class="go">ZIG</span>
+
+<span class="go">﹩ zig build-exe main.zig demo.s</span>
+<span class="go">﹩ ./main</span>
+<span class="go">-123 is stored as 0x85ffffff at i32@7ff7b2e8a00c</span>
+</code></pre></div>
+
+
+
+</details>
+
+<p>Converting <code>0x85ffffff</code> to a big-endian order gives us <code>0xffffff85</code>:</p>
+<ul>
+<li><code>0000 0000 0000 0000 0000 0000 0111 1011 = 0x7b</code> -- <code>123</code> in binary format</li>
+<li><code>1111 1111 1111 1111 1111 1111 1000 0100 = 0xffffff84</code> -- invert all bits of <code>123</code></li>
+<li><code>1111 1111 1111 1111 1111 1111 1000 0101 = 0xffffff85</code> -- add one</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ python3 -c &#39;print(&quot;0xffffff85 = {0:0&gt;32b}&quot;.format(0xffffff85))&#39;</span>
+<span class="go">0xffffff85 = 11111111111111111111111110000101</span>
+</code></pre></div>
+
+<h2>Sign extension</h2>
+<p>How about storing a positive number <code>2,147,483,648</code> (2^31) as eight bytes <code>mov qword ptr [rdi], 2147483648</code>?</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.s &lt;&lt;ASM</span>
+<span class="go">.intel_syntax noprefix</span>
+<span class="go">.text</span>
+<span class="go">.global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov qword ptr [rdi], 2147483648</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ cat &gt; main.zig &lt;&lt;ZIG</span>
+<span class="go">const std = @import(&quot;std&quot;);</span>
+
+<span class="go">extern fn demo(v: *i64) void;</span>
+
+<span class="go">pub fn main() void {</span>
+<span class="go">    var v: i64 = 0;</span>
+<span class="go">    demo(&amp;v);</span>
+<span class="go">    std.debug.print(&quot;{d} is stored as 0x{x} at {*}\n&quot;, .{</span>
+<span class="go">        v,</span>
+<span class="go">        std.mem.asBytes(&amp;v),</span>
+<span class="go">        &amp;v,</span>
+<span class="go">    });</span>
+<span class="go">}</span>
+<span class="go">ZIG</span>
+
+<span class="go">﹩ zig build-exe main.zig demo.s</span>
+<span class="go">error(compilation): clang failed with stderr: demo.s:5:5: error: invalid operand for instruction</span>
+<span class="go">    mov qword ptr [rdi], 2147483648</span>
+<span class="go">    ^</span>
+</code></pre></div>
+
+<p>Zig tooling straight up refuses to build with <code>invalid operand for instruction</code> error,
+and NASM only warns <code>signed dword exceeds bounds</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.asm &lt;&lt;ASM</span>
+<span class="go">section .text</span>
+<span class="go">global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov qword [rdi], 2147483648</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ nasm -f macho64 demo.asm</span>
+<span class="go">demo.asm:4: warning: signed dword exceeds bounds [-w+number-overflow]</span>
+
+<span class="go">﹩ zig build-exe main.zig demo.o</span>
+<span class="go">﹩ ./main</span>
+<span class="go">-2147483648 is stored as 0x00000080ffffffff at i64@7ff7bf1ff008</span>
+</code></pre></div>
+
+<p>The program's output is surprising <code>-2147483648 is stored as 0x00000080ffffffff</code>:</p>
+<ul>
+<li><code>-2147483648</code> stored value is negative</li>
+<li><code>0x00000080ffffffff</code> memory representation has four <code>0xff</code> bytes
+  whereas we expect four zeros <code>0x0000008000000000</code></li>
+</ul>
+<p>Let's transform <code>0x00000080ffffffff</code> to a big-endian order <code>0xffffffff80000000</code>:</p>
+<ul>
+<li><code>0000 0000 0000 0000 0000 0000 0000 0000 1000 0000 0000 0000 0000 0000 0000 0000 = 00 00 00 00 80 00 00 00</code> -- <code>2147483648</code> in binary format</li>
+<li><code>1111 1111 1111 1111 1111 1111 1111 1111 0111 1111 1111 1111 1111 1111 1111 1111 = ff ff ff ff 7f ff ff ff</code> -- invert all bits of <code>2147483648</code></li>
+<li><code>1111 1111 1111 1111 1111 1111 1111 1111 1000 0000 0000 0000 0000 0000 0000 0000 = ff ff ff ff 80 00 00 00</code> -- add one</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ python3 -c &#39;print(&quot;0xffffffff80000000 = {0:0&gt;64b}&quot;.format(0xffffffff80000000))&#39;</span>
+<span class="go">0xffffffff80000000 = 1111111111111111111111111111111110000000000000000000000000000000</span>
+</code></pre></div>
+
+<p>Let's look at the machine code NASM produced.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ objdump -d --x86-asm-syntax=intel demo.o</span>
+<span class="go">       0: 48 c7 07 00 00 00 80          mov qword ptr [rdi], -0x80000000</span>
+<span class="go">       7: c3                            ret</span>
+</code></pre></div>
+
+<p>The machine code shows that despite our 8-byte memory destination,
+the immediate <code>00 00 00 80</code> (in little-endian form) is only 4 bytes.
+The <code>mov</code> instruction in x86-64 can't write a 64-bit immediate to memory,
+so the CPU sign-extends those 4 bytes to fill the 8.
+Our <code>2147483648</code> is <code>0x80000000</code> and its bit 31 is set, so the CPU fills the upper 32 bits with ones
+and writes <code>0xffffffff80000000</code> which is <code>-2147483648</code>.</p>
+<p>The solution is to write to a register first, and then to memory.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ cat &gt; demo.asm &lt;&lt;ASM</span>
+<span class="go">section .text</span>
+<span class="go">global _demo</span>
+<span class="go">_demo:</span>
+<span class="go">    mov rax, 2147483648</span>
+<span class="go">    mov [rdi], rax</span>
+<span class="go">    ret</span>
+<span class="go">ASM</span>
+
+<span class="go">﹩ nasm -f macho64 demo.asm</span>
+
+<span class="go">﹩ zig build-exe main.zig demo.o</span>
+<span class="go">﹩ ./main</span>
+<span class="go">2147483648 is stored as 0x0000008000000000 at i64@7ff7b8227008</span>
+</code></pre></div>
+
+<p>Note that no size specifier is needed now because the register <code>rax</code> already tells the assembler
+that the store is eight bytes wide.</p>
+<p>Only the register form of <code>mov</code> accepts a 64-bit immediate, though NASM doesn't even need it here.</p>
+<div class="highlight"><pre><span></span><code><span class="go">﹩ objdump -d --x86-asm-syntax=intel demo.o</span>
+<span class="go">       0: b8 00 00 00 80                mov eax, 0x80000000</span>
+<span class="go">       5: 48 89 07                      mov qword ptr [rdi], rax</span>
+<span class="go">       8: c3                            ret</span>
+</code></pre></div>
+
+<p>NASM replaced our <code>mov rax, 2147483648</code> with <code>mov eax, 0x80000000</code>
+which puts <code>0x0000008000000000</code> into <code>rax</code> because writing to a 32-bit register <code>eax</code>
+zero-extends (not sign-extends!) into the full 64-bit register <code>rax</code>.
+Note that this is specific to 32-bit writes: <code>ax</code> and <code>al</code> leave the upper bits of <code>rax</code> untouched.</p>
+<p>The same 4-byte immediate limit also applies to <code>add</code>, <code>cmp</code>, and the other instructions.
+Anything larger has to go through a register.</p>
+<hr>
+<p>References:</p>
+<ul>
+<li>Modern x86 Assembly Language Programming by Daniel Kusswurm</li>
+<li><a href="https://en.wikipedia.org/wiki/Two%27s_complement">Two's complement</a></li>
+</ul><p class="subheader">Category: <a href="https://marselester.com/category/zig.html">Zig</a>
+
+    Tagged: 
+    <a href="https://marselester.com/tag/assembler.html">assembler </a>
+    <a href="https://marselester.com/tag/zig.html">zig </a>
+</p>
+
+
+
+<p><a href="https://marselester.com/asm-immediates.html#disqus_thread">comments</a></p>            </article>
+
+
+                <hr  class="gradient"/>
+
+
+        
+
+
+            <article>
                 <a href="https://marselester.com/zig-simd.html"><h3 class="article-title">Zig SIMD in assembly</h3></a>
 <h6 class="subheader" title="2026-07-14T00:00:00+07:00">Tue 14 July 2026
 </h6>
@@ -62,203 +450,7 @@ This time let's see what it takes to use SIMD in assembly.</p>
 <h2>Assembly side</h2>
 <p><a href="https://github.com/Apress/modern-x86-assembly-language-programming-3e/blob/main/Chapter08/Ch08_01/Ch08_01_fasm.s">The first SIMD example</a>
 in Modern x86 Assembly book demonstrates 16-bit integers addition
-using both wraparound and saturated arithmetic.</p>
-<div class="highlight"><pre><span></span><code><span class="go">[10,   200,     30, -32766,  50,   60, 32000,  -32000] xmm0</span>
-<span class="go">                                                    +</span>
-<span class="go">[100, -200,  32760,   -400, 500, -600,  1200,    -950] xmm1</span>
-<span class="go">                                                    =</span>
-<span class="go">[110,    0, -32746,  32370, 550, -540, -32336,  32586] xmm2 (wraparound)</span>
-<span class="go">[110,    0,  32767, -32768, 550, -540,  32767, -32768] xmm3 (saturated)</span>
-<span class="go">   0     1       2       3    4     5       6       7  lane</span>
-</code></pre></div>
-
-<p>Wraparound is what we normally expect to happen (arithmetic overflow/underflow):</p>
-<ul>
-<li>lanes 0, 1, 4, and 5 stayed within boundaries</li>
-<li>lanes 2 and 6 overflowed the maximum capacity of an <code>i16</code> (32,767)</li>
-<li>lanes 3 and 7 underflowed past the minimum capacity (-32,768)</li>
-</ul>
-<p>With saturated arithmetic, the results are clipped to the maximum capacity:</p>
-<ul>
-<li>lanes 2 and 6 are capped at 32,767</li>
-<li>lanes 3 and 7 are capped at -32,768</li>
-</ul>
-<p>Here is an assembly code that LLVM understands
-<a href="https://github.com/marselester/misc/blob/main/zig-c-abi/llvm/ch08_01.s">llvm/ch08_01.s</a>.
-As we can see, a C++ call <a href="https://github.com/Apress/modern-x86-assembly-language-programming-3e/blob/main/Chapter08/Ch08_01/Ch08_01.cpp">AddI16_avx(&amp;c1, &amp;c2, &amp;a, &amp;b)</a>
-of the assembly function supplies 4 pointers:</p>
-<ul>
-<li><code>&amp;a</code> and <code>&amp;b</code> are the inputs</li>
-<li><code>&amp;c1</code> and <code>&amp;c2</code> are the outputs</li>
-</ul>
-<p>In essence, the function sums the input vectors with wraparound/saturated arithmetic
-and stores the resulting vectors in <code>&amp;c1</code> and <code>&amp;c2</code> respectively.</p>
-<div class="highlight"><pre><span></span><code><span class="na">.intel_syntax</span><span class="w"> </span><span class="no">noprefix</span><span class="w"></span>
-<span class="na">.text</span><span class="w"></span>
-<span class="na">.global</span><span class="w"> </span><span class="no">_AddI16_avx</span><span class="w"></span>
-
-<span class="c1"># Calculates *c1 = *a + *b (wraparound), *c2 = *a + *b (saturated).</span>
-<span class="c1"># AddI16_avx(c1: *XmmVal, c2: *XmmVal, a: *const XmmVal, b: *const XmmVal) void;</span>
-<span class="nl">_AddI16_avx:</span><span class="w"></span>
-<span class="w">    </span><span class="nf">vmovdqa</span><span class="w"> </span><span class="no">xmm0</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="no">rdx</span><span class="p">]</span><span class="w">         </span><span class="c1"># xmm0 = *a</span>
-<span class="w">    </span><span class="nf">vmovdqa</span><span class="w"> </span><span class="no">xmm1</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="no">rcx</span><span class="p">]</span><span class="w">         </span><span class="c1"># xmm1 = *b</span>
-
-<span class="w">    </span><span class="nf">vpaddw</span><span class="w"> </span><span class="no">xmm2</span><span class="p">,</span><span class="w"> </span><span class="no">xmm0</span><span class="p">,</span><span class="w"> </span><span class="no">xmm1</span><span class="w">     </span><span class="c1"># xmm2 = xmm0 + xmm1 (wraparound)</span>
-<span class="w">    </span><span class="nf">vpaddsw</span><span class="w"> </span><span class="no">xmm3</span><span class="p">,</span><span class="w"> </span><span class="no">xmm0</span><span class="p">,</span><span class="w"> </span><span class="no">xmm1</span><span class="w">    </span><span class="c1"># xmm3 = xmm0 + xmm1 (saturated)</span>
-
-<span class="w">    </span><span class="nf">vmovdqa</span><span class="w"> </span><span class="p">[</span><span class="no">rdi</span><span class="p">],</span><span class="w"> </span><span class="no">xmm2</span><span class="w">         </span><span class="c1"># *c1 = xmm2</span>
-<span class="w">    </span><span class="nf">vmovdqa</span><span class="w"> </span><span class="p">[</span><span class="no">rsi</span><span class="p">],</span><span class="w"> </span><span class="no">xmm3</span><span class="w">         </span><span class="c1"># *c2 = xmm3</span>
-<span class="w">    </span><span class="nf">ret</span><span class="w"></span>
-</code></pre></div>
-
-<p>Since those pointers are basically 64-bit unsigned integers holding memory addresses,
-they are passed in <code>rdi</code> (c1), <code>rsi</code> (c2), <code>rdx</code> (a), <code>rcx</code> (b) registers in accordance with the C ABI.</p>
-<p>The first instruction <code>vmovdqa xmm0, [rdx]</code> copies data from a memory address stored
-in a general purpose register <code>rdx</code> (a) to a vector register <code>xmm0</code>.
-The instruction name stands for <strong>V</strong>ector Extension (VEX) <strong>MOV</strong>e <strong>D</strong>ouble <strong>Q</strong>uadword <strong>A</strong>ligned.
-The eight <code>i16</code> items (128 bits total or a double quadword)
-<code>[10, 200, 30, -32766, 50, 60, 32000, -32000]</code> are copied from an aligned memory address stored in <code>rdx</code> to <code>xmm0</code>.</p>
-<p>Aligned means starting at a memory address that is a multiple of the vector's size in bytes.
-That means the variable <code>&amp;a</code> (memory address) must be aligned to 16 bytes for XMM register
-(128 bits / 8 bits = 16 bytes).
-Note, there is <code>vmovdqu</code> instruction that works with unaligned addresses,
-see <a href="https://marselester.com/intro-to-simd-in-avo.html">Intro to SIMD in avo</a>.</p>
-<p>The second instruction <code>vmovdqa xmm1, [rcx]</code> is similar, i.e.,
-it copies from a memory address <code>&amp;b</code> held in <code>rcx</code> register to <code>xmm1</code>
-like this <code>xmm1 = *rcx</code>, i.e., <code>xmm1 = [100, -200, 32760, -400, 500, -600, 1200, -950]</code>.</p>
-<p>The third and fourth instructions <code>vpaddw xmm2, xmm0, xmm1</code> and <code>vpaddsw xmm3, xmm0, xmm1</code>
-represent wraparound and saturated additions:</p>
-<ul>
-<li><strong>V</strong>ector (VEX) <strong>P</strong>acked <strong>ADD</strong> <strong>W</strong>ord:
-  16-bit elements of vectors <code>xmm0</code> and <code>xmm1</code> are added and the result is stored in
-  <code>xmm2 = [110, 0, -32746, 32370, 550, -540, -32336, 32586]</code></li>
-<li><strong>V</strong>ector (VEX) <strong>P</strong>acked <strong>ADD</strong> <strong>S</strong>aturated <strong>W</strong>ord:
-  the same 16-bit elements are added and the result is stored in
-  <code>xmm3 = [110, 0, 32767, -32768, 550, -540, 32767, -32768]</code></li>
-</ul>
-<p>The last instructions <code>vmovdqa [rdi], xmm2</code> and <code>vmovdqa [rsi], xmm3</code>
-copy the computed results from <code>xmm2</code>/<code>xmm3</code> vector registers
-to memory addresses held in <code>rdi</code>/<code>rsi</code> registers (<code>&amp;c1</code> and <code>&amp;c2</code> variables on the caller side).</p>
-<h2>C++ side</h2>
-<p>In the C++ example, <a href="https://github.com/Apress/modern-x86-assembly-language-programming-3e/blob/main/Include/XmmVal.h">XmmVal</a>
-type represents all sorts of 128-bit values we could place into XMM registers, e.g., four floats, eight 16-bit integers, etc.
-It is an anonymous union defined within a struct,
-allowing its members to be accessed directly as if they were part of the struct.
-The <code>alignas(16)</code> specifier tells the compiler to place <code>XmmVal</code> variables/constants
-at a memory address that is a multiple of 16 bytes (<code>vmovdqa</code> instruction requires this, we talked about it above).</p>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">alignas</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="n">XmmVal</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="k">union</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="kt">int8_t</span><span class="w">   </span><span class="n">m_I8</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">int16_t</span><span class="w">  </span><span class="n">m_I16</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">int32_t</span><span class="w">  </span><span class="n">m_I32</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">int64_t</span><span class="w">  </span><span class="n">m_I64</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">uint8_t</span><span class="w">  </span><span class="n">m_U8</span><span class="p">[</span><span class="mi">16</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">m_U16</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">m_U32</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">uint64_t</span><span class="w"> </span><span class="n">m_U64</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">float</span><span class="w">    </span><span class="n">m_F32</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span><span class="w"></span>
-<span class="w">        </span><span class="kt">double</span><span class="w">   </span><span class="n">m_F64</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span><span class="w"></span>
-<span class="w">    </span><span class="p">};</span><span class="w"></span>
-<span class="p">};</span><span class="w"></span>
-</code></pre></div>
-
-<p>Since we're dealing with 16-bit integers, we must use <code>int16_t m_I16[8]</code> field in our
-<a href="https://github.com/marselester/misc/blob/main/zig-c-abi/cpp/ch08_01.cpp">cpp/ch08_01.cpp</a> program.</p>
-<div class="highlight"><pre><span></span><code><span class="k">extern</span><span class="w"> </span><span class="s">&quot;C&quot;</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">AddI16_avx</span><span class="p">(</span><span class="n">XmmVal</span><span class="o">*</span><span class="w"> </span><span class="n">c1</span><span class="p">,</span><span class="w"> </span><span class="n">XmmVal</span><span class="o">*</span><span class="w"> </span><span class="n">c2</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">XmmVal</span><span class="o">*</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">XmmVal</span><span class="o">*</span><span class="w"> </span><span class="n">b</span><span class="p">);</span><span class="w"></span>
-
-<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="n">XmmVal</span><span class="w"> </span><span class="n">c1</span><span class="p">,</span><span class="w"> </span><span class="n">c2</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">XmmVal</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">m_I16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="mi">-32766</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="mi">32000</span><span class="p">,</span><span class="w"> </span><span class="mi">-32000</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">};</span><span class="w"></span>
-<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">XmmVal</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">m_I16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">-200</span><span class="p">,</span><span class="w"> </span><span class="mi">32760</span><span class="p">,</span><span class="w"> </span><span class="mi">-400</span><span class="p">,</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"> </span><span class="mi">-600</span><span class="p">,</span><span class="w"> </span><span class="mi">1200</span><span class="p">,</span><span class="w"> </span><span class="mi">-950</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">};</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">AddI16_avx</span><span class="p">(</span><span class="o">&amp;</span><span class="n">c1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">c2</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Print the results...</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>The results of wraparound <code>c1</code> and saturated <code>c2</code> addition match the expectations.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ zig c++ ./cpp/ch08_01.cpp ./llvm/ch08_01.s -o main &amp;&amp; ./main</span>
-<span class="go">C++ says</span>
-<span class="go">c1={ 110, 0, -32746, 32370, 550, -540, -32336, 32586 }</span>
-<span class="go">c2={ 110, 0, 32767, -32768, 550, -540, 32767, -32768 }</span>
-</code></pre></div>
-
-<p>🦉 Note, C++ has C-compatible struct layout as long as there are no virtual functions.
-If <code>XmmVal</code> had one, C++ compiler would have injected a hidden pointer to a vtable at the beginning of the struct 😰:</p>
-<ul>
-<li><code>vmovdqa xmm0, [rdx]</code> would read <code>_vptr</code> (8 bytes) and half of <code>m_I16</code> (8 bytes)</li>
-<li><code>XmmVal</code> size would increase from 16 bytes to 32 bytes: 8 bytes pointer, 16 bytes of <code>m_I16</code>,
-  and 8 bytes of trailing padding.
-  The compiler adds 8 bytes to make sure the total struct size is a multiple of 16
-  (24 bytes of <code>_vptr</code> and <code>m_I16</code> are not divisible by 16, but 32 is)
-  in case <code>XmmVal</code> is used in an array, e.g., <code>XmmVal x[2];</code>.</li>
-<li><code>vpaddw xmm2, xmm0, xmm1</code> would sum a garbage data</li>
-<li><code>vmovdqa [rdi], xmm2</code> would produce a corrupted <code>c1</code>, e.g., its <code>_vptr</code> would be broken
-  because we would copy <code>xmm2</code> there</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">alignas</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="n">XmmVal</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w">   </span><span class="n">_vptr</span><span class="p">;</span><span class="w">        </span><span class="c1">// 8 bytes</span>
-<span class="w">    </span><span class="kt">int16_t</span><span class="w"> </span><span class="n">m_I16</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span><span class="w">     </span><span class="c1">// 16 bytes</span>
-<span class="w">    </span><span class="kt">char</span><span class="w">    </span><span class="n">__padding</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span><span class="w"> </span><span class="c1">// 8 bytes</span>
-<span class="p">};</span><span class="w"></span>
-</code></pre></div>
-
-<h2>Zig side</h2>
-<p>Zig code <a href="https://github.com/marselester/misc/blob/main/zig-c-abi/zig/ch08_01.zig">zig/ch08_01.zig</a>
-isn't very different from C++ one: we'got <code>XmmVal</code> struct wrapping a union,
-it also has a 16-byte alignment requirement.</p>
-<p>Note, <code>const XmmVal = extern struct { ... }</code> has <code>extern</code> keyword
-that instructs Zig compiler to keep the stable memory layout.</p>
-<div class="highlight"><pre><span></span><code><span class="kr">const</span><span class="w"> </span><span class="n">XmmVal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kr">extern</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="n">data</span><span class="o">:</span><span class="w"> </span><span class="kr">extern</span><span class="w"> </span><span class="k">union</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_I8</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="n">i8</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_I16</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="kt">i16</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_I32</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="kt">i32</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_I64</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="kt">i64</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_U8</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">u8</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_U16</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="kt">u16</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_U32</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="kt">u32</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_U64</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="kt">u64</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_F32</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="kt">f32</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="n">m_F64</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="kt">f64</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="kr">align</span><span class="p">(</span><span class="mi">16</span><span class="p">),</span><span class="w"></span>
-<span class="p">};</span><span class="w"></span>
-</code></pre></div>
-
-<p>We use <code>m_I16: [8]i16</code> field to set an array of 16-bit integers just like in the C++ example.</p>
-<div class="highlight"><pre><span></span><code><span class="kr">extern</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">AddI16_avx</span><span class="p">(</span><span class="n">c1</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">XmmVal</span><span class="p">,</span><span class="w"> </span><span class="n">c2</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">XmmVal</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="kr">const</span><span class="w"> </span><span class="n">XmmVal</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="kr">const</span><span class="w"> </span><span class="n">XmmVal</span><span class="p">)</span><span class="w"> </span><span class="kt">void</span><span class="p">;</span><span class="w"></span>
-
-<span class="kr">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="n">main</span><span class="p">()</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">XmmVal</span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="p">.</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span><span class="w"></span>
-<span class="w">            </span><span class="p">.</span><span class="n">m_I16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="kt">i16</span><span class="p">{</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">32766</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="mi">32000</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">32000</span><span class="w"> </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="p">};</span><span class="w"></span>
-<span class="w">    </span><span class="kr">const</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">XmmVal</span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="p">.</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span><span class="w"></span>
-<span class="w">            </span><span class="p">.</span><span class="n">m_I16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="kt">i16</span><span class="p">{</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">32760</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">400</span><span class="p">,</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">600</span><span class="p">,</span><span class="w"> </span><span class="mi">1200</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">950</span><span class="w"> </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="p">};</span><span class="w"></span>
-<span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">c1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">XmmVal</span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span><span class="w"> </span><span class="p">.</span><span class="n">m_I16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">undefined</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">};</span><span class="w"></span>
-<span class="w">    </span><span class="kr">var</span><span class="w"> </span><span class="n">c2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">XmmVal</span><span class="p">{</span><span class="w"> </span><span class="p">.</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">.{</span><span class="w"> </span><span class="p">.</span><span class="n">m_I16</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">undefined</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">};</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">AddI16_avx</span><span class="p">(</span><span class="o">&amp;</span><span class="n">c1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">c2</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Print the results...</span>
-<span class="p">}</span><span class="w"></span>
-</code></pre></div>
-
-<p>The results match C++ output.</p>
-<div class="highlight"><pre><span></span><code><span class="go">﹩ zig run ./zig/ch08_01.zig ./llvm/ch08_01.s</span>
-<span class="go">Zig says</span>
-<span class="go">c1={ 110, 0, -32746, 32370, 550, -540, -32336, 32586 }</span>
-<span class="go">c2={ 110, 0, 32767, -32768, 550, -540, 32767, -32768 }</span>
-</code></pre></div>
-
-<hr>
-<p>Even though the compilers can auto-vectorize code, it's good to know how to write SIMD in assembly.
-Calling such functions from C++/Zig isn't always straightforward due to alignment requirements.</p><p class="subheader">Category: <a href="https://marselester.com/category/zig.html">Zig</a>
+using both wraparound and saturated arithmetic …</p><p class="subheader">Category: <a href="https://marselester.com/category/zig.html">Zig</a>
 
     Tagged: 
     <a href="https://marselester.com/tag/assembler.html">assembler </a>
@@ -268,11 +460,9 @@ Calling such functions from C++/Zig isn't always straightforward due to alignmen
 
 
 
-<p><a href="https://marselester.com/zig-simd.html#disqus_thread">comments</a></p>            </article>
-
-
+<p><a href="https://marselester.com/zig-simd.html#disqus_thread">comments</a></p>                <a class="button radius secondary small right" href="https://marselester.com/zig-simd.html">Read More</a>
                 <hr  class="gradient"/>
-
+            </article>
 
         
 
